@@ -1,4 +1,4 @@
-const { EmbedBuilder, Embed, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, sourceban_urls } = require('./config.json');
 
 const axios = require('axios').default;
@@ -66,7 +66,7 @@ class ProfileBuilder {
                 }
                 let addrdata = this.plist[id64].addresses;
                 for (let addr in addrdata) {
-                    iplist += `\`${addr}\` - *${addrdata[addr].gamename}* on <t:${addrdata[addr].date}:D>\n`;
+                    iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
                 }
             }
     
@@ -284,13 +284,13 @@ async function getSourceBans(steamid) {
     let tasks = [];
     let data = [];
 
-    for (let i = 0; i < sourceban_urls.length; i++) {
-        let url = sourceban_urls[i] + CONSTS.SRCBAN_URL;
-        if (url.includes('skial.com')) {
-            url += steamid.getSteam3RenderedID();
-        }
-        else {
-            url += steamid.getSteam2RenderedID(false);
+    for (let url of Object.keys(sourceban_urls)) {
+        if (sourceban_urls[url] == 3) {
+            url += CONSTS.SRCBAN_URL + steamid.getSteam3RenderedID();
+        } else if (sourceban_urls[url] == 2.1) {
+            url += CONSTS.SRCBAN_URL + steamid.getSteam2RenderedID(true);
+        } else {
+            url += CONSTS.SRCBAN_URL + steamid.getSteam2RenderedID(false);
         }
         
         tasks.push(axios.get(url, { timeout: 3000, validateStatus: () => true }));

@@ -10,8 +10,8 @@ async function handleMoreInfo(interaction) {
 	let steamid = interaction.customId.split(':')[1];
 	let original = interaction.message;
 
-	if (original.content.startsWith('Fetching') || original.embeds[0].some(x => x.name == 'Sourcebans')) {
-		await interaction.reply({ content: '❌ Error: Already displaying more info.', ephemeral: true });
+	if (original.content.startsWith('Fetching')) {
+		await interaction.reply({ content: '❌ Error: Already fetching more info.', ephemeral: true });
 		return;
 	}
 
@@ -45,7 +45,7 @@ async function handleListFriends(interaction) {
 		});
 
 	for (let i = 0; i < friends.length; i += 100) {
-		const chunk = friends.slice(i, i + 100);
+		let chunk = friends.slice(i, i + 100);
 		let chunkdata = await axios.get(CONSTS.SUMMARY_URL, { 
 			params: { 
 				key: steam_token, 
@@ -109,14 +109,19 @@ async function handleModifyTags(interaction) {
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
 
 	if (!plist.hasOwnProperty(steamid)) {
+		let bandata = await axios.get(CONSTS.BAN_URL, { 
+			params: { key: steam_token, steamids: steamid },
+			validateStatus: () => true
+		 }).data.players[0];
+
 		plist[steamid] = {
 			tags: [],
 			addresses: [],
 			bandata: {
-				vacbans: 0,
-				gamebans: 0,
-				communityban: false,
-				tradeban: false
+				vacbans: bandata.NumberOfVACBans,
+				gamebans: bandata.NumberOfGameBans,
+				communityban: bandata.CommunityBanned,
+				tradeban: bandata.EconomyBan == 'banned'
 			}
 		};
 	}

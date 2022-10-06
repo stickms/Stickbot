@@ -6,6 +6,8 @@ const { discord_token } = require('./config.json');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent] });
 
+fs.writeFile('./playerlist.json', '{}', { flag: 'wx' }, x => {});
+
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));

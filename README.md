@@ -11,6 +11,8 @@ __Stickbot features:__
 * Playerlist exporting in various formats
 * (WIP) Ban watch and notifying
 
+## File Formatting
+
 ### config.json formatting
 `config.json` __must__ be placed in the same directory as index.js for it to work.
 
@@ -22,9 +24,10 @@ Make sure it's formatted exactly as below:
 	"steam_token": "YOUR-STEAMDEV-TOKEN",
     "client_id": "YOUR-BOTS-CLIENT-ID",
 	"sourceban_urls": [
-        "Links of various Sourcebans websites",
+        "Links of various Sourcebans websites and their SteamID formats",
         "For example:",
-        "https://www.skial.com/sourcebans/"
+        "https://www.skial.com/sourcebans/": 3,
+        "https://lazypurple.com/sourcebans/": 2,
     ]
 }
 ```
@@ -39,6 +42,12 @@ Make sure it's formatted exactly as below:
             "cheater": {
                 addedby: DISCORD-USER-ID,
                 date: DATE-ADDED
+            }
+        },
+        "addresses": {
+            "GAME-SERVER-IP": {
+                game: "NAME-OF-GAME",
+                date: DATE-PLAYED
             }
         },
         "bandata": {
