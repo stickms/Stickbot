@@ -12,9 +12,9 @@ module.exports = {
                 .setDescription('Export playerist for this format')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Steam ID3', value: 'id3' },
-                    { name: 'Steam ID64', value: 'id64' },
-                    { name: 'Steam ID2', value: 'id2' },
+                    { name: 'Steam ID 64', value: 'id64' },
+                    { name: 'Steam ID 3', value: 'id3' },
+                    { name: 'Steam ID 2', value: 'id2' },
                     { name: 'LMAOBOX', value: 'lbox' },
                     { name: 'Cathook', value: 'cat' }
                 ))
@@ -30,40 +30,36 @@ module.exports = {
         let fmt = interaction.options.getString('format');
         let tag = interaction.options.getString('tag') ?? 'cheater';
 
-        let result = '';
-
-        for (let steamid of Object.keys(plist)) {
-            if (!plist[steamid].tags.hasOwnProperty(tag)) {
-               continue;
+        let result = Object.keys(plist).map(x => {
+            if (!plist[x].tags.hasOwnProperty(tag)) {
+                return '';
             }
 
-            let conv = new SteamID(steamid);
+            let steamid = new SteamID(x);
 
-            switch (fmt) {
+            switch(fmt) {
                 case 'id64':
-                    result += steamid;
-                    break;
+                    return x + '\n';
                 case 'id3':
-                    result += conv.getSteam3RenderedID();
-                    break;
+                    return steamid.getSteam3RenderedID() + '\n';
                 case 'id2':
-                    result += conv.getSteam2RenderedID();
-                    break;
+                    return steamid.getSteam2RenderedID() + '\n';
                 case 'lbox':
-                    result += `${conv.accountid.toString(16)};10;`;
-                    break;
+                    return `${steamid.accountid.toString(16).toUpperCase()};10;`;
                 case 'cat':
-                    result += `cat_pl_add ${conv.accountid} RAGE`;
-                    break;
+                    return `cat_pl_add ${steamid.accountid} RAGE\n`;
             }
-
-            if (fmt != 'lbox') {
-                result += '\n';
-            }
-        }
+        }).join('');
 
         let filename = fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt';
         let file = { attachment: Buffer.from(result), name: filename };
-        await interaction.reply({ content: '✅ Successfully exported ', files: [ file ] })
+        let message = `✅ Playerlist successfully exported with tag ${tag}\n`;
+
+        if (fmt == 'lbox') {
+            message += "\u2139\uFE0F Paste the export after \"c1 = \" " 
+                + "under the [pl] section of your config in `%localappdata%`\n";
+        }
+
+        await interaction.reply({ content: message, files: [ file ] });
 	},
 };

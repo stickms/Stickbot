@@ -29,7 +29,7 @@ module.exports = {
             let comps = await profile.getProfileComponents();
 
             await message.suppressEmbeds();
-            await message.reply({ embeds: [ embed ], components: [ comps ], allowedMentions: { repliedUser: false } });
+            await message.reply({ embeds: [ embed ], components: comps, allowedMentions: { repliedUser: false } });
         }
     },
 };
