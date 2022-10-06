@@ -22,7 +22,8 @@ module.exports = {
             option.setName('tag')
                 .setDescription('Export this tag only (def. \"Cheater\")')
                 .setRequired(false)
-                .addChoices(...CONSTS.VALID_TAGS)),
+                .addChoices(...CONSTS.VALID_TAGS)
+            ),
         
 	async execute(interaction) {
         let plist = JSON.parse(fs.readFileSync('./playerlist.json'));  

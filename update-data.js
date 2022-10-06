@@ -111,7 +111,7 @@ async function updatePlayerData(client) {
 		await channel.send({
 			content: `**${update.steamid}** has been **${update.message}**`,
 			embeds: [ embed ],
-			components: comps
+			components: comps,
 		});
 	}
 }

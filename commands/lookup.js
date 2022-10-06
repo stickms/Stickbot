@@ -5,9 +5,11 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('lookup')
 		.setDescription('Lookup a Steam Profile!')
-		.addStringOption(option => option.setName('profile')
-			.setDescription('Lookup this Profile')
-			.setRequired(true)),
+		.addStringOption(option => 
+			option.setName('profile')
+				.setDescription('Lookup this Profile')
+				.setRequired(true)
+			),
         
 	async execute(interaction) {
 		let profile = await ProfileBuilder.create(interaction.options.getString('profile'));
@@ -17,7 +19,7 @@ module.exports = {
 		} 
 		else {
 			let comps = await profile.getProfileComponents();
-			await interaction.reply({ embeds: [ embed ], components: comps, allowedMentions: false }); 
+			await interaction.reply({ embeds: [ embed ], components: comps }); 
 		}
 	},
 };

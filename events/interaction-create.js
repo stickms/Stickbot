@@ -1,5 +1,5 @@
 const { steam_token, sourceban_urls } = require('../config.json');
-const { ProfileBuilder } = require('../profile-builder.js');
+const { ProfileBuilder, getBanData } = require('../profile-builder.js');
 const { EmbedBuilder } = require('discord.js');
 
 const axios = require('axios').default;
@@ -109,20 +109,12 @@ async function handleModifyTags(interaction) {
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
 
 	if (!plist.hasOwnProperty(steamid)) {
-		let bandata = await axios.get(CONSTS.BAN_URL, { 
-			params: { key: steam_token, steamids: steamid },
-			validateStatus: () => true
-		 }).data.players[0];
+		let bandata = await getBanData(steamid);
 
 		plist[steamid] = {
-			tags: [],
-			addresses: [],
-			bandata: {
-				vacbans: bandata.NumberOfVACBans,
-				gamebans: bandata.NumberOfGameBans,
-				communityban: bandata.CommunityBanned,
-				tradeban: bandata.EconomyBan == 'banned'
-			}
+			tags: {},
+			addresses: {},
+			bandata: bandata
 		};
 	}
 
@@ -142,19 +134,17 @@ async function handleModifyTags(interaction) {
 	let original = interaction.message.embeds[0];
 	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
 
-	console.log(sourcebans);
-
 	profile = await ProfileBuilder.create(steamid);
 	let comps = await profile.getProfileComponents();
 	let embed = null;
 
-	if (sourcebans) {
+	if (sourcebans[0]) {
 		embed = await profile.getProfileEmbed(true, sourcebans[0].value);
 	} else {
 		 embed = await profile.getProfileEmbed();
 	}
 
-	await interaction.update({embeds: [ embed ], components: comps});
+	await interaction.update({embeds: [ embed ], components: comps });
 }
 
 module.exports = {

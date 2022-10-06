@@ -16,7 +16,7 @@ class ProfileBuilder {
     static async create(steamid) {
         let r = new ProfileBuilder();
         r.steamid = await resolveSteamID(steamid);
-        r.cheaterfriends = await getCheaterFriendCount(r.steamid, r.plist);
+        r.cheaterfriends = await r.getCheaterFriendCount();
         return r;
     }
 
@@ -78,7 +78,7 @@ class ProfileBuilder {
             }
     
             if (sourcebans == null) {
-                sourcebans = await getSourceBans(this.steamid);
+                sourcebans = await this.getSourceBans();
                 let requireupload = false;
                 let banlist = '';
                 let bantext = '';
@@ -234,6 +234,82 @@ class ProfileBuilder {
     
         return alertlist;
     }    
+
+    async getCheaterFriendCount() {
+        let response = await axios.get(CONSTS.FRIEND_URL, { 
+            params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
+            validateStatus: () => true 
+        });
+    
+        let frienddata = response.data;
+        let cheatercount = 0;
+    
+        if (frienddata.hasOwnProperty('friendslist')) {
+            frienddata = frienddata.friendslist.friends;
+            for (let i = 0; i < frienddata.length; i++) {
+                if (this.plist.hasOwnProperty(frienddata[i].steamid) && 
+                    this.plist[frienddata[i].steamid].tags.hasOwnProperty('cheater')) {
+                    cheatercount++;
+                }
+            } 
+        }
+    
+        return cheatercount;
+    }    
+
+    async getSourceBans() {
+        let sourcebans = [];
+        let tasks = [];
+        let data = [];
+    
+        for (let url of Object.keys(sourceban_urls)) {
+            if (sourceban_urls[url] == 3) {
+                url += CONSTS.SRCBAN_URL + this.steamid.getSteam3RenderedID();
+            } else if (sourceban_urls[url] == 2.1) {
+                url += CONSTS.SRCBAN_URL + this.steamid.getSteam2RenderedID(true);
+            } else {
+                url += CONSTS.SRCBAN_URL + this.steamid.getSteam2RenderedID(false);
+            }
+            
+            tasks.push(axios.get(url, { timeout: 3000, validateStatus: () => true }));
+        }
+    
+        await Promise.allSettled(tasks).then(async (results) => {
+            for (let i = 0; i < results.length; i++) {
+                if (results[i].status == 'fulfilled') {
+                    data.push(results[i]);
+                }
+            }
+        },
+        (rejected) => console.log(`${rejected.length} url errors`));
+    
+        for (let i in data) {
+            if (!data[i].value.data) {
+                continue;
+            }
+            
+            let htmldata = HTMLParser.parse(data[i].value.data);
+            let tables = htmldata.getElementsByTagName('table');
+    
+            for (let t in tables) {
+                var tds = tables[t].getElementsByTagName('td');
+                if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
+                    continue;
+                }
+    
+                var trs = tables[t].getElementsByTagName('tr');
+                for (let row in trs) {
+                    var nodes = trs[row].getElementsByTagName('td');
+    
+                    if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
+                        sourcebans.push({ url: data[i].value.config.url, reason: nodes[1].innerText });
+                    }
+                }
+            }
+        }
+    
+        return sourcebans;
+    }    
 }
 
 async function resolveSteamID(steamid) {
@@ -257,80 +333,24 @@ async function resolveSteamID(steamid) {
     }
 }
 
-async function getCheaterFriendCount(steamid, plist) {
-    response = await axios.get(CONSTS.FRIEND_URL, { 
-        params: { key: steam_token, steamid: steamid.getSteamID64() }, 
-        validateStatus: () => true 
-    });
+async function getBanData(steamid) {
+    let bandata = await axios.get(CONSTS.BAN_URL, { 
+        params: { key: steam_token, steamids: steamid },
+        validateStatus: () => true
+     });
 
-    let frienddata = response.data;
-    let cheatercount = 0;
+     if (!bandata.data.players[0]) {
+        return null;
+     }
 
-    if (frienddata.hasOwnProperty('friendslist')) {
-        frienddata = frienddata.friendslist.friends;
-        for (let i = 0; i < frienddata.length; i++) {
-            if (plist.hasOwnProperty(frienddata[i].steamid) && 
-                plist[frienddata[i].steamid].tags.hasOwnProperty('cheater')) {
-                cheatercount++;
-            }
-        } 
-    }
+     bandata = bandata.data.players[0];
 
-    return cheatercount;
+     return {
+        vacbans: bandata.NumberOfVACBans,
+        gamebans: bandata.NumberOfGameBans,
+        communityban: bandata.CommunityBanned,
+        tradeban: bandata.EconomyBan == 'banned'
+    };
 }
 
-async function getSourceBans(steamid) {
-    let sourcebans = [];
-    let tasks = [];
-    let data = [];
-
-    for (let url of Object.keys(sourceban_urls)) {
-        if (sourceban_urls[url] == 3) {
-            url += CONSTS.SRCBAN_URL + steamid.getSteam3RenderedID();
-        } else if (sourceban_urls[url] == 2.1) {
-            url += CONSTS.SRCBAN_URL + steamid.getSteam2RenderedID(true);
-        } else {
-            url += CONSTS.SRCBAN_URL + steamid.getSteam2RenderedID(false);
-        }
-        
-        tasks.push(axios.get(url, { timeout: 3000, validateStatus: () => true }));
-    }
-
-    await Promise.allSettled(tasks).then(async (results) => {
-        for (let i = 0; i < results.length; i++) {
-            if (results[i].status == 'fulfilled') {
-                data.push(results[i]);
-            }
-        }
-    },
-    (rejected) => console.log(`${rejected.length} url errors`));
-
-    for (let i in data) {
-        if (!data[i].value.data) {
-            continue;
-        }
-        
-        let htmldata = HTMLParser.parse(data[i].value.data);
-        let tables = htmldata.getElementsByTagName('table');
-
-        for (let t in tables) {
-            var tds = tables[t].getElementsByTagName('td');
-            if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
-                continue;
-            }
-
-            var trs = tables[t].getElementsByTagName('tr');
-            for (let row in trs) {
-                var nodes = trs[row].getElementsByTagName('td');
-
-                if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
-                    sourcebans.push({ url: data[i].value.config.url, reason: nodes[1].innerText });
-                }
-            }
-        }
-    }
-
-    return sourcebans;
-}
-
-module.exports = { ProfileBuilder };
+module.exports = { ProfileBuilder, resolveSteamID, getBanData };
