@@ -21,7 +21,7 @@ Make sure it's formatted exactly as below:
 ```
 {
     "discord_token": "YOUR-DISCORD-TOKEN",
-	"steam_token": "YOUR-STEAMDEV-TOKEN",
+    "steam_token": "YOUR-STEAMDEV-TOKEN",
     "client_id": "YOUR-BOTS-CLIENT-ID",
 	"sourceban_urls": [
         "Links of various Sourcebans websites and their SteamID formats",
