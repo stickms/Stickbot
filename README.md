@@ -9,7 +9,7 @@ __Stickbot features:__
 * Tagging profiles (cheaters, suspcious players, etc.)
 * Sourcebans scraping
 * Playerlist exporting in various formats
-* (WIP) Ban watch and notifying
+* Ban watch and notifying
 
 ## File Formatting
 

@@ -30,11 +30,18 @@ module.exports = {
 
         let fulltext = (await axios.get(idlist.url, { timeout: 5000 })).data;
         let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+        let curdate = Math.floor(Date.now() / 1000);
 
         for (let line of fulltext.split('\n')) {
             try {
                 let steamid = new SteamID(line);
                 plist[steamid.getSteamID64()] = await newProfileEntry(steamid);
+                plist[steamid.getSteamID64()].tags.push({
+                    "cheater" : {
+                        addedby: interaction.user.id,
+                        date: curdate
+                    }
+                });
             } catch (error) {
                 console.log(`error parsing line: ${line}`);
             }
