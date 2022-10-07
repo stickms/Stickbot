@@ -51,7 +51,7 @@ async function updatePlayerData(client) {
         }
 	}, rejected => console.log(`${rejected.length} banwatch errors`));
 
-	let plupdates = []; 
+	let updatemessages = [];
 
 	for (let bans of bandata) {
 		let localbans = plist[bans.SteamId].bandata;
@@ -73,7 +73,19 @@ async function updatePlayerData(client) {
 		}
 
 		if (banmessages.length) {
-			plupdates.push({ steamid: bans.SteamId, message: banmessages.join(', ') });
+			let builder = await ProfileBuilder.create(bans.SteamId);
+
+			let message = {
+				content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**`,
+				embeds: await builder.getProfileEmbed(),
+				components: await builder.getProfileComponents(),
+			};	
+	
+			updatemessages.push({ snowflake: banwatch_channel, message: message, dm: false });
+	
+			for (let user of plist[profile.steamid].notifications.ban) {
+				updatemessages.push({ snowflake: user, message: message, dm: true });
+			}	
 		}
 	}
 
@@ -84,11 +96,7 @@ async function updatePlayerData(client) {
 			localaddr = plist[profile.steamid].addresses = {};
 		}
 
-		if (!profile.hasOwnProperty('gameserverip')) {
-			continue;
-		}
-
-		if (profile.gameserverip.split(':')[1] != '0') {
+		if (!profile.hasOwnProperty('gameserverip') || profile.gameserverip.split(':')[1] != '0') {
 			continue;
 		}
 
@@ -97,6 +105,21 @@ async function updatePlayerData(client) {
 			date: Math.floor(Date.now() / 1000)
 		};
 
+		if (plist[profile.steamid].notifications.log) {
+			let builder = await ProfileBuilder.create(profile.steamid);
+
+			let message = {
+				content: `**${profile.steamid}** has had a new IP Logged`,
+				embeds: await builder.getProfileEmbed(),
+				components: await builder.getProfileComponents(),
+			};	
+
+			for (let user of plist[profile.steamid].notifications.log) {
+				updatemessages.push({ snowflake: user, message: message, dm: true });
+			}
+		}
+
+		// Delete oldest log if we have more than 6
 		if (Object.keys(localaddr).length > 6) {
 			let sorted = Object.entries(localaddr).sort(([,a], [,b]) => a.date - b.date);
 			delete localaddr[sorted[0][0]];
@@ -107,17 +130,19 @@ async function updatePlayerData(client) {
 
 	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
 
-	let channel = client.channels.cache.get(banwatch_channel);
-	for (let update of plupdates) {
-		let profile = await ProfileBuilder.create(update.steamid);
-		let embed = await profile.getProfileEmbed();
-		let comps = await profile.getProfileComponents();
-	
-		await channel.send({
-			content: `**${update.steamid}** has been **${update.message}**`,
-			embeds: [ embed ],
-			components: comps,
-		});
+	for (let update of updatemessages) {
+		let channel = update.dm ? await client.users.fetch(update.snowflake, { force: true }) :
+			await client.channels.fetch(update.snowflake);
+
+		if (!channel) {
+			continue;
+		}
+
+		try {
+			await channel.send(update.message);
+		} catch (error) {
+			console.log(`Could not send update ${update}`);
+		}
 	}
 }
 

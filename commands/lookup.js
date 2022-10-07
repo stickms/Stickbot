@@ -14,12 +14,12 @@ module.exports = {
 	async execute(interaction) {
 		let profile = await ProfileBuilder.create(interaction.options.getString('profile'));
 		let embed = await profile.getProfileEmbed();
-		if (embed == null) {
+		if (!embed) {
 			await interaction.reply({content: '❌ Error: Could not find profile.'});
 		} 
 		else {
 			let comps = await profile.getProfileComponents();
-			await interaction.reply({ embeds: [ embed ], components: comps }); 
+			await interaction.reply({ embeds: embed, components: comps }); 
 		}
 	},
 };

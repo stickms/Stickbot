@@ -5,6 +5,7 @@ module.exports = {
 	once: true,
 	execute(client) {
 		console.log(`Ready! Logged in as ${client.user.tag}`);
-		setInterval(_ => { updatePlayerData(client); }, 5 * 60 * 1000); // Every 5 minutes
+		//setInterval(_ => { updatePlayerData(client); }, 5 * 60 * 1000); // Every 5 minutes
+		updatePlayerData(client);
 	},
 };

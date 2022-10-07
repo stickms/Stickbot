@@ -1,9 +1,31 @@
+const fs = require('node:fs');
 const axios = require('axios').default;
 const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
-module.exports = { resolveSteamID, newProfileEntry, getBanData };
+module.exports = { setupPlayerList, resolveSteamID, newProfileEntry, getBanData };
+
+function setupPlayerList() {
+    // Create playerlist if it doesn't otherwise exist
+    //fs.writeFileSync('./playerlist.json', '{}', { flag: 'wx' }, x => {});
+
+    // Format playerlist so we don't run into null errors later
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    for (let id of Object.keys(plist)) {
+        if (!plist[id].tags) {
+            plist[id].tags = {};
+        } if (!plist[id].addresses) {
+            plist[id].addresses = {};
+        } if (!plist[id].notifications) {
+            plist[id].notifications = {};
+        } if (!plist[id].bandata) {
+            plist[id].bandata = {};
+        }
+    }
+
+    fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+} 
 
 async function resolveSteamID(steamid) {
     try {
@@ -50,7 +72,7 @@ async function getBanData(steamid) {
      });
 
      if (!bandata.data.players[0]) {
-        return null;
+        return {};
      }
 
      bandata = bandata.data.players[0];

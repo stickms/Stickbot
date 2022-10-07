@@ -23,7 +23,7 @@ class ProfileBuilder {
 
     async getProfileEmbed(moreinfo = false, sourcebans = null) {
         if (this.steamid == null) {
-            return null;
+            return [];
         }
 
         const id64 = this.steamid.getSteamID64();
@@ -133,12 +133,12 @@ class ProfileBuilder {
             }
         }
     
-        return embed;
+        return [ embed ];
     }
     
     async getProfileComponents() {
         if (this.steamid == null) {
-            return null;
+            return [];
         }
 
         const id64 = this.steamid.getSteamID64();

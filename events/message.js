@@ -22,14 +22,14 @@ module.exports = {
 
             let profile = await ProfileBuilder.create(profileid);
             let embed = await profile.getProfileEmbed();
-            if (embed == null) {
+            if (!embed) {
                 return;
             }
 
             let comps = await profile.getProfileComponents();
 
             await message.suppressEmbeds();
-            await message.reply({ embeds: [ embed ], components: comps, allowedMentions: { repliedUser: false } });
+            await message.reply({ embeds: embed, components: comps, allowedMentions: { repliedUser: false } });
         }
     },
 };

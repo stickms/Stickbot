@@ -46,7 +46,7 @@ async function handleMoreInfo(interaction) {
 	let embed = await profile.getProfileEmbed(true);
 	let comps = await profile.getProfileComponents();
 
-	await interaction.editReply({ content: null, embeds: [ embed ], components: comps });
+	await interaction.editReply({ content: null, embeds: embed, components: comps });
 }
 
 async function handleListFriends(interaction) {
@@ -162,7 +162,8 @@ async function handleModifyTags(interaction) {
 		 embed = await profile.getProfileEmbed();
 	}
 
-	await interaction.update({embeds: [ embed ], components: comps });
+	await interaction.update({ embeds: embed, components: comps });
+	await interaction.followUp({ content: `✅ Modified tags for **${steamid}**`, ephemeral: true });
 }
 
 async function handleNotifyButton(interaction) {
@@ -172,31 +173,52 @@ async function handleNotifyButton(interaction) {
 	var selectmenu = new SelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
 		.setPlaceholder('Notification Settings')
-		.setMaxValues(CONSTS.PROFILE_NOTIFYS.length);
+		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
 	if (plist.hasOwnProperty(steamid) && plist[steamid].notifications) {
 		let nolist = plist[steamid].notifications;
-		for (let noti of CONSTS.PROFILE_NOTIFYS) {
-			let hasnoti = nolist.hasOwnProperty(noti.value) && nolist[noti.value].contains(steamid);
+		for (let noti of CONSTS.NOTIFICATIONS) {
+			let hasnoti = nolist.hasOwnProperty(noti.value) && nolist[noti.value].includes(interaction.user.id);
 			selectmenu.addOptions({
 				label: `${hasnoti ? 'Remove notification for:' : 'Get notified on:'} ${noti.name}`, 
-				value: tag.value
+				value: noti.value
 			});
 		}
 	}
 	else {
-		for (let noti of CONSTS.PROFILE_NOTIFYS) {
+		for (let noti of CONSTS.NOTIFICATIONS) {
 			selectmenu.addOptions({label: `Get notified on: ${noti.name}`, value: noti.value});
 		}
 	}
 
 	await interaction.reply({
 		content: `Change notifications for **${steamid}**`,
-		components: [ new ActionRowBuilder().addComponents(selectmenu) ]
+		components: [ new ActionRowBuilder().addComponents(selectmenu) ],
+		ephemeral: true
 	});
 }
 
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	console.log(interaction.values);
+	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+
+	if (!plist.hasOwnProperty(steamid)) {
+		plist[steamid] = await newProfileEntry(steamid);
+	}
+
+	for (let event of interaction.values) {
+		let arr = plist[steamid].notifications[event];
+		if (!arr){
+			arr = [ interaction.user.id ];
+		} else if (arr.includes(interaction.user.id)) {
+			arr = arr.filter(x => x != interaction.user.id);
+		} else {
+			arr.push(interaction.user.id);
+		}
+		plist[steamid].notifications[event] = arr;
+	}
+
+	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+
+	await interaction.reply({ content: `✅ Modified notification settings for **${steamid}**`, ephemeral: true });
 }
