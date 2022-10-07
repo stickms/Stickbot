@@ -16,12 +16,13 @@ __Stickbot features:__
 ### config.json formatting
 `config.json` __must__ be placed in the same directory as index.js for it to work.
 
-Make sure it's formatted exactly as below: 
+Make sure it's formatted exactly as below, note that `rust_token` is an optional token: 
 
 ```
 {
     "discord_token": "YOUR-DISCORD-TOKEN",
     "steam_token": "YOUR-STEAMDEV-TOKEN",
+    "rust_token": "RUSTBANNED.COM-API-TOKEN",
     "client_id": "YOUR-BOTS-CLIENT-ID",
 	"sourceban_urls": [
         "Links of various Sourcebans websites and their SteamID formats",

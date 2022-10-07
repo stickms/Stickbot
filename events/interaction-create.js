@@ -41,10 +41,10 @@ async function handleMoreInfo(interaction) {
 
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
-	let profile = await ProfileBuilder.create(steamid);
+	let builder = await ProfileBuilder.create(steamid);
 	
-	let embed = await profile.getProfileEmbed(true);
-	let comps = await profile.getProfileComponents();
+	let embed = await builder.getProfileEmbed(true);
+	let comps = await builder.getProfileComponents();
 
 	await interaction.editReply({ content: null, embeds: embed, components: comps });
 }
@@ -152,14 +152,14 @@ async function handleModifyTags(interaction) {
 	let original = interaction.message.embeds[0];
 	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
 
-	profile = await ProfileBuilder.create(steamid);
-	let comps = await profile.getProfileComponents();
+	let builder = await ProfileBuilder.create(steamid);
+	let comps = await builder.getProfileComponents();
 	let embed = null;
 
 	if (sourcebans[0]) {
-		embed = await profile.getProfileEmbed(true, sourcebans[0].value);
+		embed = await builder.getProfileEmbed(true, sourcebans[0].value);
 	} else {
-		 embed = await profile.getProfileEmbed();
+		 embed = await builder.getProfileEmbed();
 	}
 
 	await interaction.update({ embeds: embed, components: comps });

@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
-const { steam_token, sourceban_urls } = require('./config.json');
+const { steam_token, rust_token, sourceban_urls } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
 
 const axios = require('axios').default;
@@ -199,7 +199,19 @@ class ProfileBuilder {
             alertlist += `❌ ${bandata.vacbans} VAC Ban${(bandata.vacbans == 1 ? '' : 's')}\n`;
         } if (bandata.gamebans > 0) {
             alertlist += `❌ ${bandata.gamebans} Game Ban${(bandata.gamebans == 1 ? '' : 's')}\n`;
-        } if (bandata.communityban) {
+        } if (rust_token) {
+            let rustdata = await axios.get(CONSTS.RUST_URL, { 
+                params: { apikey: rust_token, steamid64: id64 },
+                headers: { 'User-Agent': 'Mozilla/5.0' },
+                validateStatus: () => true
+             });
+
+             if (!rustdata.data.error && rustdata.data.response[0].url) {
+                alertlist += '❌ Rust Ban\n';
+             }
+        } 
+        
+        if (bandata.communityban) {
             alertlist += '❌ Community Ban\n';
         } if (bandata.tradeban) {
             alertlist += '❌ Trade Ban\n';

@@ -134,12 +134,8 @@ async function updatePlayerData(client) {
 		let channel = update.dm ? await client.users.fetch(update.snowflake, { force: true }) :
 			await client.channels.fetch(update.snowflake);
 
-		if (!channel) {
-			continue;
-		}
-
 		try {
-			await channel.send(update.message);
+			if (channel) await channel.send(update.message);
 		} catch (error) {
 			console.log(`Could not send update ${update}`);
 		}

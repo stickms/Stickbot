@@ -20,13 +20,13 @@ module.exports = {
 
             let profileid = word.split('/')[4];
 
-            let profile = await ProfileBuilder.create(profileid);
-            let embed = await profile.getProfileEmbed();
+            let builder = await ProfileBuilder.create(profileid);
+            let embed = await builder.getProfileEmbed();
             if (!embed) {
                 return;
             }
 
-            let comps = await profile.getProfileComponents();
+            let comps = await builder.getProfileComponents();
 
             await message.suppressEmbeds();
             await message.reply({ embeds: embed, components: comps, allowedMentions: { repliedUser: false } });
