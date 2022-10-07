@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, sourceban_urls } = require('./config.json');
+const { resolveSteamID, getBanData } = require('./bot-helpers.js');
 
 const axios = require('axios').default;
 const CONSTS = require('./bot-consts.js');
@@ -54,6 +55,20 @@ class ProfileBuilder {
                 { name: 'Alerts', value: alertlist, inline: true},
                 { name: 'Quick Links', value: quicklinks, inline: true}
             );
+
+        if (data.gameextrainfo != null) {
+            if (data.gameserverip != null) {
+                embed.addFields({ 
+                    name: 'Now Playing', 
+                    value: `**${data.gameextrainfo}** on \`${data.gameserverip}\``
+                });
+            } else {
+                embed.addFields({ 
+                    name: 'Now Playing', 
+                    value: `**${data.gameextrainfo}**`
+                });
+            }
+        }
     
         if (moreinfo == true) {
             let taglist = '';
@@ -72,8 +87,7 @@ class ProfileBuilder {
     
             if (taglist) {
                 embed.addFields({ name: 'Added Tags', value: taglist });
-            }
-            if (iplist) {
+            } if (iplist) {
                 embed.addFields({ name: 'Logged IPs', value: iplist });
             }
     
@@ -132,11 +146,11 @@ class ProfileBuilder {
         var selectmenu = new SelectMenuBuilder()
                             .setCustomId(`modifytags:${this.steamid.getSteamID64()}`)
                             .setPlaceholder('Modify User Tags')
-                            .setMaxValues(CONSTS.VALID_TAGS.length);
+                            .setMaxValues(CONSTS.TAGS.length);
     
         if (this.plist.hasOwnProperty(id64)) {
             let taglist = this.plist[id64].tags;
-            for (let tag of CONSTS.VALID_TAGS) {
+            for (let tag of CONSTS.TAGS) {
                 selectmenu.addOptions({
                     label: `${taglist.hasOwnProperty(tag.value) ? 'Remove' : 'Add'} ${tag.name}`, 
                     value: tag.value
@@ -144,19 +158,23 @@ class ProfileBuilder {
             }
         }
         else {
-            for (let tag of CONSTS.VALID_TAGS) {
+            for (let tag of CONSTS.TAGS) {
                 selectmenu.addOptions({label: `Add ${tag.name}`, value: tag.value});
             }
         }
 
         let selectrow = new ActionRowBuilder().addComponents(selectmenu);
         
-        let buttonrow = new ActionRowBuilder().addComponents(
+        let buttonrow = new ActionRowBuilder().addComponents([
             new ButtonBuilder()
                 .setCustomId(`moreinfo:${this.steamid.getSteamID64()}`)
                 .setLabel('More Info')
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId(`notifybutton:${this.steamid.getSteamID64()}`)
+                .setLabel('Notifications')
                 .setStyle(ButtonStyle.Primary)
-            );
+            ]);
 
         if (this.cheaterfriends > 0) {
             buttonrow.addComponents(
@@ -175,34 +193,27 @@ class ProfileBuilder {
     
         let alertlist = '';
     
-        let response = await axios.get(CONSTS.BAN_URL, { 
-            params: { key: steam_token, steamids: id64 },
-            validateStatus: () => true
-         });
-    
-        let bandata = response.data.players[0];
+        let bandata = await getBanData(id64);
         
-        if (bandata.NumberOfVACBans > 0) {
-            alertlist += `❌ ${bandata.NumberOfVACBans} VAC Ban${(bandata.NumberOfVACBans == 1 ? '' : 's')}\n`;
-        }
-        if (bandata.NumberOfGameBans > 0) {
-            alertlist += `❌ ${bandata.NumberOfGameBans} Game Ban${(bandata.NumberOfGameBans == 1 ? '' : 's')}\n`;
-        }
-        if (bandata.CommunityBanned) {
+        if (bandata.vacbans > 0) {
+            alertlist += `❌ ${bandata.vacbans} VAC Ban${(bandata.vacbans == 1 ? '' : 's')}\n`;
+        } if (bandata.gamebans > 0) {
+            alertlist += `❌ ${bandata.gamebans} Game Ban${(bandata.gamebans == 1 ? '' : 's')}\n`;
+        } if (bandata.communityban) {
             alertlist += '❌ Community Ban\n';
-        }
-        if (bandata.EconomyBan == 'banned') {
+        } if (bandata.tradeban) {
             alertlist += '❌ Trade Ban\n';
         }
     
         let cheatercount = this.cheaterfriends;
     
         if (this.plist.hasOwnProperty(id64)) {
-            for (let i = 0; i < CONSTS.VALID_TAGS.length - 1; i++) {
-                if (this.plist[id64].tags.hasOwnProperty(CONSTS.VALID_TAGS[i].value)) {
-                    alertlist += `⚠️ ${CONSTS.VALID_TAGS[i].name}\n`;
+            for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
+                if (this.plist[id64].tags.hasOwnProperty(CONSTS.TAGS[i].value)) {
+                    alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
                 }    
             }
+
             if (cheatercount > 0) {
                 alertlist += `⚠️ Friends with ${cheatercount} cheater${cheatercount == 1 ? '' : 's'}`;
             }    
@@ -210,15 +221,12 @@ class ProfileBuilder {
             // Place Ban Watch/IP Logs Last
             if (this.plist[id64].tags.hasOwnProperty('banwatch')) {
                 alertlist += '\u2139\uFE0F Ban Watch\n';
-            }
-            if (this.plist[id64].addresses.length > 0) {
+            } if (this.plist[id64].addresses.length > 0) {
                 alertlist += '\u2139\uFE0F IP Logged\n';
             }
         }
-        else {
-            if (cheatercount > 0) {
-                alertlist += `⚠️ Friends with ${cheatercount} cheater${cheatercount == 1 ? '' : 's'}`;
-            }    
+        else if (cheatercount > 0) {
+            alertlist += `⚠️ Friends with ${cheatercount} cheater${cheatercount == 1 ? '' : 's'}`;
         }
     
         if (timecreated != null) {
@@ -312,45 +320,4 @@ class ProfileBuilder {
     }    
 }
 
-async function resolveSteamID(steamid) {
-    try {
-        return new SteamID(steamid);
-    } catch (error) {
-        // Try to check if this is a Vanity URL
-        let response = await axios.get(CONSTS.VANITY_URL, { 
-            params: { key: steam_token, vanityurl: steamid }, 
-            validateStatus: () => true 
-        });
-
-        let data = response.data.response;
-
-        if (data.hasOwnProperty('steamid')) {
-            return new SteamID(data.steamid);
-        }    
-        else {
-            return null;
-        }
-    }
-}
-
-async function getBanData(steamid) {
-    let bandata = await axios.get(CONSTS.BAN_URL, { 
-        params: { key: steam_token, steamids: steamid },
-        validateStatus: () => true
-     });
-
-     if (!bandata.data.players[0]) {
-        return null;
-     }
-
-     bandata = bandata.data.players[0];
-
-     return {
-        vacbans: bandata.NumberOfVACBans,
-        gamebans: bandata.NumberOfGameBans,
-        communityban: bandata.CommunityBanned,
-        tradeban: bandata.EconomyBan == 'banned'
-    };
-}
-
-module.exports = { ProfileBuilder, resolveSteamID, getBanData };
+module.exports = { ProfileBuilder };

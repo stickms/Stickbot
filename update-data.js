@@ -55,6 +55,7 @@ async function updatePlayerData(client) {
 
 	for (let bans of bandata) {
 		let localbans = plist[bans.SteamId].bandata;
+
 		let banmessages = [];
 
 		if (bans.NumberOfVACBans != localbans.vacbans) {
@@ -78,6 +79,10 @@ async function updatePlayerData(client) {
 
 	for (let profile of summaries) {
 		let localaddr = plist[profile.steamid].addresses;
+
+		if (!localaddr) {
+			localaddr = plist[profile.steamid].addresses = {};
+		}
 
 		if (!profile.hasOwnProperty('gameserverip')) {
 			continue;

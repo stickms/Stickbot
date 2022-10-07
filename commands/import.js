@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getBanData } = require('../profile-builder.js');
+const { newProfileEntry } = require('../bot-helpers.js');
 const axios = require('axios').default;
 const SteamID = require('steamid');
 const fs = require('node:fs');
@@ -34,15 +34,7 @@ module.exports = {
         for (let line of fulltext.split('\n')) {
             try {
                 let steamid = new SteamID(line);
-
-                let bandata = await getBanData(steamid.getSteamID64());
-        
-                plist[steamid.getSteamID64()] = {
-                    tags: {},
-                    addresses: {},
-                    bandata: bandata
-                };
-        
+                plist[steamid.getSteamID64()] = await newProfileEntry(steamid);
             } catch (error) {
                 console.log(`error parsing line: ${line}`);
             }

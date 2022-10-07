@@ -11,8 +11,15 @@ module.exports = {
     STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
     PASTE_URL: 'https://hastebin.app/v2/paste/',
 
-    VALID_TAGS: [{ name: 'Cheater', value: 'cheater' },
-                 { name: 'Suspcious', value: 'suspicious' },
-                 { name: 'Content Creator', value: 'popular' },
-                 { name: 'Ban Watch', value: 'banwatch' }]
+    TAGS: [
+        { name: 'Cheater', value: 'cheater' },
+        { name: 'Suspcious', value: 'suspicious' },
+        { name: 'Content Creator', value: 'popular' },
+        { name: 'Ban Watch', value: 'banwatch' }
+    ],
+
+    NOTIFICATIONS: [
+        { name: 'Ban', value: 'ban' },
+        { name: 'Address Log', value: 'log' }
+    ],
 };

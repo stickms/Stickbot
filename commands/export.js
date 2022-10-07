@@ -22,7 +22,7 @@ module.exports = {
             option.setName('tag')
                 .setDescription('Export this tag only (def. \"Cheater\")')
                 .setRequired(false)
-                .addChoices(...CONSTS.VALID_TAGS)
+                .addChoices(...CONSTS.TAGS)
             ),
         
 	async execute(interaction) {

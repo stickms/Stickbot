@@ -1,10 +1,34 @@
 const { steam_token, sourceban_urls } = require('../config.json');
-const { ProfileBuilder, getBanData } = require('../profile-builder.js');
-const { EmbedBuilder } = require('discord.js');
+const { ProfileBuilder } = require('../profile-builder.js');
+const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
+const { newProfileEntry } = require('../bot-helpers.js');
 
 const axios = require('axios').default;
 const fs = require('fs');
 const CONSTS = require('../bot-consts.js');
+
+module.exports = {
+	name: 'interactionCreate',
+	async execute(interaction) {
+		let customid = interaction.customId;
+
+		if (interaction.isButton()) {
+			if (customid.startsWith('moreinfo')) {
+				await handleMoreInfo(interaction);
+			} else if (customid.startsWith('friendinfo')) {
+				await handleListFriends(interaction);
+			} else if (customid.startsWith('notifybutton')) {
+				await handleNotifyButton(interaction);
+			}
+		} else if (interaction.isSelectMenu()) {
+			if (customid.startsWith('modifytags')) {
+				await handleModifyTags(interaction);
+			} else if (customid.startsWith('notifymenu')) {
+				await handleNotifyMenu(interaction);
+			}
+		}
+	},
+};
 
 async function handleMoreInfo(interaction) {
 	let steamid = interaction.customId.split(':')[1];
@@ -109,13 +133,7 @@ async function handleModifyTags(interaction) {
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
 
 	if (!plist.hasOwnProperty(steamid)) {
-		let bandata = await getBanData(steamid);
-
-		plist[steamid] = {
-			tags: {},
-			addresses: {},
-			bandata: bandata
-		};
+		plist[steamid] = await newProfileEntry(steamid);
 	}
 
 	for (let tag of interaction.values) {
@@ -147,19 +165,38 @@ async function handleModifyTags(interaction) {
 	await interaction.update({embeds: [ embed ], components: comps });
 }
 
-module.exports = {
-	name: 'interactionCreate',
-	async execute(interaction) {
-		console.log(`${interaction.user.tag} ${interaction.channel.name}`);
+async function handleNotifyButton(interaction) {
+	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+	let steamid = interaction.customId.split(':')[1];
 
-		if (interaction.isButton()) {
-			if (interaction.customId.startsWith('moreinfo')) {
-				await handleMoreInfo(interaction);
-			} else if (interaction.customId.startsWith('friendinfo')) {
-				await handleListFriends(interaction);
-			}
-		} else if (interaction.isSelectMenu()) {
-			await handleModifyTags(interaction);
+	var selectmenu = new SelectMenuBuilder()
+		.setCustomId(`notifymenu:${steamid}`)
+		.setPlaceholder('Notification Settings')
+		.setMaxValues(CONSTS.PROFILE_NOTIFYS.length);
+
+	if (plist.hasOwnProperty(steamid) && plist[steamid].notifications) {
+		let nolist = plist[steamid].notifications;
+		for (let noti of CONSTS.PROFILE_NOTIFYS) {
+			let hasnoti = nolist.hasOwnProperty(noti.value) && nolist[noti.value].contains(steamid);
+			selectmenu.addOptions({
+				label: `${hasnoti ? 'Remove notification for:' : 'Get notified on:'} ${noti.name}`, 
+				value: tag.value
+			});
 		}
-	},
-};
+	}
+	else {
+		for (let noti of CONSTS.PROFILE_NOTIFYS) {
+			selectmenu.addOptions({label: `Get notified on: ${noti.name}`, value: noti.value});
+		}
+	}
+
+	await interaction.reply({
+		content: `Change notifications for **${steamid}**`,
+		components: [ new ActionRowBuilder().addComponents(selectmenu) ]
+	});
+}
+
+async function handleNotifyMenu(interaction) {
+	let steamid = interaction.customId.split(':')[1];
+	console.log(interaction.values);
+}
