@@ -50,6 +50,11 @@ Make sure it's formatted exactly as below:
                 date: DATE-PLAYED
             }
         },
+        "notifications": {
+            "ban": [
+                "DISCORD-USER-IDS"
+            ]
+        },
         "bandata": {
             "vacbans": NUM-VACBANS,
             "gamebans": NUM-GAMEBANS,
