@@ -1,7 +1,7 @@
 const { steam_token, sourceban_urls } = require('../config.json');
 const { ProfileBuilder } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
-const { newProfileEntry } = require('../bot-helpers.js');
+const { newProfileEntry, uploadText } = require('../bot-helpers.js');
 
 const axios = require('axios').default;
 const fs = require('fs');
@@ -55,11 +55,17 @@ async function handleListFriends(interaction) {
 	await interaction.deferReply();
 
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+	let friends = {};
 
-    let friends = (await axios.get(CONSTS.FRIEND_URL, { 
-        params: { key: steam_token, steamid: steamid }, 
-        validateStatus: () => true 
-    })).data.friendslist.friends;
+	try {
+		friends = (await axios.get(CONSTS.FRIEND_URL, { 
+			params: { key: steam_token, steamid: steamid }, 
+			validateStatus: () => true 
+		})).data.friendslist.friends;
+	} catch (error) {
+		await interaction.editReply({ content: '❌ Error grabbing friends.' });
+		return;
+	}
 
 	let personadata = []; 
 
@@ -69,15 +75,21 @@ async function handleListFriends(interaction) {
 		});
 
 	for (let i = 0; i < friends.length; i += 100) {
-		let chunk = friends.slice(i, i + 100);
-		let chunkdata = await axios.get(CONSTS.SUMMARY_URL, { 
-			params: { 
-				key: steam_token, 
-				steamids: chunk.map(val => val.steamid).join(',') 
-			} 
-		} );
+		try {
+			let chunk = friends.slice(i, i + 100);
+			let chunkdata = await axios.get(CONSTS.SUMMARY_URL, { 
+				params: { 
+					key: steam_token, 
+					steamids: chunk.map(val => val.steamid).join(',') 
+				}, 
+				timeout: 1500
+			} );
 
-		personadata.push(...chunkdata.data.response.players);	
+			personadata.push(...chunkdata.data.response.players);	
+		} catch (error) {
+			await interaction.editReply({ content: '❌ Error checking friend data.' });
+			return;
+		}
 	}
 
 	personadata.sort((a, b) => { return a.steamid > b.steamid ? 1 : -1; });
@@ -101,13 +113,10 @@ async function handleListFriends(interaction) {
 	} 
 
 	if (requireupload) {
-		let hasteurl = await axios.post(CONSTS.PASTE_URL, friendstext, { 
-			timeout: 1500, 
-			headers: { 'Content-Type': 'text/plain' } 
-		});
+		let hasteurl = await uploadText(friendstext);
 
-		if (hasteurl.data) {
-			friendslist += `[\`Click to show all friends\`](${hasteurl.data.raw})`;
+		if (hasteurl) {
+			friendslist += `[\`Click to show all friends\`](${hasteurl})`;
 		} else {
 			friendslist += `\`Error when trying to upload friends list\``;
 		}
@@ -180,14 +189,14 @@ async function handleNotifyButton(interaction) {
 		for (let noti of CONSTS.NOTIFICATIONS) {
 			let hasnoti = nolist.hasOwnProperty(noti.value) && nolist[noti.value].includes(interaction.user.id);
 			selectmenu.addOptions({
-				label: `${hasnoti ? 'Remove notification for:' : 'Get notified on:'} ${noti.name}`, 
+				label: `${hasnoti ? 'Don\'t notify on:' : 'Notify on:'} ${noti.name}`, 
 				value: noti.value
 			});
 		}
 	}
 	else {
 		for (let noti of CONSTS.NOTIFICATIONS) {
-			selectmenu.addOptions({label: `Get notified on: ${noti.name}`, value: noti.value});
+			selectmenu.addOptions({label: `Notify on: ${noti.name}`, value: noti.value});
 		}
 	}
 

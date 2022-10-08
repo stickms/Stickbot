@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
-const { resolveSteamID, getBanData } = require('./bot-helpers.js');
+const { resolveSteamID, getBanData, uploadText } = require('./bot-helpers.js');
 
 const axios = require('axios').default;
 const CONSTS = require('./bot-consts.js');
@@ -27,22 +27,25 @@ class ProfileBuilder {
         }
 
         const id64 = this.steamid.getSteamID64();
+        let data = {};
+
+        try {
+            let response = await axios.get(CONSTS.SUMMARY_URL, { params: { key: steam_token, steamids: id64 } });
+            data = response.data.response.players[0];
+        } catch (error) {
+            return [];
+        }
     
-        let response = await axios.get(CONSTS.SUMMARY_URL, { params: { key: steam_token, steamids: id64 } });
-        let data = response.data.response.players[0];
-    
-        let idlist =   `${id64}
-                        ${this.steamid.getSteam3RenderedID()}
-                        ${this.steamid.getSteam2RenderedID(true)}\n`;
+        let idlist = `${id64}\n${this.steamid.getSteam3RenderedID()}\n${this.steamid.getSteam2RenderedID(true)}\n`;
     
         if(data.profileurl.includes('id/')) {
             idlist += data.profileurl.split('/')[4];
         }
     
-        const quicklinks = `[SteamRep](https://steamrep.com/profiles/${id64}/)
-                            [SteamID.uk](https://steamid.uk/profile/${id64}/)
-                            [Backpack.tf](https://backpack.tf/profiles/${id64}/)
-                            [SteamDB](https://steamdb.info/calculator/${id64}/)`;
+        const quicklinks =  `[SteamRep](https://steamrep.com/profiles/${id64}/)\n` + 
+                            `[SteamID.uk](https://steamid.uk/profile/${id64}/)\n` +
+                            `[Backpack.tf](https://backpack.tf/profiles/${id64}/)\n` +
+                            `[SteamDB](https://steamdb.info/calculator/${id64}/)`;
         
         const alertlist = await this.getAlertList(data.timecreated);
     
@@ -115,13 +118,10 @@ class ProfileBuilder {
                 if (!banlist) {
                     banlist = '✅ None';
                 } else if (requireupload) {
-                    let hasteurl = await axios.post(CONSTS.PASTE_URL, bantext, { 
-                        timeout: 1500, 
-                        headers: { 'Content-Type': 'text/plain' } 
-                    });        
+                    let hasteurl = await uploadText(bantext); 
 
-                    if (hasteurl.data) {
-                        banlist += `[\`Click to show all bans\`](${hasteurl.data.raw})`;
+                    if (hasteurl) {
+                        banlist += `[\`Click to show all bans\`](${hasteurl})`;
                     } else {
                         banlist += `\`Error when trying to upload ban list\``;
                     }        
@@ -200,15 +200,20 @@ class ProfileBuilder {
         } if (bandata.gamebans > 0) {
             alertlist += `❌ ${bandata.gamebans} Game Ban${(bandata.gamebans == 1 ? '' : 's')}\n`;
         } if (rust_token) {
-            let rustdata = await axios.get(CONSTS.RUST_URL, { 
-                params: { apikey: rust_token, steamid64: id64 },
-                headers: { 'User-Agent': 'Mozilla/5.0' },
-                validateStatus: () => true
-             });
+            try {
+                let rustdata = await axios.get(CONSTS.RUST_URL, { 
+                    params: { apikey: rust_token, steamid64: id64 },
+                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    timeout: 1000,
+                    validateStatus: () => true
+                });
 
-             if (!rustdata.data.error && rustdata.data.response[0].url) {
-                alertlist += '❌ Rust Ban\n';
-             }
+                if (!rustdata.data.error && rustdata.data.response[0].url) {
+                    alertlist += '❌ Rust Ban\n';
+                }
+            } catch (error) {
+                console.log('Error grabbing Rust Bandata');
+            }
         } 
         
         if (bandata.communityban) {
@@ -256,12 +261,20 @@ class ProfileBuilder {
     }    
 
     async getCheaterFriendCount() {
-        let response = await axios.get(CONSTS.FRIEND_URL, { 
-            params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
-            validateStatus: () => true 
-        });
+        let frienddata = {};
+        
+        try {
+            let response = await axios.get(CONSTS.FRIEND_URL, { 
+                params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
+                validateStatus: () => true,
+                timeout: 1500
+            });
+
+            frienddata = response.data;
+        } catch (error) {
+            return 0;
+        }
     
-        let frienddata = response.data;
         let cheatercount = 0;
     
         if (frienddata.hasOwnProperty('friendslist')) {

@@ -4,7 +4,7 @@ const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
-module.exports = { setupPlayerList, resolveSteamID, newProfileEntry, getBanData };
+module.exports = { setupPlayerList, resolveSteamID, newProfileEntry, getBanData, uploadText };
 
 function setupPlayerList() {
     // Create playerlist if it doesn't otherwise exist
@@ -32,17 +32,22 @@ async function resolveSteamID(steamid) {
         return new SteamID(steamid);
     } catch (error) {
         // Try to check if this is a Vanity URL
-        let response = await axios.get(CONSTS.VANITY_URL, { 
-            params: { key: steam_token, vanityurl: steamid }, 
-            validateStatus: () => true 
-        });
+        try {
+            let response = await axios.get(CONSTS.VANITY_URL, { 
+                params: { key: steam_token, vanityurl: steamid }, 
+                validateStatus: () => true,
+                timeout: 1500,
+            });
 
-        let data = response.data.response;
+            let data = response.data.response;
 
-        if (data.hasOwnProperty('steamid')) {
-            return new SteamID(data.steamid);
-        }    
-        else {
+            if (data.hasOwnProperty('steamid')) {
+                return new SteamID(data.steamid);
+            }    
+            else {
+                return null;
+            }
+        } catch (error2) {
             return null;
         }
     }
@@ -66,21 +71,43 @@ async function getBanData(steamid) {
         steamid = steamid.getSteamID64();
     }
 
-    let bandata = await axios.get(CONSTS.BAN_URL, { 
-        params: { key: steam_token, steamids: steamid },
-        validateStatus: () => true
-     });
+    try {
+        let bandata = await axios.get(CONSTS.BAN_URL, { 
+            params: { key: steam_token, steamids: steamid },
+            validateStatus: () => true
+        });
 
-     if (!bandata.data.players[0]) {
+        if (!bandata.data.players[0]) {
+            return {};
+        }
+
+        bandata = bandata.data.players[0];
+
+        return {
+            vacbans: bandata.NumberOfVACBans,
+            gamebans: bandata.NumberOfGameBans,
+            communityban: bandata.CommunityBanned,
+            tradeban: bandata.EconomyBan == 'banned'
+        };
+    } catch (error) {
         return {};
-     }
+    }
+}
 
-     bandata = bandata.data.players[0];
+// Returns hastebin URL
+async function uploadText(content) {
+    try {
+        let response = await axios.post(CONSTS.PASTE_URL, friendstext, { 
+            headers: { 'Content-Type': 'text/plain' },
+            timeout: 1500
+        });
 
-     return {
-        vacbans: bandata.NumberOfVACBans,
-        gamebans: bandata.NumberOfGameBans,
-        communityban: bandata.CommunityBanned,
-        tradeban: bandata.EconomyBan == 'banned'
-    };
+        if (!response.data) {
+            return '';
+        }
+
+        return response.data.raw;
+    } catch (error) {
+        return '';
+    }
 }

@@ -24,7 +24,7 @@ Make sure it's formatted exactly as below, note that `rust_token` is an optional
     "steam_token": "YOUR-STEAMDEV-TOKEN",
     "rust_token": "RUSTBANNED.COM-API-TOKEN",
     "client_id": "YOUR-BOTS-CLIENT-ID",
-	"sourceban_urls": [
+    "sourceban_urls": [
         "Links of various Sourcebans websites and their SteamID formats",
         "For example:",
         "https://www.skial.com/sourcebans/": 3,
