@@ -36,7 +36,7 @@ module.exports = {
             try {
                 let steamid = new SteamID(line);
                 plist[steamid.getSteamID64()] = await newProfileEntry(steamid);
-                plist[steamid.getSteamID64()].tags.push({
+                plist[steamid.getSteamID64()].tags[interaction.guildId].push({
                     "cheater" : {
                         addedby: interaction.user.id,
                         date: curdate

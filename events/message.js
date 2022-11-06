@@ -1,4 +1,4 @@
-const { ProfileBuilder } = require('../profile-builder.js');
+const { createProfile } = require('../profile-builder.js');
 
 module.exports = {
 	name: 'messageCreate',
@@ -20,7 +20,7 @@ module.exports = {
 
             let profileid = word.split('/')[4];
 
-            let builder = await ProfileBuilder.create(profileid);
+            let builder = await createProfile(message.guildId, profileid);
             let embed = await builder.getProfileEmbed();
             if (!embed) {
                 return;

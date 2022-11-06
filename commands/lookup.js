@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { ProfileBuilder } = require('../profile-builder.js');
+const { createProfile } = require('../profile-builder.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -12,14 +12,16 @@ module.exports = {
 			),
         
 	async execute(interaction) {
-		let builder = await ProfileBuilder.create(interaction.options.getString('profile'));
+		await interaction.deferReply();
+
+		let builder = await createProfile(interaction.guildId, interaction.options.getString('profile'));
 		let embed = await builder.getProfileEmbed();
 		if (!embed) {
-			await interaction.reply({content: '❌ Error: Could not find profile.'});
+			await interaction.editReply({content: '❌ Error: Could not find profile.'});
 		} 
 		else {
 			let comps = await builder.getProfileComponents();
-			await interaction.reply({ embeds: embed, components: comps }); 
+			await interaction.editReply({ embeds: embed, components: comps }); 
 		}
 	},
 };

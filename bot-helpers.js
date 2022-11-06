@@ -4,27 +4,28 @@ const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
-module.exports = { setupPlayerList, resolveSteamID, newProfileEntry, getBanData, uploadText };
+module.exports = { setupPlayerList, resolveSteamID, getProfileEntry, setProfileEntry, getBanData, uploadText };
 
 function setupPlayerList() {
-    // Create playerlist if it doesn't otherwise exist
-    //fs.writeFileSync('./playerlist.json', '{}', { flag: 'wx' }, x => {});
-
     // Format playerlist so we don't run into null errors later
-    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
-    for (let id of Object.keys(plist)) {
-        if (!plist[id].tags) {
-            plist[id].tags = {};
-        } if (!plist[id].addresses) {
-            plist[id].addresses = {};
-        } if (!plist[id].notifications) {
-            plist[id].notifications = {};
-        } if (!plist[id].bandata) {
-            plist[id].bandata = {};
+    if (fs.existsSync('./playerlist.json')) {
+        let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+        for (let id of Object.keys(plist)) {
+            if (!plist[id].tags) {
+                plist[id].tags = {};
+            } if (!plist[id].addresses) {
+                plist[id].addresses = {};
+            } if (!plist[id].notifications) {
+                plist[id].notifications = {};
+            } if (!plist[id].bandata) {
+                plist[id].bandata = {};
+            }
         }
-    }
 
-    fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+        fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+    } else {
+        fs.writeFileSync('./playerlist.json', JSON.stringify({}, null, '\t'));
+    }
 } 
 
 async function resolveSteamID(steamid) {
@@ -51,6 +52,17 @@ async function resolveSteamID(steamid) {
             return null;
         }
     }
+}
+
+async function getProfileEntry(steamid) {
+	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    return plist[steamid] ?? await newProfileEntry(steamid);
+}
+
+async function setProfileEntry(steamid, data) {
+	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    plist[steamid] = data;
+	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
 }
 
 async function newProfileEntry(steamid) {

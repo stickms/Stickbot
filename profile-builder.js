@@ -6,16 +6,16 @@ const axios = require('axios').default;
 const CONSTS = require('./bot-consts.js');
 
 const HTMLParser = require('node-html-parser');
-const SteamID = require('steamid');
 const fs = require('fs');
 
 class ProfileBuilder {
     constructor() {
-        this.plist = JSON.parse(fs.readFileSync('./playerlist.json'));
     }
 
-    static async create(steamid) {
+    static async initialize(serverid, steamid) {
         let r = new ProfileBuilder();
+        r.plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+        r.serverid = serverid;
         r.steamid = await resolveSteamID(steamid);
         r.cheaterfriends = await r.getCheaterFriendCount();
         return r;
@@ -77,11 +77,15 @@ class ProfileBuilder {
             let taglist = '';
             let iplist = '';
     
-            if (this.plist.hasOwnProperty(id64)) {
-                let tagdata = this.plist[id64].tags;
-                for (let tag in tagdata) {
-                    taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
+            if (this.plist[id64]) {
+                let tagdata = this.plist[id64].tags[this.serverid];
+
+                if (tagdata) {
+                    for (let tag in tagdata) {
+                        taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
+                    } 
                 }
+
                 let addrdata = this.plist[id64].addresses;
                 for (let addr in addrdata) {
                     iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
@@ -148,11 +152,11 @@ class ProfileBuilder {
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
-        if (this.plist.hasOwnProperty(id64)) {
-            let taglist = this.plist[id64].tags;
+        if (this.plist[id64] && this.plist[id64].tags[this.serverid]) {
+            let taglist = this.plist[id64].tags[this.serverid];
             for (let tag of CONSTS.TAGS) {
                 selectmenu.addOptions({
-                    label: `${taglist.hasOwnProperty(tag.value) ? 'Remove' : 'Add'} ${tag.name}`, 
+                    label: `${taglist[tag.value] ? 'Remove' : 'Add'} ${tag.name}`, 
                     value: tag.value
                 });
             }
@@ -224,9 +228,9 @@ class ProfileBuilder {
     
         let cheatercount = this.cheaterfriends;
     
-        if (this.plist.hasOwnProperty(id64)) {
+        if (this.plist[id64]) {
             for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
-                if (this.plist[id64].tags.hasOwnProperty(CONSTS.TAGS[i].value)) {
+                if (this.plist[id64].tags[this.serverid] && this.plist[id64].tags[this.serverid][CONSTS.TAGS[i].value]) {
                     alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
                 }    
             }
@@ -236,7 +240,7 @@ class ProfileBuilder {
             }    
 
             // Place Ban Watch/IP Logs Last
-            if (this.plist[id64].tags.hasOwnProperty('banwatch')) {
+            if (this.plist[id64].tags[this.serverid] && this.plist[id64].tags[this.serverid]['banwatch']) {
                 alertlist += '\u2139\uFE0F Ban Watch\n';
             } if (this.plist[id64].addresses.length > 0) {
                 alertlist += '\u2139\uFE0F IP Logged\n';
@@ -281,7 +285,8 @@ class ProfileBuilder {
             frienddata = frienddata.friendslist.friends;
             for (let i = 0; i < frienddata.length; i++) {
                 if (this.plist.hasOwnProperty(frienddata[i].steamid) && 
-                    this.plist[frienddata[i].steamid].tags.hasOwnProperty('cheater')) {
+                    this.plist[frienddata[i].steamid].tags[this.serverid] && 
+                    this.plist[frienddata[i].steamid].tags[this.serverid]['cheater']) {
                     cheatercount++;
                 }
             } 
@@ -345,4 +350,8 @@ class ProfileBuilder {
     }    
 }
 
-module.exports = { ProfileBuilder };
+async function createProfile(serverid, steamid) {
+    return await ProfileBuilder.initialize(serverid, steamid);
+}
+
+module.exports = { createProfile };

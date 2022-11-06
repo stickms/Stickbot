@@ -1,7 +1,7 @@
 const { steam_token, sourceban_urls } = require('../config.json');
-const { ProfileBuilder } = require('../profile-builder.js');
+const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
-const { newProfileEntry, uploadText } = require('../bot-helpers.js');
+const { getProfileEntry, setProfileEntry, uploadText } = require('../bot-helpers.js');
 
 const axios = require('axios').default;
 const fs = require('fs');
@@ -41,7 +41,7 @@ async function handleMoreInfo(interaction) {
 
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
-	let builder = await ProfileBuilder.create(steamid);
+	let builder = await createProfile(interaction.guildId, steamid);
 	
 	let embed = await builder.getProfileEmbed(true);
 	let comps = await builder.getProfileComponents();
@@ -70,8 +70,9 @@ async function handleListFriends(interaction) {
 	let personadata = []; 
 
 	friends = friends.filter(x => { 
-		return plist.hasOwnProperty(x.steamid) && 
-			plist[x.steamid].tags.hasOwnProperty('cheater')
+		return plist[x.steamid] && 
+			plist[x.steamid].tags[interaction.guildId] && 
+			plist[x.steamid].tags[interaction.guildId]['cheater']
 		});
 
 	for (let i = 0; i < friends.length; i += 100) {
@@ -138,30 +139,28 @@ async function handleListFriends(interaction) {
 
 async function handleModifyTags(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-
-	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
-
-	if (!plist.hasOwnProperty(steamid)) {
-		plist[steamid] = await newProfileEntry(steamid);
-	}
+	let pdata = await getProfileEntry(steamid);
+	let guildid = interaction.guildId;
 
 	for (let tag of interaction.values) {
-		if (plist[steamid].tags.hasOwnProperty(tag)) {
-			delete plist[steamid].tags[tag];
+		if (pdata.tags[guildid] && pdata.tags[guildid][tag]) {
+			delete pdata.tags[guildid][tag];
 		} else {
-			plist[steamid].tags[tag] = {
-				addedby: interaction.user.id,
-				date: Math.floor(Date.now() / 1000)
-			}
+			pdata.tags[guildid] = { 
+				[tag] : {
+					addedby: interaction.user.id,
+					date: Math.floor(Date.now() / 1000)
+				}
+			};
 		}
 	}
 
-	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+	await setProfileEntry(steamid, pdata);
 
 	let original = interaction.message.embeds[0];
 	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
 
-	let builder = await ProfileBuilder.create(steamid);
+	let builder = await createProfile(interaction.guildId, steamid);
 	let comps = await builder.getProfileComponents();
 	let embed = null;
 
@@ -176,18 +175,20 @@ async function handleModifyTags(interaction) {
 }
 
 async function handleNotifyButton(interaction) {
-	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
 	let steamid = interaction.customId.split(':')[1];
+	let pdata = await getProfileEntry(steamid);
+	let guildid = interaction.guildId;
 
 	var selectmenu = new SelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
 		.setPlaceholder('Notification Settings')
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
-	if (plist.hasOwnProperty(steamid) && plist[steamid].notifications) {
-		let nolist = plist[steamid].notifications;
+	if (pdata.notifications && pdata.notifications[guildid]) {
+		let nolist = pdata.notifications[guildid];
+
 		for (let noti of CONSTS.NOTIFICATIONS) {
-			let hasnoti = nolist.hasOwnProperty(noti.value) && nolist[noti.value].includes(interaction.user.id);
+			let hasnoti = nolist[noti.value] && nolist[noti.value].includes(interaction.user.id);
 			selectmenu.addOptions({
 				label: `${hasnoti ? 'Don\'t notify on:' : 'Notify on:'} ${noti.name}`, 
 				value: noti.value
@@ -209,25 +210,26 @@ async function handleNotifyButton(interaction) {
 
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+	let pdata = await getProfileEntry(steamid);
 
-	if (!plist.hasOwnProperty(steamid)) {
-		plist[steamid] = await newProfileEntry(steamid);
+	let userid = interaction.user.id;
+	let guildid = interaction.guildId;
+
+	if (!pdata.notifications[guildid]) {
+		pdata.notifications[guildid] = {};
 	}
 
 	for (let event of interaction.values) {
-		let arr = plist[steamid].notifications[event];
-		if (!arr){
-			arr = [ interaction.user.id ];
-		} else if (arr.includes(interaction.user.id)) {
-			arr = arr.filter(x => x != interaction.user.id);
-		} else {
-			arr.push(interaction.user.id);
-		}
-		plist[steamid].notifications[event] = arr;
+		let arr = pdata.notifications[guildid][event];
+
+		if (!arr) arr = [ userid ];
+		else if (arr.includes(userid)) arr = arr.filter(x => x != userid);
+		else arr.push(userid);
+
+		pdata.notifications[guildid][event] = arr;
 	}
 
-	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+	await setProfileEntry(steamid, pdata);
 
 	await interaction.reply({ content: `✅ Modified notification settings for **${steamid}**`, ephemeral: true });
 }

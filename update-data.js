@@ -1,4 +1,4 @@
-const { ProfileBuilder } = require('./profile-builder.js');
+const { createProfile } = require('./profile-builder.js');
 const { steam_token, banwatch_channel } = require('./config.json');
 const axios = require('axios').default;
 const fs = require('node:fs');
@@ -73,7 +73,7 @@ async function updatePlayerData(client) {
 		}
 
 		if (banmessages.length) {
-			let builder = await ProfileBuilder.create(bans.SteamId);
+			let builder = await createProfile(bans.SteamId);
 
 			let message = {
 				content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**`,
@@ -106,7 +106,7 @@ async function updatePlayerData(client) {
 		};
 
 		if (plist[profile.steamid].notifications.log) {
-			let builder = await ProfileBuilder.create(profile.steamid);
+			let builder = await createProfile(profile.steamid);
 
 			let message = {
 				content: `**${profile.steamid}** has had a new IP Logged`,
