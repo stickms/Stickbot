@@ -35,21 +35,21 @@ async function updatePlayerData(client) {
 		}));
 	}
 
-	await Promise.allSettled(summarytasks).then(result => {
+	await Promise.allSettled(summarytasks).then((result) => {
 		for (let res of result) {
             if (res.status == 'fulfilled') {
 				summaries.push(...res.value.data.response.players);
             }
         }
-	}, rejected => console.log(`${rejected.length} banwatch errors`));
+	});
 
-	await Promise.allSettled(bantasks).then(result => {
+	await Promise.allSettled(bantasks).then((result) => {
 		for (let res of result) {
 			if (res.status == 'fulfilled') {
 				bandata.push(...res.value.data.players);
             }
         }
-	}, rejected => console.log(`${rejected.length} banwatch errors`));
+	});
 
 	let updatemessages = [];
 
@@ -73,19 +73,22 @@ async function updatePlayerData(client) {
 		}
 
 		if (banmessages.length) {
-			let builder = await createProfile(bans.SteamId);
+			for (let guildid in plist[bans.SteamId].tags) {
+				let builder = await createProfile(guildid, bans.SteamId);
+				let message = {
+					content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**\n`,
+					embeds: await builder.getProfileEmbed(),
+					components: await builder.getProfileComponents(),
+				};		
 
-			let message = {
-				content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**`,
-				embeds: await builder.getProfileEmbed(),
-				components: await builder.getProfileComponents(),
-			};	
-	
-			updatemessages.push({ snowflake: banwatch_channel, message: message, dm: false });
-	
-			for (let user of plist[profile.steamid].notifications.ban) {
-				updatemessages.push({ snowflake: user, message: message, dm: true });
-			}	
+				if (plist[bans.SteamId].notifications[guildid]) {
+					for (let userid of plist[bans.SteamId].notifications[guildid].ban) {
+						message.content += `<@${userid}> `;
+					}
+				}
+
+				updatemessages.push({ snowflake: banwatch_channel, message: message });
+			}
 		}
 	}
 
@@ -105,17 +108,20 @@ async function updatePlayerData(client) {
 			date: Math.floor(Date.now() / 1000)
 		};
 
-		if (plist[profile.steamid].notifications.log) {
-			let builder = await createProfile(profile.steamid);
+		for (let guildid in plist[profile.steamid].tags) {
+			if (plist[profile.steamid].notifications[guildid]) {
+				let builder = await createProfile(guildid, profile.steamid);
+				let message = {
+					content: `**${profile.steamid}** has had a new IP Logged\n`,
+					embeds: await builder.getProfileEmbed(),
+					components: await builder.getProfileComponents(),
+				};		
 
-			let message = {
-				content: `**${profile.steamid}** has had a new IP Logged`,
-				embeds: await builder.getProfileEmbed(),
-				components: await builder.getProfileComponents(),
-			};	
+				for (let userid of plist[profile.steamid].notifications[guildid].log) {
+					message.content += `<@${userid}> `;
+				}
 
-			for (let user of plist[profile.steamid].notifications.log) {
-				updatemessages.push({ snowflake: user, message: message, dm: true });
+				updatemessages.push({ snowflake: banwatch_channel, message: message });
 			}
 		}
 
@@ -131,8 +137,7 @@ async function updatePlayerData(client) {
 	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
 
 	for (let update of updatemessages) {
-		let channel = update.dm ? await client.users.fetch(update.snowflake, { force: true }) :
-			await client.channels.fetch(update.snowflake);
+		let channel = await client.channels.fetch(update.snowflake);
 
 		try {
 			if (channel) await channel.send(update.message);
