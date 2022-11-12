@@ -42,7 +42,6 @@ async function handleMoreInfo(interaction) {
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
 	let builder = await createProfile(interaction.guildId, steamid);
-	
 	let embed = await builder.getProfileEmbed(true);
 	let comps = await builder.getProfileComponents();
 
@@ -70,10 +69,8 @@ async function handleListFriends(interaction) {
 	let personadata = []; 
 
 	friends = friends.filter(x => { 
-		return plist[x.steamid] && 
-			plist[x.steamid].tags[interaction.guildId] && 
-			plist[x.steamid].tags[interaction.guildId]['cheater']
-		});
+		return plist[x.steamid]?.tags?.[interaction.guildId]?.['cheater']
+	});
 
 	for (let i = 0; i < friends.length; i += 100) {
 		try {
@@ -184,7 +181,7 @@ async function handleNotifyButton(interaction) {
 		.setPlaceholder('Notification Settings')
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
-	if (pdata.notifications && pdata.notifications[guildid]) {
+	if (pdata.notifications?.[guildid]) {
 		let nolist = pdata.notifications[guildid];
 
 		for (let noti of CONSTS.NOTIFICATIONS) {

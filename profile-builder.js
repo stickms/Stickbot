@@ -17,7 +17,7 @@ class ProfileBuilder {
         r.plist = JSON.parse(fs.readFileSync('./playerlist.json'));
         r.serverid = serverid;
         r.steamid = await resolveSteamID(steamid);
-        r.cheaterfriends = await r.getCheaterFriendCount();
+        r.cheatercount = await r.getCheaterFriendCount();
         return r;
     }
 
@@ -78,25 +78,19 @@ class ProfileBuilder {
             let iplist = '';
     
             if (this.plist[id64]) {
-                let tagdata = this.plist[id64].tags[this.serverid];
+                let tagdata = this.plist[id64]?.tags?.[this.serverid];
+                for (let tag in tagdata) {
+                    taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
+                } 
 
-                if (tagdata) {
-                    for (let tag in tagdata) {
-                        taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
-                    } 
-                }
-
-                let addrdata = this.plist[id64].addresses;
+                let addrdata = this.plist[id64]?.addresses;
                 for (let addr in addrdata) {
                     iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
                 }
             }
     
-            if (taglist) {
-                embed.addFields({ name: 'Added Tags', value: taglist });
-            } if (iplist) {
-                embed.addFields({ name: 'Logged IPs', value: iplist });
-            }
+            if (taglist) embed.addFields({ name: 'Added Tags', value: taglist });
+            if (iplist) embed.addFields({ name: 'Logged IPs', value: iplist });
     
             if (sourcebans == null) {
                 sourcebans = await this.getSourceBans();
@@ -152,7 +146,7 @@ class ProfileBuilder {
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
-        if (this.plist[id64] && this.plist[id64].tags[this.serverid]) {
+        if (this.plist[id64]?.tags?.[this.serverid]) {
             let taglist = this.plist[id64].tags[this.serverid];
             for (let tag of CONSTS.TAGS) {
                 selectmenu.addOptions({
@@ -180,7 +174,7 @@ class ProfileBuilder {
                 .setStyle(ButtonStyle.Primary)
             ]);
 
-        if (this.cheaterfriends > 0) {
+        if (this.cheatercount > 0) {
             buttonrow.addComponents(
                 new ButtonBuilder()
                     .setCustomId(`friendinfo:${this.steamid.getSteamID64()}`)
@@ -225,22 +219,20 @@ class ProfileBuilder {
         } if (bandata.tradeban) {
             alertlist += '❌ Trade Ban\n';
         }
-    
-        let cheatercount = this.cheaterfriends;
-    
+        
         if (this.plist[id64]) {
             for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
-                if (this.plist[id64].tags[this.serverid] && this.plist[id64].tags[this.serverid][CONSTS.TAGS[i].value]) {
+                if (this.plist[id64]?.tags?.[this.serverid]?.[CONSTS.TAGS[i].value]) {
                     alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
                 }    
             }
 
-            if (cheatercount > 0) {
-                alertlist += `⚠️ Friends with ${cheatercount} cheater${cheatercount == 1 ? '' : 's'}`;
+            if (this.cheatercount > 0) {
+                alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
             }    
 
             // Place Ban Watch/IP Logs Last
-            if (this.plist[id64].tags[this.serverid] && this.plist[id64].tags[this.serverid]['banwatch']) {
+            if (this.plist[id64]?.tags?.[this.serverid]?.['banwatch']) {
                 alertlist += '\u2139\uFE0F Ban Watch\n';
             } if (this.plist[id64].addresses.length > 0) {
                 alertlist += '\u2139\uFE0F IP Logged\n';
@@ -284,9 +276,7 @@ class ProfileBuilder {
         if (frienddata.hasOwnProperty('friendslist')) {
             frienddata = frienddata.friendslist.friends;
             for (let i = 0; i < frienddata.length; i++) {
-                if (this.plist.hasOwnProperty(frienddata[i].steamid) && 
-                    this.plist[frienddata[i].steamid].tags[this.serverid] && 
-                    this.plist[frienddata[i].steamid].tags[this.serverid]['cheater']) {
+                if (this.plist?.[frienddata[i].steamid]?.tags[this.serverid]?.['cheater']) {
                     cheatercount++;
                 }
             } 
