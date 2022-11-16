@@ -31,7 +31,7 @@ module.exports = {
         let tag = interaction.options.getString('tag') ?? 'cheater';
 
         let result = Object.keys(plist).map(x => {
-            if (!plist[x].tags[interaction.guildId] || !plist[x].tags[tag][interaction.guildId][tag]) {
+            if (!plist[x].tags[tag][interaction.guildId]?.[tag]) {
                 return '';
             }
 

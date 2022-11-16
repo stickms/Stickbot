@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const play = require('play-dl');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -18,5 +19,10 @@ module.exports = {
 };
 
 async function commandPlay(interaction) {
-    console.log(interaction.commandName);
+    if (!interaction.member.voice?.channel)  {
+        await interaction.reply({ content: '❌ Error: Please join a voice channel first.' });
+        return;
+    }
+
+    
 }

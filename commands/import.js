@@ -34,8 +34,15 @@ module.exports = {
 
         for (let line of fulltext.split('\n')) {
             try {
-                let steamid = new SteamID(line);
-                plist[steamid.getSteamID64()] = await newProfileEntry(steamid);
+                let steamid = (new SteamID(line)).getSteamID64();
+                if (!plist[steamid]) {
+                    plist[steamid] = await newProfileEntry(steamid);
+                } else if (!plist[steamid].tags) {
+                    plist[steamid].tags = { [interaction.guildId] : {} }
+                } else if (!plist[steamid].tags[interaction.guildId]) {
+                    plist[steamid].tags[interaction.guildId] = { }
+                }
+            
                 plist[steamid.getSteamID64()].tags[interaction.guildId].push({
                     "cheater" : {
                         addedby: interaction.user.id,

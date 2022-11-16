@@ -3,6 +3,7 @@
     "axios": "^0.27.2",
     "discord.js": "^14.5.0",
     "node-html-parser": "^6.1.1",
+    "play-dl": "^1.9.6",
     "steamid": "^2.0.0"
   }
 }

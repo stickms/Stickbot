@@ -4,7 +4,11 @@ const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
-module.exports = { setupPlayerList, resolveSteamID, getProfileEntry, setProfileEntry, getBanData, uploadText };
+module.exports = { 
+    setupPlayerList, resolveSteamID, getProfileEntry, setProfileEntry, 
+    setProfileTags, getProfileTags, setProfileAddrs, getProfileAddrs,
+    setProfileNotis, getProfileNotis, getBanData, uploadText 
+};
 
 function setupPlayerList() {
     // Format playerlist so we don't run into null errors later
@@ -55,14 +59,94 @@ async function resolveSteamID(steamid) {
 }
 
 async function getProfileEntry(steamid) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
     return plist[steamid] ?? await newProfileEntry(steamid);
 }
 
 async function setProfileEntry(steamid, data) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
 	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
     plist[steamid] = data;
 	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
+}
+
+async function setProfileTags(guildid, steamid, data) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+
+    if (!plist[steamid]) {
+        plist[steamid] = await newProfileEntry(steamid);
+    } 
+
+    plist[steamid].tags[guildid] = data;
+    setProfileEntry(steamid, plist[steamid])
+}
+
+function getProfileTags(guildid, steamid) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    return plist[steamid]?.tags[guildid] ?? {};
+}
+
+async function setProfileAddrs(steamid, data) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+
+    if (!plist[steamid]) {
+        plist[steamid] = await newProfileEntry(steamid);
+    } 
+
+    plist[steamid].addresses = data;
+    setProfileEntry(steamid, plist[steamid])
+}
+
+function getProfileAddrs(steamid) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    return plist[steamid]?.addresses ?? {};
+}
+
+async function setProfileNotis(guildid, steamid, data) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+
+    if (!plist[steamid]) {
+        plist[steamid] = await newProfileEntry(steamid);
+    } 
+
+    plist[steamid].notifications[guildid] = data;
+    setProfileEntry(steamid, plist[steamid])
+}
+
+function getProfileNotis(guildid, steamid) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+    return plist[steamid]?.notifications[guildid] ?? {};
 }
 
 async function newProfileEntry(steamid) {
