@@ -3,7 +3,7 @@ const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
 const { getProfileTags, setProfileTags, getProfileNotis, setProfileNotis, uploadText } = require('../bot-helpers.js');
 
-const axios = require('axios').default;
+const axios = require('axios');
 const fs = require('fs');
 const CONSTS = require('../bot-consts.js');
 

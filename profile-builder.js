@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, Button
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
 const { resolveSteamID, getBanData, uploadText } = require('./bot-helpers.js');
 
-const axios = require('axios').default;
+const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 
 const HTMLParser = require('node-html-parser');
@@ -238,8 +238,8 @@ class ProfileBuilder {
                 alertlist += '\u2139\uFE0F IP Logged\n';
             }
         }
-        else if (cheatercount > 0) {
-            alertlist += `⚠️ Friends with ${cheatercount} cheater${cheatercount == 1 ? '' : 's'}`;
+        else if (this.cheatercount > 0) {
+            alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
         }
     
         if (timecreated != null) {
@@ -249,11 +249,7 @@ class ProfileBuilder {
             }
         }
     
-        if (!alertlist) {
-            return '✅ None';
-        }
-    
-        return alertlist;
+        return alertlist ?? '✅ None';
     }    
 
     async getCheaterFriendCount() {

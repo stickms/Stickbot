@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { newProfileEntry } = require('../bot-helpers.js');
-const axios = require('axios').default;
+const axios = require('axios');
 const SteamID = require('steamid');
 const fs = require('node:fs');
 

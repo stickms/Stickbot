@@ -1,6 +1,6 @@
 const { createProfile } = require('./profile-builder.js');
 const { steam_token, banwatch_channel } = require('./config.json');
-const axios = require('axios').default;
+const axios = require('axios');
 const fs = require('node:fs');
 
 const CONSTS = require('./bot-consts.js');
