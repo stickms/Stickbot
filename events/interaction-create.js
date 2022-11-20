@@ -1,7 +1,7 @@
 const { steam_token, sourceban_urls } = require('../config.json');
 const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
-const { getProfileTags, setProfileTags, getProfileNotis, setProfileNotis, uploadText } = require('../bot-helpers.js');
+const { getProfileTags, setProfileTags, getProfileNotis, setProfileNotis } = require('../bot-helpers.js');
 
 const axios = require('axios');
 const fs = require('fs');
@@ -12,20 +12,28 @@ module.exports = {
 	async execute(interaction) {
 		let customid = interaction.customId;
 
-		if (interaction.isButton()) {
-			if (customid.startsWith('moreinfo')) {
-				await handleMoreInfo(interaction);
-			} else if (customid.startsWith('friendinfo')) {
-				await handleListFriends(interaction);
-			} else if (customid.startsWith('notifybutton')) {
-				await handleNotifyButton(interaction);
-			}
-		} else if (interaction.isSelectMenu()) {
-			if (customid.startsWith('modifytags')) {
-				await handleModifyTags(interaction);
-			} else if (customid.startsWith('notifymenu')) {
-				await handleNotifyMenu(interaction);
-			}
+		try {
+			if (interaction.isButton()) {
+				if (customid.startsWith('moreinfo')) {
+					await handleMoreInfo(interaction);
+				} else if (customid.startsWith('friendinfo')) {
+					await handleListFriends(interaction);
+				} else if (customid.startsWith('notifybutton')) {
+					await handleNotifyButton(interaction);
+				}
+			} else if (interaction.isSelectMenu()) {
+				if (customid.startsWith('modifytags')) {
+					await handleModifyTags(interaction);
+				} else if (customid.startsWith('notifymenu')) {
+					await handleNotifyMenu(interaction);
+				}
+			} 
+		} catch (error) {
+			try {
+				await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
+			} catch (error2) {
+				await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
+			}	
 		}
 	},
 };
@@ -44,8 +52,9 @@ async function handleMoreInfo(interaction) {
 	let builder = await createProfile(interaction.guildId, steamid);
 	let embed = await builder.getProfileEmbed(true);
 	let comps = await builder.getProfileComponents();
+	let file = builder.getSourceBansFile(); 
 
-	await interaction.editReply({ content: null, embeds: embed, components: comps });
+	await interaction.editReply({ content: null, embeds: embed, components: comps, files: file });
 }
 
 async function handleListFriends(interaction) {
@@ -95,6 +104,7 @@ async function handleListFriends(interaction) {
 	let friendslist = '';
 	let friendstext = '';
 	let requireupload = false;
+	let file = null;
 
 	for (let i in personadata) {
 		let sid = personadata[i].steamid;
@@ -111,13 +121,8 @@ async function handleListFriends(interaction) {
 	} 
 
 	if (requireupload) {
-		let hasteurl = await uploadText(friendstext);
-
-		if (hasteurl) {
-			friendslist += `[\`Click to show all friends\`](${hasteurl})`;
-		} else {
-			friendslist += `\`Error when trying to upload friends list\``;
-		}
+        file = { attachment: Buffer.from(friendstext), name: 'friends.txt' };
+		friendslist += `\`Check Attachment for full list\``;
 	}
 
 	let original = interaction.message.embeds[0];
@@ -131,7 +136,7 @@ async function handleListFriends(interaction) {
 			value: friendslist 
 		});
 
-	await interaction.editReply({ embeds: [ embed ] });
+	await interaction.editReply({ embeds: [ embed ], files: [ file ] });
 }
 
 async function handleModifyTags(interaction) {

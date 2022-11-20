@@ -5,14 +5,16 @@ const SteamID = require('steamid');
 const fs = require('node:fs');
 
 module.exports = {
-	data: new SlashCommandBuilder()
+	data: [
+        new SlashCommandBuilder()
 		.setName('import')
 		.setDescription('Import a list of Steam IDs!')
-        .addAttachmentOption(option => 
-            option.setName('list')
-                .setDescription('A file with a list of Steam IDs')
-                .setRequired(true)
-            ),
+        .addAttachmentOption(
+            option => option.setName('list')
+            .setDescription('A file with a list of Steam IDs')
+            .setRequired(true)
+        )
+    ],
         
 	async execute(interaction) {
 		let idlist = interaction.options.getAttachment('list');

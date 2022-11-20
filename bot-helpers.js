@@ -7,7 +7,7 @@ const { steam_token } = require('./config.json');
 module.exports = { 
     setupPlayerList, resolveSteamID, getProfileEntry, setProfileEntry, 
     setProfileTags, getProfileTags, setProfileAddrs, getProfileAddrs,
-    setProfileNotis, getProfileNotis, getBanData, uploadText 
+    setProfileNotis, getProfileNotis, getBanData 
 };
 
 function setupPlayerList() {
@@ -171,23 +171,5 @@ async function getBanData(steamid) {
         };
     } catch (error) {
         return {};
-    }
-}
-
-// Returns hastebin URL
-async function uploadText(content) {
-    try {
-        let response = await axios.post(CONSTS.PASTE_URL, friendstext, { 
-            headers: { 'Content-Type': 'text/plain' },
-            timeout: 1500
-        });
-
-        if (!response.data) {
-            return '';
-        }
-
-        return response.data.raw;
-    } catch (error) {
-        return '';
     }
 }

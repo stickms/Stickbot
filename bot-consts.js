@@ -7,10 +7,10 @@ module.exports = {
     BAN_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/',
     RUST_URL: 'https://rustbanned.com/api/eac_ban_check_v2.php',
 
-    SRCBAN_URL: 'index.php?p=banlist&advType=steamid&advSearch=',
+    SRCBAN_EXT: 'index.php?p=banlist&advType=steamid&advSearch=',
     PROFILE_URL: 'https://steamcommunity.com/profiles/',
     STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
-    PASTE_URL: 'https://hastebin.app/v2/paste/',
+    PASTE_URL: 'https://hastebin.com/documents',
 
     TAGS: [
         { name: 'Cheater', value: 'cheater' },

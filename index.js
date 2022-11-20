@@ -5,10 +5,13 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { discord_token } = require('./config.json');
 const { setupPlayerList } = require('./bot-helpers.js');
 
-const client = new Client({ intents: [
-	GatewayIntentBits.Guilds, 
-	GatewayIntentBits.GuildMessages, 
-	GatewayIntentBits.MessageContent] 
+const client = new Client({ 
+	intents: [
+		GatewayIntentBits.Guilds, 
+		GatewayIntentBits.GuildMessages, 
+		GatewayIntentBits.MessageContent,
+		GatewayIntentBits.GuildVoiceStates
+	] 
 });
 
 setupPlayerList();
@@ -20,7 +23,9 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
 	const command = require(filePath);
-	client.commands.set(command.data.name, command);
+	for (const cmd of command.data) {
+		client.commands.set(cmd.name, command);
+	}
 }
 
 const eventsPath = path.join(__dirname, 'events');

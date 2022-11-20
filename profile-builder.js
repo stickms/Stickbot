@@ -1,6 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
-const { resolveSteamID, getBanData, uploadText } = require('./bot-helpers.js');
+const { resolveSteamID, getBanData } = require('./bot-helpers.js');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -18,6 +18,7 @@ class ProfileBuilder {
         r.serverid = serverid;
         r.steamid = await resolveSteamID(steamid);
         r.cheatercount = await r.getCheaterFriendCount();
+        r.srcbansfile = null;
         return r;
     }
 
@@ -116,13 +117,8 @@ class ProfileBuilder {
                 if (!banlist) {
                     banlist = '✅ None';
                 } else if (requireupload) {
-                    let hasteurl = await uploadText(bantext); 
-
-                    if (hasteurl) {
-                        banlist += `[\`Click to show all bans\`](${hasteurl})`;
-                    } else {
-                        banlist += `\`Error when trying to upload ban list\``;
-                    }        
+                    this.srcbansfile = { attachment: Buffer.from(bantext), name: 'bans.txt' };
+                    banlist += `\`Check Attachment for full list\``;
                 }
 
                 embed.addFields({ name: 'Sourcebans', value: banlist }); 
@@ -186,13 +182,16 @@ class ProfileBuilder {
         return [ selectrow, buttonrow ];
     }    
 
+    getSourceBansFile() {
+        return this.srcbansfile ? [ this.srcbansfile ] : null;
+    }
+
     async getAlertList(timecreated = null) {
         const id64 = this.steamid.getSteamID64();
     
-        let alertlist = '';
-    
         let bandata = await getBanData(id64);
-        
+        let alertlist = '';
+
         if (bandata.vacbans > 0) {
             alertlist += `❌ ${bandata.vacbans} VAC Ban${(bandata.vacbans == 1 ? '' : 's')}\n`;
         } if (bandata.gamebans > 0) {
@@ -201,7 +200,7 @@ class ProfileBuilder {
             try {
                 let rustdata = await axios.get(CONSTS.RUST_URL, { 
                     params: { apikey: rust_token, steamid64: id64 },
-                    headers: { 'User-Agent': 'Mozilla/5.0' },
+                    headers: { 'User-Agent': 'node-js-app' },
                     timeout: 1000,
                     validateStatus: () => true
                 });
@@ -227,14 +226,14 @@ class ProfileBuilder {
                 }    
             }
 
-            if (this.cheatercount > 0) {
+            if (this.cheatercount) {
                 alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
             }    
 
             // Place Ban Watch/IP Logs Last
-            if (this.plist[id64]?.tags?.[this.serverid]?.['banwatch']) {
+            if (this.plist[id64].tags?.[this.serverid]?.['banwatch']) {
                 alertlist += '\u2139\uFE0F Ban Watch\n';
-            } if (this.plist[id64].addresses.length > 0) {
+            } if (this.plist[id64].addresses?.length) {
                 alertlist += '\u2139\uFE0F IP Logged\n';
             }
         }
@@ -249,7 +248,7 @@ class ProfileBuilder {
             }
         }
     
-        return alertlist ?? '✅ None';
+        return alertlist.length ? alertlist : '✅ None';
     }    
 
     async getCheaterFriendCount() {
@@ -288,11 +287,11 @@ class ProfileBuilder {
     
         for (let url of Object.keys(sourceban_urls)) {
             if (sourceban_urls[url] == 3) {
-                url += CONSTS.SRCBAN_URL + this.steamid.getSteam3RenderedID();
+                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam3RenderedID();
             } else if (sourceban_urls[url] == 2.1) {
-                url += CONSTS.SRCBAN_URL + this.steamid.getSteam2RenderedID(true);
+                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam2RenderedID(true);
             } else {
-                url += CONSTS.SRCBAN_URL + this.steamid.getSteam2RenderedID(false);
+                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam2RenderedID(false);
             }
             
             tasks.push(axios.get(url, { timeout: 3000, validateStatus: () => true }));
