@@ -25,6 +25,10 @@ module.exports = {
 		.setDescription('Skips the currently playing track.'),
 
 		new SlashCommandBuilder()
+		.setName('clear')
+		.setDescription('Clears the entire playlist.'),
+
+		new SlashCommandBuilder()
 		.setName('queue')
 		.setDescription('Shows all of the current tracks in queue.')
 		.addIntegerOption(option => 
@@ -46,11 +50,13 @@ module.exports = {
 			commandLeave(interaction);
 		} else if (interaction.commandName == 'skip') {
 			commandSkip(interaction);
+		} else if (interaction.commandName == 'clear') {
+			commandClear(interaction);
 		} else if (interaction.commandName == 'nowplaying') {
 			commandNowPlaying(interaction);
 		} else if (interaction.commandName == 'queue') {
 			commandQueue(interaction);
-		}
+		}	
 	}
 };
 
@@ -94,20 +100,49 @@ async function commandPlay(interaction) {
 		});
 	}
 
-	let search = await play.search(interaction.options.getString('query'), { limit: 1 });
-	if (!search[0]?.url) {
-		return await interaction.reply('❌ Error: Could not find a related video.');
+	if (!queue[interaction.guildId]) {
+		queue[interaction.guildId] = [];
 	}
 
-	if (!queue[interaction.guildId]) queue[interaction.guildId] = [];
+	let query = interaction.options.getString('query');
 
-	queue[interaction.guildId].push(search[0].url);
+	if (query.startsWith('https') && play.yt_validate(query) == 'playlist') {
+		await interaction.deferReply();
+
+		const playlist = await play.playlist_info(query, { incomplete : true });
+		const videos = await playlist.all_videos();
+
+		for (const video of videos) {
+			queue[interaction.guildId].push(video.url);
+
+			if (queue[interaction.guildId].length == 1) {
+				playAudio(interaction.guildId, video.url);
+			}		
+		}
+
+		let embed = new EmbedBuilder()
+			.setColor(CONSTS.EMBED_CLR)
+			.setAuthor({ name: 'Queued Playlist', iconURL: 'https://i.imgur.com/h6tq25c.png' })
+			.setThumbnail(playlist.thumbnail?.url)
+			.setDescription(`[${playlist.title}](${playlist.url})`);
+
+		return await interaction.editReply({ embeds: [ embed ] });
+	} else if (!query.startsWith('https') || play.yt_validate(query) != 'video') {
+		let search = await play.search(interaction.options.getString('query'), { limit: 1 });
+		if (!search[0]?.url) {
+			return await interaction.reply('❌ Error: Could not find a related video.');
+		}
+
+		query = search[0].url;
+	}
+
+	queue[interaction.guildId].push(query);
 	if (queue[interaction.guildId].length == 1) {
-		playAudio(interaction.guildId, search[0].url);
+		playAudio(interaction.guildId, query);
 	}
 
 	try {
-		const info = await play.video_basic_info(search[0].url);
+		const info = await play.video_basic_info(query);
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
@@ -117,7 +152,7 @@ async function commandPlay(interaction) {
 
 		await interaction.reply({ embeds: [ embed ] });
 	} catch (error) {
-		await interaction.reply('❌ Error: Could not find a related video.');
+		await interaction.reply('❌ Error: Could not load video info.');
 	}
 }
 
@@ -128,9 +163,12 @@ async function commandLeave(interaction) {
 
 async function commandSkip(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection) {
+	if (!connection || queue[interaction.guildId].length == 0) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
+
+	const info = await play.video_basic_info(queue[interaction.guildId][0]);
+	await interaction.reply(`🎵 Skipping **${info.video_details.title}**...`);
 
 	queue[interaction.guildId].shift();
 
@@ -143,6 +181,18 @@ async function commandSkip(interaction) {
 	}
 }
 
+async function commandClear(interaction) {
+	const connection = getVoiceConnection(interaction.guildId);
+	if (!connection) {
+		return await interaction.reply('❌ Error: Not currently playing any tracks.');
+	}
+
+	queue[interaction.guildId] = [];
+	connection.state = { ...connection.state, subscription: null };
+
+	await interaction.reply('🎵 Cleared Playlist!');
+}
+
 async function commandNowPlaying(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
 	if (!connection || !queue[interaction.guildId]?.[0]) {
@@ -152,7 +202,7 @@ async function commandNowPlaying(interaction) {
 	const info = await play.video_basic_info(queue[interaction.guildId][0]);
 
 	let embed = new EmbedBuilder()
-		.setColor(EMBED_CLR)
+		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor({ name: 'Now Playing', iconURL: 'https://i.imgur.com/h6tq25c.png' })
 		.setThumbnail(info.video_details.thumbnails.pop().url)
 		.setDescription(`[${info.video_details.title}](${info.video_details.url})`);
@@ -162,7 +212,7 @@ async function commandNowPlaying(interaction) {
 
 async function commandQueue(interaction) {
 	let embed = new EmbedBuilder()
-		.setColor(EMBED_CLR)
+		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor({ name: 'Queue', iconURL: 'https://i.imgur.com/h6tq25c.png' });
 
 	const length = queue[interaction.guildId]?.length;

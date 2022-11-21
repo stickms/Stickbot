@@ -18,10 +18,13 @@ function setupPlayerList() {
 
 async function resolveSteamID(steamid) {
     try {
+        if (typeof steamid === 'string' && steamid.split('/').length > 4) {
+            steamid = steamid.split('/')[4];
+        }
         return new SteamID(steamid);
     } catch (error) {
-        // Try to check if this is a Vanity URL
         try {
+            // Try to check if this is a Vanity URL
             let response = await axios.get(CONSTS.VANITY_URL, { 
                 params: { key: steam_token, vanityurl: steamid }, 
                 validateStatus: () => true,

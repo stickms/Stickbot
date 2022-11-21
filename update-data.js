@@ -41,7 +41,7 @@ async function updatePlayerData(client) {
 				summaries.push(...res.value.data.response.players);
             }
         }
-	});
+	}).catch(e => console.log(e));
 
 	await Promise.allSettled(bantasks).then((result) => {
 		for (let res of result) {
@@ -49,7 +49,7 @@ async function updatePlayerData(client) {
 				bandata.push(...res.value.data.players);
             }
         }
-	});
+	}).catch(e => console.log(e));
 
 	let updatemessages = [];
 

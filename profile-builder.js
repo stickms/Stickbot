@@ -226,7 +226,7 @@ class ProfileBuilder {
                 }    
             }
 
-            if (this.cheatercount) {
+            if (this.cheatercount > 0) {
                 alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
             }    
 
@@ -268,7 +268,7 @@ class ProfileBuilder {
     
         let cheatercount = 0;
     
-        if (frienddata.hasOwnProperty('friendslist')) {
+        if (frienddata?.['friendslist']?.['friends']) {
             frienddata = frienddata.friendslist.friends;
             for (let i = 0; i < frienddata.length; i++) {
                 if (this.plist?.[frienddata[i].steamid]?.tags[this.serverid]?.['cheater']) {

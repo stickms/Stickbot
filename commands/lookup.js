@@ -18,7 +18,8 @@ module.exports = {
 
 		let builder = await createProfile(interaction.guildId, interaction.options.getString('profile'));
 		let embed = await builder.getProfileEmbed();
-		if (!embed) {
+
+		if (!embed || embed.length == 0) {
 			await interaction.editReply({content: '❌ Error: Could not find profile.'});
 		} 
 		else {

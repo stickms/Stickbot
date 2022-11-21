@@ -200,7 +200,7 @@ async function handleNotifyButton(interaction) {
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
 	let usernotis = getProfileNotis(interaction.guildId, steamid);
-	let userid = interaction.user.id;
+	let userid = +interaction.user.id;
 
 	for (let event of interaction.values) {
 		if (usernotis[event]?.includes(userid)) {
