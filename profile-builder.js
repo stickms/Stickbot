@@ -51,7 +51,7 @@ class ProfileBuilder {
         const alertlist = await this.getAlertList(data.timecreated);
     
         const embed = new EmbedBuilder()
-            .setColor(0xADD8E6)
+            .setColor(CONSTS.EMBED_CLR)
             .setAuthor({ name: data.personaname, iconURL: CONSTS.STEAM_ICON, url: `${CONSTS.PROFILE_URL}${id64}/`})
             .setThumbnail(data.avatarfull)
             .addFields(

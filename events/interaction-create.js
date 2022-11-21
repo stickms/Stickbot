@@ -128,7 +128,7 @@ async function handleListFriends(interaction) {
 	let original = interaction.message.embeds[0];
 
 	let embed = new EmbedBuilder()
-		.setColor(0xADD8E6)
+		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor(original.author)
 		.setThumbnail(original.thumbnail.url)
 		.addFields({ 
