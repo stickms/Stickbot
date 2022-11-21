@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, AudioPlayerStatus } = require('@discordjs/voice')
+const CONSTS = require('../bot-consts')
 const play = require('play-dl');
 
 let queue = {};
@@ -109,7 +110,7 @@ async function commandPlay(interaction) {
 		const info = await play.video_basic_info(search[0].url);
 
 		let embed = new EmbedBuilder()
-			.setColor(0xADD8E6)
+			.setColor(CONSTS.EMBED_CLR)
 			.setAuthor({ name: 'Queued Track', iconURL: 'https://i.imgur.com/h6tq25c.png' })
 			.setThumbnail(info.video_details.thumbnails.pop().url)
 			.setDescription(`[${info.video_details.title}](${info.video_details.url})`);
@@ -151,7 +152,7 @@ async function commandNowPlaying(interaction) {
 	const info = await play.video_basic_info(queue[interaction.guildId][0]);
 
 	let embed = new EmbedBuilder()
-		.setColor(0xADD8E6)
+		.setColor(EMBED_CLR)
 		.setAuthor({ name: 'Now Playing', iconURL: 'https://i.imgur.com/h6tq25c.png' })
 		.setThumbnail(info.video_details.thumbnails.pop().url)
 		.setDescription(`[${info.video_details.title}](${info.video_details.url})`);
@@ -161,7 +162,7 @@ async function commandNowPlaying(interaction) {
 
 async function commandQueue(interaction) {
 	let embed = new EmbedBuilder()
-		.setColor(0xADD8E6)
+		.setColor(EMBED_CLR)
 		.setAuthor({ name: 'Queue', iconURL: 'https://i.imgur.com/h6tq25c.png' });
 
 	const length = queue[interaction.guildId]?.length;
