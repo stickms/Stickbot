@@ -23,7 +23,8 @@ async function updatePlayerData(client) {
 				key: steam_token, 
 				steamids: idlist 
 			},
-			timeout: 2000  
+			timeout: 2000,
+			validateStatus: () => true  
 		}));
 
 		bantasks.push(axios.get(CONSTS.BAN_URL, { 
@@ -31,25 +32,30 @@ async function updatePlayerData(client) {
 				key: steam_token, 
 				steamids: idlist 
 			},
-			timeout: 2000  
+			timeout: 2000,
+			validateStatus: () => true 
 		}));
 	}
 
-	await Promise.allSettled(summarytasks).then((result) => {
-		for (let res of result) {
-            if (res.status == 'fulfilled') {
-				summaries.push(...res.value.data.response.players);
-            }
-        }
-	}).catch(e => console.log(e));
+	try {
+		await Promise.allSettled(summarytasks).then(result => {
+			for (const get of result) {
+				if (get.status == 'fulfilled' && get.value?.data?.response?.players) {
+					summaries.push(...get.value.data.response.players);
+				}
+			}
+		});
 
-	await Promise.allSettled(bantasks).then((result) => {
-		for (let res of result) {
-			if (res.status == 'fulfilled') {
-				bandata.push(...res.value.data.players);
-            }
-        }
-	}).catch(e => console.log(e));
+		await Promise.allSettled(bantasks).then(result => {
+			for (const get of result) {
+				if (get.status == 'fulfilled' && get.value?.data?.players) {
+					bandata.push(...get.value.data.players);
+				}
+			}
+		});
+	} catch(error) {
+		console.log('Error occurred in Banwatch update');
+	}
 
 	let updatemessages = [];
 

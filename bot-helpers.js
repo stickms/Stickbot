@@ -21,27 +21,26 @@ async function resolveSteamID(steamid) {
         if (typeof steamid === 'string' && steamid.split('/').length > 4) {
             steamid = steamid.split('/')[4];
         }
-        return new SteamID(steamid);
-    } catch (error) {
-        try {
-            // Try to check if this is a Vanity URL
-            let response = await axios.get(CONSTS.VANITY_URL, { 
-                params: { key: steam_token, vanityurl: steamid }, 
-                validateStatus: () => true,
-                timeout: 1500,
-            });
 
-            let data = response.data.response;
+        // Try to check if this is a Vanity URL first
+        let response = await axios.get(CONSTS.VANITY_URL, { 
+            params: { key: steam_token, vanityurl: steamid }, 
+            validateStatus: () => true,
+            timeout: 1500,
+        });
 
-            if (data.steamid) {
-                return new SteamID(data.steamid);
-            }    
-            else {
-                return null;
-            }
-        } catch (error2) {
-            return null;
+        let data = response.data.response;
+
+        if (data.steamid) {
+            return new SteamID(data.steamid);
+        }    
+        else {
+            // Check if it's a regular steamid format
+            return new SteamID(steamid);
         }
+        
+    } catch (error) {
+        return null;
     }
 }
 

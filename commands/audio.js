@@ -122,7 +122,7 @@ async function commandPlay(interaction) {
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Playlist', iconURL: 'https://i.imgur.com/h6tq25c.png' })
+			.setAuthor({ name: 'Queued Playlist', iconURL: 'https://i.imgur.com/xGH9Yt6.png' })
 			.setThumbnail(playlist.thumbnail?.url)
 			.setDescription(`[${playlist.title}](${playlist.url})`);
 
@@ -142,14 +142,27 @@ async function commandPlay(interaction) {
 	}
 
 	try {
-		const info = await play.video_basic_info(query);
+		const info = (await play.video_basic_info(queue[interaction.guildId][0])).video_details;
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Track', iconURL: 'https://i.imgur.com/h6tq25c.png' })
-			.setThumbnail(info.video_details.thumbnails.pop().url)
-			.setDescription(`[${info.video_details.title}](${info.video_details.url})`);
-
+			.setAuthor({ name: 'Queued Track', iconURL: 'https://i.imgur.com/xGH9Yt6.png' })
+			.setThumbnail(info.thumbnails.pop().url)
+			.addFields(
+				{
+					name: 'Track', 
+					value: `[${info.title}](${info.url})`
+				}, {
+					name: 'Uploaded By', 
+					value: `[${info.channel.name}](${info.channel.url})`
+				}, {
+					name: 'Statistics', 
+					value: `Views: ${info.views}
+					Likes: ${info.likes}
+					Duration: \`[${info.durationRaw}]\``
+				}
+			)
+		
 		await interaction.reply({ embeds: [ embed ] });
 	} catch (error) {
 		await interaction.reply('❌ Error: Could not load video info.');
@@ -159,6 +172,8 @@ async function commandPlay(interaction) {
 async function commandLeave(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
 	connection.destroy();
+
+	await interaction.reply('🎵 Left the voice channel.');
 }
 
 async function commandSkip(interaction) {
@@ -199,13 +214,26 @@ async function commandNowPlaying(interaction) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
-	const info = await play.video_basic_info(queue[interaction.guildId][0]);
+	const info = (await play.video_basic_info(queue[interaction.guildId][0])).video_details;
 
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Now Playing', iconURL: 'https://i.imgur.com/h6tq25c.png' })
-		.setThumbnail(info.video_details.thumbnails.pop().url)
-		.setDescription(`[${info.video_details.title}](${info.video_details.url})`);
+		.setAuthor({ name: 'Now Playing', iconURL: 'https://i.imgur.com/xGH9Yt6.png' })
+		.setThumbnail(info.thumbnails.pop().url)
+		.addFields(
+			{
+				name: 'Track', 
+				value: `[${info.title}](${info.url})`
+			}, {
+				name: 'Uploaded By', 
+				value: `[${info.channel.name}](${info.channel.url})`
+			}, {
+				name: 'Statistics', 
+				value: `Views: ${info.views}
+				Likes: ${info.likes}
+				Duration: \`[${info.durationRaw}]\``
+			}
+		)
 
 	await interaction.reply({ embeds: [ embed ] });
 }
@@ -213,7 +241,7 @@ async function commandNowPlaying(interaction) {
 async function commandQueue(interaction) {
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Queue', iconURL: 'https://i.imgur.com/h6tq25c.png' });
+		.setAuthor({ name: 'Queue', iconURL: 'https://i.imgur.com/xGH9Yt6.png' });
 
 	const length = queue[interaction.guildId]?.length;
 	if (!length) {
