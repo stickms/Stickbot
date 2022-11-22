@@ -12,7 +12,7 @@ module.exports = {
 	async execute(interaction) {
 		let customid = interaction.customId;
 
-		try {
+		//try {
 			if (interaction.isButton()) {
 				if (customid.startsWith('moreinfo')) {
 					await handleMoreInfo(interaction);
@@ -28,13 +28,13 @@ module.exports = {
 					await handleNotifyMenu(interaction);
 				}
 			} 
-		} catch (error) {
-			try {
-				await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
-			} catch (error2) {
-				await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
-			}	
-		}
+		// } catch (error) {
+		// 	try {
+		// 		await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
+		// 	} catch (error2) {
+		// 		await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
+		// 	}	
+		// }
 	},
 };
 
@@ -68,6 +68,7 @@ async function handleListFriends(interaction) {
 	try {
 		friends = (await axios.get(CONSTS.FRIEND_URL, { 
 			params: { key: steam_token, steamid: steamid }, 
+			timeout: 1500,
 			validateStatus: () => true 
 		})).data.friendslist.friends;
 	} catch (error) {
@@ -89,13 +90,14 @@ async function handleListFriends(interaction) {
 					key: steam_token, 
 					steamids: chunk.map(val => val.steamid).join(',') 
 				}, 
-				timeout: 1500
-			} );
+				timeout: 1500,
+				validateStatus: () => true 
+			});
 
 			personadata.push(...chunkdata.data.response.players);	
 		} catch (error) {
-			await interaction.editReply({ content: '❌ Error checking friend data.' });
-			return;
+			// await interaction.editReply({ content: '❌ Error checking friend data.' });
+			// return;
 		}
 	}
 
@@ -106,12 +108,11 @@ async function handleListFriends(interaction) {
 	let requireupload = false;
 	let file = null;
 
-	for (let i in personadata) {
-		let sid = personadata[i].steamid;
-		let text = `${sid} - ${personadata[i].personaname}`;
+	for (let data of personadata) {
+		let text = `${data.steamid} - ${data.personaname}`;
 		friendstext += text + '\n';
 
-		text = `[\`${sid}\`](${CONSTS.PROFILE_URL}${sid}/) - ${personadata[i].personaname}\n`;
+		text = `[\`${data.steamid}\`](${CONSTS.PROFILE_URL}${data.steamid}/) - ${data.personaname}\n`;
 
 		if ((friendslist + text).length > 950) {
 			requireupload = true;
@@ -121,7 +122,7 @@ async function handleListFriends(interaction) {
 	} 
 
 	if (requireupload) {
-        file = { attachment: Buffer.from(friendstext), name: 'friends.txt' };
+        file = [ { attachment: Buffer.from(friendstext), name: 'friends.txt' } ];
 		friendslist += `\`Check Attachment for full list\``;
 	}
 
@@ -136,7 +137,7 @@ async function handleListFriends(interaction) {
 			value: friendslist 
 		});
 
-	await interaction.editReply({ embeds: [ embed ], files: [ file ] });
+	await interaction.editReply({ content: null, embeds: [ embed ], files: file });
 }
 
 async function handleModifyTags(interaction) {
