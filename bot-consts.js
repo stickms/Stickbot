@@ -16,7 +16,7 @@ module.exports = {
 
     TAGS: [
         { name: 'Cheater', value: 'cheater' },
-        { name: 'Suspcious', value: 'suspicious' },
+        { name: 'Suspicious', value: 'suspicious' },
         { name: 'Content Creator', value: 'popular' },
         { name: 'Ban Watch', value: 'banwatch' }
     ],

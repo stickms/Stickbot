@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, NoSubscriberBehavior, AudioPlayerStatus } = require('@discordjs/voice')
 const CONSTS = require('../bot-consts')
 const play = require('play-dl');
+
+const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, 
+		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice')
 
 let queue = {};
 
@@ -73,14 +75,18 @@ async function playAudio(guildId, url) {
 		behaviors: { noSubscriber: NoSubscriberBehavior.Play }
 	});
 
-	// TODO: Maybe add a "now playing" notification?
-	// player.on(AudioPlayerStatus.Playing, () => {
-	// });	
-
-	player.on(AudioPlayerStatus.Idle, () => {
+	player.on(AudioPlayerStatus.Idle, async () => {
 		queue[guildId].shift();
-		playAudio(guildId, queue[guildId][0]); // Play next song in queue
-	});	
+		if (queue[guildId][0]) {
+			playAudio(guildId, queue[guildId][0]); // Play next song in queue
+		} else {
+			try {
+				connection.destroy();
+			} catch (error) {
+				// Connection has already been destroyed
+			}
+		}
+	});
 
 	player.play(resource);
 	connection.subscribe(player);
@@ -99,6 +105,19 @@ async function commandPlay(interaction) {
 			adapterCreator: interaction.guild.voiceAdapterCreator
 		});
 	}
+
+	// Try to handle disconnects
+	connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+		try {
+			await Promise.race([
+				entersState(connection, VoiceConnectionStatus.Signalling, 2000),
+				entersState(connection, VoiceConnectionStatus.Connecting, 2000),
+			]);
+		} catch (error) {
+			connection.destroy();
+			queue[interaction.guildId] = [];
+		}
+	});	
 
 	if (!queue[interaction.guildId]) {
 		queue[interaction.guildId] = [];
@@ -200,8 +219,7 @@ async function commandSkip(interaction) {
 }
 
 async function commandClear(interaction) {
-	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection) {
+	if (!queue[interaction.guildId]?.length) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
