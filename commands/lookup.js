@@ -20,7 +20,7 @@ module.exports = {
 		let embed = await builder.getProfileEmbed();
 
 		if (!embed || embed.length == 0) {
-			await interaction.editReply({content: '❌ Error: Could not find profile.'});
+			await interaction.editReply({ content: '❌ Error: Could not find profile.' });
 		} 
 		else {
 			let comps = await builder.getProfileComponents();

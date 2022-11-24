@@ -1,14 +1,11 @@
 const { createProfile } = require('./profile-builder.js');
 const { steam_token, banwatch_channel } = require('./config.json');
-const axios = require('axios');
-const fs = require('node:fs');
+const { db, getNotis, setBans, getBans, getAddrs, setAddrs } = require('./database');
 
+const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 
 async function updatePlayerData(client) {
-	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
-	let players = Object.keys(plist);
-
 	let summarytasks = [];
 	let bantasks = [];
 	
@@ -16,6 +13,8 @@ async function updatePlayerData(client) {
 	let bandata = [];
 
 	try {
+		let players = Object.keys(db.players);
+
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
 
@@ -59,27 +58,31 @@ async function updatePlayerData(client) {
 
 	let updatemessages = [];
 
-	for (let bans of bandata) {
-		let localbans = plist[bans.SteamId].bandata;
-
+	for (let data of bandata) {
+		const curbans = getBans(data.SteamId);
+		let bans = curbans;
 		let banmessages = [];
 
-		if (bans.NumberOfVACBans != localbans.vacbans) {
-			banmessages.push(bans.NumberOfVACBans > localbans.vacbans ? 'VAC Banned' : 'Un-VAC Banned');
-			plist[bans.SteamId].bandata.vacbans = bans.NumberOfVACBans;
-		} if (bans.NumberOfGameBans != localbans.gamebans) {
-			banmessages.push(bans.NumberOfGameBans > localbans.gamebans ? 'Game Banned' : 'Un-Game Banned');
-			plist[bans.SteamId].bandata.gamebans = bans.NumberOfGameBans;
-		} if (bans.CommunityBanned != localbans.communityban) {
-			banmessages.push(bans.CommunityBanned ? 'Community Banned' : 'Un-Community Banned');
-			plist[bans.SteamId].bandata.communityban = bans.CommunityBanned;
-		} if ((bans.EconomyBan == 'banned') != localbans.tradeban) {
-			banmessages.push((bans.EconomyBan == 'banned') ? 'Trade Banned' : 'Un-Trade Banned');
-			plist[bans.SteamId].bandata.tradeban = (bans.EconomyBan == 'banned');
+		if (data.NumberOfVACBans != bans.vacbans) {
+			banmessages.push(data.NumberOfVACBans > bans.vacbans ? 'VAC Banned' : 'Un-VAC Banned');
+			bans.vacbans = data.NumberOfVACBans;
+		} if (data.NumberOfGameBans != bans.gamebans) {
+			banmessages.push(data.NumberOfGameBans > bans.gamebans ? 'Game Banned' : 'Un-Game Banned');
+			bans.gamebans = data.NumberOfGameBans;
+		} if (data.CommunityBanned != bans.communityban) {
+			banmessages.push(data.CommunityBanned ? 'Community Banned' : 'Un-Community Banned');
+			bans.communityban = data.CommunityBanned;
+		} if ((data.EconomyBan == 'banned') != bans.tradeban) {
+			banmessages.push((data.EconomyBan == 'banned') ? 'Trade Banned' : 'Un-Trade Banned');
+			bans.tradeban = (data.EconomyBan == 'banned');
+		}
+
+		if (bans != curbans) {
+			await setBans(steamid, bans);
 		}
 
 		if (banmessages.length) {
-			for (let guildid in plist[bans.SteamId].tags) {
+			for (let guildid in db.players[data.SteamId].tags) {
 				let builder = await createProfile(guildid, bans.SteamId);
 				let message = {
 					content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**\n`,
@@ -87,8 +90,10 @@ async function updatePlayerData(client) {
 					components: await builder.getProfileComponents(),
 				};		
 
-				if (plist[bans.SteamId].notifications[guildid]) {
-					for (let userid of plist[bans.SteamId].notifications[guildid].ban) {
+				const notis = getNotis(bans.SteamId, guildid);
+
+				if (notis.ban) {
+					for (let userid of notis.ban) {
 						message.content += `<@${userid}> `;
 					}
 				}
@@ -99,23 +104,21 @@ async function updatePlayerData(client) {
 	}
 
 	for (let profile of summaries) {
-		let localaddr = plist[profile.steamid].addresses;
-
-		if (!localaddr) {
-			localaddr = plist[profile.steamid].addresses = {};
-		}
-
 		if (!profile.hasOwnProperty('gameserverip') || profile.gameserverip.split(':')[1] != '0') {
 			continue;
 		}
 
-		localaddr[profile.gameserverip] = {
+		let addrs = getAddrs(profile.steamid);
+
+		addrs[profile.gameserverip] = {
 			game: profile.gameextrainfo ?? 'Unknown Game',
 			date: Math.floor(Date.now() / 1000)
 		};
 
-		for (let guildid in plist[profile.steamid].tags) {
-			if (plist[profile.steamid].notifications[guildid]) {
+		for (let guildid in db.players[profile.steamid].tags) {
+			const notis = getNotis(profile.steamid, guildid);
+
+			if (notis.log) {
 				let builder = await createProfile(guildid, profile.steamid);
 				let message = {
 					content: `**${profile.steamid}** has had a new IP Logged\n`,
@@ -123,24 +126,22 @@ async function updatePlayerData(client) {
 					components: await builder.getProfileComponents(),
 				};		
 
-				for (let userid of plist[profile.steamid].notifications[guildid].log) {
+				for (let userid of notis.log) {
 					message.content += `<@${userid}> `;
-				}
+				}	
 
 				updatemessages.push({ snowflake: banwatch_channel, message: message });
 			}
 		}
 
 		// Delete oldest log if we have more than 6
-		if (Object.keys(localaddr).length > 6) {
-			let sorted = Object.entries(localaddr).sort(([,a], [,b]) => a.date - b.date);
-			delete localaddr[sorted[0][0]];
+		if (Object.keys(addrs).length > 6) {
+			let sorted = Object.entries(addrs).sort(([,a], [,b]) => a.date - b.date);
+			delete addrs[sorted[0][0]];
 		}
 
-		plist[profile.steamid].addresses = localaddr;
+		await setAddrs(profile.steamid, addrs);
 	}
-
-	fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
 
 	for (let update of updatemessages) {
 		let channel = await client.channels.fetch(update.snowflake);

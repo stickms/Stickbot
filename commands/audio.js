@@ -6,6 +6,7 @@ const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnec
 		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice')
 
 let queue = {};
+let settings = {};
 
 module.exports = {
 	data: [ 
@@ -31,6 +32,20 @@ module.exports = {
 		.setDescription('Clears the entire playlist.'),
 
 		new SlashCommandBuilder()
+		.setName('loop')
+		.setDescription('Clears the entire playlist.')
+        .addStringOption(
+            option => option.setName('mode')
+			.setDescription('Loop mode')
+			.setRequired(true)
+            .addChoices(
+                { name: 'Disabled', value: 'off' },
+                { name: 'One Track', value: 'one' },
+                { name: 'All Tracks', value: 'all' },
+            )
+        ),
+
+		new SlashCommandBuilder()
 		.setName('queue')
 		.setDescription('Shows all of the current tracks in queue.')
 		.addIntegerOption(option => 
@@ -54,6 +69,8 @@ module.exports = {
 			commandSkip(interaction);
 		} else if (interaction.commandName == 'clear') {
 			commandClear(interaction);
+		} else if (interaction.commandName == 'loop') {
+			commandLoop(interaction);
 		} else if (interaction.commandName == 'nowplaying') {
 			commandNowPlaying(interaction);
 		} else if (interaction.commandName == 'queue') {
@@ -72,16 +89,48 @@ async function playAudio(guildId, url) {
 
 	let resource = createAudioResource(stream.stream, { inputType: stream.type });
 	let player = createAudioPlayer({
-		behaviors: { noSubscriber: NoSubscriberBehavior.Play }
+		behaviors: { 
+			noSubscriber: NoSubscriberBehavior.Play,
+			maxMissedFrames: 100
+		}
+	});
+
+	player.on(AudioPlayerStatus.Playing, async () => {
+		if (settings[guildId]?.timeout) {
+			clearTimeout(settings[guildId].timeout);
+		}
 	});
 
 	player.on(AudioPlayerStatus.Idle, async () => {
+		if (settings[guildId]) {
+			if (settings[guildId].loop == 'one') {
+				queue[guildId].splice(1, 0, queue[guildId][0]);
+			} else if (settings[guildId].loop == 'all') {
+				queue[guildId].push(queue[guildId][0]);
+			}
+		}
+
 		queue[guildId].shift();
+
 		if (queue[guildId][0]) {
 			playAudio(guildId, queue[guildId][0]); // Play next song in queue
 		} else {
 			try {
-				connection.destroy();
+				if (!settings[guildId]) {
+					settings[guildId] = {};
+				}
+
+				settings[guildId].timeout = setTimeout(() => {
+					try {
+						connection.destroy();
+					} catch (error) {
+						// Already left
+					}
+				}, 120_000); // 2 Mins
+
+				if (settings[guildId]) {
+					settings[guildId].loop = {};
+				}
 			} catch (error) {
 				// Connection has already been destroyed
 			}
@@ -106,7 +155,11 @@ async function commandPlay(interaction) {
 		});
 	}
 
-	// Try to handle disconnects
+	if (!queue[interaction.guildId]) {
+		queue[interaction.guildId] = [];
+	}
+
+	// Handle disconnects
 	connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
 		try {
 			await Promise.race([
@@ -116,12 +169,12 @@ async function commandPlay(interaction) {
 		} catch (error) {
 			connection.destroy();
 			queue[interaction.guildId] = [];
+
+			if (settings[interaction.guildId]) {
+				settings[interaction.guildId].loop = {};
+			}
 		}
 	});	
-
-	if (!queue[interaction.guildId]) {
-		queue[interaction.guildId] = [];
-	}
 
 	let query = interaction.options.getString('query');
 
@@ -141,7 +194,7 @@ async function commandPlay(interaction) {
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Playlist', iconURL: 'https://i.imgur.com/h6tq25c.png' })
+			.setAuthor({ name: 'Queued Playlist', iconURL: CONSTS.MUSIC_ICON })
 			.setThumbnail(playlist.thumbnail?.url)
 			.setDescription(`[${playlist.title}](${playlist.url})`);
 
@@ -165,7 +218,7 @@ async function commandPlay(interaction) {
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Track', iconURL: 'https://i.imgur.com/h6tq25c.png' })
+			.setAuthor({ name: 'Queued Track', iconURL: CONSTS.MUSIC_ICON })
 			.setThumbnail(info.thumbnails.pop().url)
 			.addFields(
 				{
@@ -200,7 +253,7 @@ async function commandLeave(interaction) {
 
 async function commandSkip(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection || queue[interaction.guildId].length == 0) {
+	if (!connection || !queue[interaction.guildId]?.length) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
@@ -212,21 +265,43 @@ async function commandSkip(interaction) {
 	if (queue[interaction.guildId][0]) {
 		await playAudio(interaction.guildId, queue[interaction.guildId][0]); 
 	} else {
-		// TODO: There's probably a better way of doing this, but
-		// I don't want to have to keep track of all my AudioPlayers
-		connection.state = { ...connection.state, subscription: null };
+		connection.destroy();
+
+		if (settings[interaction.guildId]) {
+			settings[interaction.guildId].loop = {};
+		}
 	}
 }
 
 async function commandClear(interaction) {
 	if (!queue[interaction.guildId]?.length) {
-		return await interaction.reply('❌ Error: Not currently playing any tracks.');
+		return await interaction.reply('❌ Error: There are currently no tracks in queue.');
 	}
 
 	queue[interaction.guildId] = [];
-	connection.state = { ...connection.state, subscription: null };
+	if (settings[interaction.guildId]) {
+		settings[interaction.guildId].loop = {};
+	}
+
+	connection.destroy();
 
 	await interaction.reply('🎵 Cleared Playlist!');
+}
+
+async function commandLoop(interaction) {
+	if (!settings[interaction.guildId]) {
+		settings[interaction.guildId] = { };
+	}
+
+	settings[interaction.guildId].loop = interaction.options.getString('mode');
+
+	if (settings[interaction.guildId].loop == 'one') {
+		await interaction.reply('🎵 Playlist will now loop the current track.');
+	} else if (settings[interaction.guildId].loop == 'all') {
+		await interaction.reply('🎵 Playlist will now loop all tracks.');
+	} else {
+		await interaction.reply('🎵 Playlist looping is now disabled.');
+	}
 }
 
 async function commandNowPlaying(interaction) {
@@ -239,7 +314,7 @@ async function commandNowPlaying(interaction) {
 
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Now Playing', iconURL: 'https://i.imgur.com/h6tq25c.png' })
+		.setAuthor({ name: 'Now Playing', iconURL: CONSTS.MUSIC_ICON })
 		.setThumbnail(info.thumbnails.pop().url)
 		.addFields(
 			{
@@ -265,7 +340,7 @@ async function commandNowPlaying(interaction) {
 async function commandQueue(interaction) {
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Queue', iconURL: 'https://i.imgur.com/h6tq25c.png' });
+		.setAuthor({ name: 'Queue', iconURL: CONSTS.MUSIC_ICON });
 
 	const length = queue[interaction.guildId]?.length;
 	if (!length) {

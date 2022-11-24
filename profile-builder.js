@@ -1,12 +1,11 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
+const { getTags, getNotis, getAddrs, getBans } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
-
 const HTMLParser = require('node-html-parser');
-const fs = require('fs');
 
 class ProfileBuilder {
     constructor() {
@@ -14,7 +13,6 @@ class ProfileBuilder {
 
     static async initialize(serverid, steamid) {
         let r = new ProfileBuilder();
-        r.plist = JSON.parse(fs.readFileSync('./playerlist.json'));
         r.serverid = serverid;
         r.steamid = await resolveSteamID(steamid);
         r.cheatercount = await r.getCheaterFriendCount();
@@ -78,16 +76,14 @@ class ProfileBuilder {
             let taglist = '';
             let iplist = '';
     
-            if (this.plist[id64]) {
-                let tagdata = this.plist[id64]?.tags?.[this.serverid];
-                for (let tag in tagdata) {
-                    taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
-                } 
+            let tagdata = getTags(id64, this.serverid);
+            for (let tag in tagdata) {
+                taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
+            } 
 
-                let addrdata = this.plist[id64]?.addresses;
-                for (let addr in addrdata) {
-                    iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
-                }
+            let addrdata = getAddrs(id64);
+            for (let addr in addrdata) {
+                iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
             }
     
             if (taglist) embed.addFields({ name: 'Added Tags', value: taglist });
@@ -142,19 +138,12 @@ class ProfileBuilder {
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
-        if (this.plist[id64]?.tags?.[this.serverid]) {
-            let taglist = this.plist[id64].tags[this.serverid];
-            for (let tag of CONSTS.TAGS) {
-                selectmenu.addOptions({
-                    label: `${taglist[tag.value] ? 'Remove' : 'Add'} ${tag.name}`, 
-                    value: tag.value
-                });
-            }
-        }
-        else {
-            for (let tag of CONSTS.TAGS) {
-                selectmenu.addOptions({label: `Add ${tag.name}`, value: tag.value});
-            }
+        let taglist = getTags(id64, this.serverid);
+        for (let tag of CONSTS.TAGS) {
+            selectmenu.addOptions({
+                label: `${taglist[tag.value] ? 'Remove' : 'Add'} ${tag.name}`, 
+                value: tag.value
+            });
         }
 
         let selectrow = new ActionRowBuilder().addComponents(selectmenu);
@@ -219,26 +208,23 @@ class ProfileBuilder {
             alertlist += '❌ Trade Ban\n';
         }
         
-        if (this.plist[id64]) {
-            for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
-                if (this.plist[id64]?.tags?.[this.serverid]?.[CONSTS.TAGS[i].value]) {
-                    alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
-                }    
-            }
+        const tags = getTags(id64, this.serverid);
 
-            if (this.cheatercount > 0) {
-                alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
+        for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
+            if (tags[CONSTS.TAGS[i].value]) {
+                alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
             }    
-
-            // Place Ban Watch/IP Logs Last
-            if (this.plist[id64].tags?.[this.serverid]?.['banwatch']) {
-                alertlist += '\u2139\uFE0F Ban Watch\n';
-            } if (this.plist[id64].addresses?.length) {
-                alertlist += '\u2139\uFE0F IP Logged\n';
-            }
         }
-        else if (this.cheatercount > 0) {
+
+        if (this.cheatercount > 0) {
             alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
+        }    
+
+        // Place Ban Watch/IP Logs Last
+        if (tags['banwatch']) {
+            alertlist += '\u2139\uFE0F Ban Watch\n';
+        } if (getAddrs(id64).length) {
+            alertlist += '\u2139\uFE0F IP Logged\n';
         }
     
         if (timecreated != null) {
@@ -271,9 +257,8 @@ class ProfileBuilder {
         if (frienddata?.['friendslist']?.['friends']) {
             frienddata = frienddata.friendslist.friends;
             for (let i = 0; i < frienddata.length; i++) {
-                if (this.plist?.[frienddata[i].steamid]?.tags[this.serverid]?.['cheater']) {
-                    cheatercount++;
-                }
+                const tags = getTags(frienddata[i].steamid, this.serverid);
+                if (tags['cheater']) cheatercount++;
             } 
         }
     

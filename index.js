@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { discord_token } = require('./config.json');
-const { setupPlayerList } = require('./bot-helpers.js');
+const { loadDB } = require('./database');
 
 const client = new Client({ 
 	intents: [
@@ -14,7 +14,11 @@ const client = new Client({
 	] 
 });
 
-setupPlayerList();
+if (!fs.existsSync('./playerlist.json')) {
+	fs.writeFileSync('./playerlist.json', JSON.stringify({}, null, '\t'));
+}
+
+loadDB();
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');

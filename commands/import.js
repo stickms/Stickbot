@@ -1,8 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { newProfileEntry } = require('../bot-helpers.js');
+const { setTags, getTags } = require('../database');
 const axios = require('axios');
 const SteamID = require('steamid');
-const fs = require('node:fs');
 
 module.exports = {
 	data: [
@@ -31,31 +30,24 @@ module.exports = {
         }
 
         let fulltext = (await axios.get(idlist.url, { timeout: 5000 })).data;
-        let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
         let curdate = Math.floor(Date.now() / 1000);
 
         for (let line of fulltext.split('\n')) {
             try {
                 let steamid = (new SteamID(line)).getSteamID64();
-                if (!plist[steamid]) {
-                    plist[steamid] = await newProfileEntry(steamid);
-                } else if (!plist[steamid].tags) {
-                    plist[steamid].tags = { [interaction.guildId] : {} }
-                } else if (!plist[steamid].tags[interaction.guildId]) {
-                    plist[steamid].tags[interaction.guildId] = { }
-                }
-            
-                plist[steamid.getSteamID64()].tags[interaction.guildId].push({
-                    "cheater" : {
+                let curtags = getTags(steamid, interaction.guildId);
+
+                if (!curtags['cheater']) {
+                    curtags['cheater'] = {
                         addedby: interaction.user.id,
                         date: curdate
-                    }
-                });
+                    };
+
+                    setTags(steamid, interaction.guildId, curtags);
+                }
             } catch (error) {
                 console.log(`error parsing line: ${line}`);
             }
         }
-
-        fs.writeFileSync('./playerlist.json', JSON.stringify(plist, null, '\t'));
 	},
 };

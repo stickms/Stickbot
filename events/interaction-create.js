@@ -1,10 +1,9 @@
 const { steam_token, sourceban_urls } = require('../config.json');
 const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
-const { getProfileTags, setProfileTags, getProfileNotis, setProfileNotis } = require('../bot-helpers.js');
+const { setTags, getTags, setNotis, getNotis } = require('../database');
 
 const axios = require('axios');
-const fs = require('fs');
 const CONSTS = require('../bot-consts.js');
 
 module.exports = {
@@ -12,7 +11,7 @@ module.exports = {
 	async execute(interaction) {
 		let customid = interaction.customId;
 
-		//try {
+		try {
 			if (interaction.isButton()) {
 				if (customid.startsWith('moreinfo')) {
 					await handleMoreInfo(interaction);
@@ -28,13 +27,13 @@ module.exports = {
 					await handleNotifyMenu(interaction);
 				}
 			} 
-		// } catch (error) {
-		// 	try {
-		// 		await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
-		// 	} catch (error2) {
-		// 		await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
-		// 	}	
-		// }
+		} catch (error) {
+			try {
+				await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
+			} catch (error2) {
+				await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
+			}	
+		}
 	},
 };
 
@@ -72,14 +71,13 @@ async function handleListFriends(interaction) {
 			validateStatus: () => true 
 		})).data.friendslist.friends;
 	} catch (error) {
-		await interaction.editReply({ content: '❌ Error grabbing friends.' });
-		return;
+		return await interaction.editReply({ content: '❌ Error grabbing friends.' });
 	}
 
 	let personadata = []; 
 
 	friends = friends.filter(x => { 
-		return plist[x.steamid]?.tags?.[interaction.guildId]?.['cheater']
+		return getTags(x.steamid, interaction.guildId)['cheater'];
 	});
 
 	for (let i = 0; i < friends.length; i += 100) {
@@ -142,7 +140,7 @@ async function handleListFriends(interaction) {
 
 async function handleModifyTags(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let usertags = getProfileTags(interaction.guildId, steamid);
+	let usertags = getTags(steamid, interaction.guildId);
 
 	for (let tag of interaction.values) {
 		if (usertags[tag]) {
@@ -155,7 +153,7 @@ async function handleModifyTags(interaction) {
 		}
 	}
 
-	await setProfileTags(interaction.guildId, steamid, usertags);
+	await setTags(steamid, interaction.guildId, usertags);
 
 	let original = interaction.message.embeds[0];
 	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
@@ -176,7 +174,7 @@ async function handleModifyTags(interaction) {
 
 async function handleNotifyButton(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let usernotis = getProfileNotis(interaction.guildId, steamid);
+	let usernotis = getNotis(steamid, interaction.guildId);
 
 	var selectmenu = new SelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
@@ -200,7 +198,7 @@ async function handleNotifyButton(interaction) {
 
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let usernotis = getProfileNotis(interaction.guildId, steamid);
+	let usernotis = getNotis(steamid, interaction.guildId);
 	let userid = +interaction.user.id;
 
 	for (let event of interaction.values) {
@@ -213,6 +211,6 @@ async function handleNotifyMenu(interaction) {
 		}
 	}
 
-	await setProfileNotis(interaction.guildId, steamid, usernotis);
+	await setNotis(steamid, interaction.guildId, usernotis);
 	await interaction.update({ content: `✅ Modified notification settings for **${steamid}**`, components: [] });
 }
