@@ -1,6 +1,6 @@
 const { createProfile } = require('./profile-builder.js');
-const { steam_token, banwatch_channel } = require('./config.json');
-const { db, getNotis, setBans, getBans, getAddrs, setAddrs } = require('./database');
+const { steam_token } = require('./config.json');
+const { getPlayers, getNotis, setBans, getBans, getAddrs, setAddrs, getBanwatch, } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -13,7 +13,7 @@ async function updatePlayerData(client) {
 	let bandata = [];
 
 	try {
-		let players = Object.keys(db.players);
+		let players = Object.keys(getPlayers());
 
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
@@ -82,7 +82,7 @@ async function updatePlayerData(client) {
 		}
 
 		if (banmessages.length) {
-			for (let guildid in db.players[data.SteamId].tags) {
+			for (let guildid in getPlayers()[data.SteamId].tags) {
 				let builder = await createProfile(guildid, bans.SteamId);
 				let message = {
 					content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**\n`,
@@ -98,7 +98,10 @@ async function updatePlayerData(client) {
 					}
 				}
 
-				updatemessages.push({ snowflake: banwatch_channel, message: message });
+				const channel = getBanwatch(guildid);
+				if (channel) {
+					updatemessages.push({ snowflake: channel, message: message });
+				}
 			}
 		}
 	}
@@ -115,7 +118,7 @@ async function updatePlayerData(client) {
 			date: Math.floor(Date.now() / 1000)
 		};
 
-		for (let guildid in db.players[profile.steamid].tags) {
+		for (let guildid in getPlayers()[profile.steamid].tags) {
 			const notis = getNotis(profile.steamid, guildid);
 
 			if (notis.log) {
@@ -130,7 +133,10 @@ async function updatePlayerData(client) {
 					message.content += `<@${userid}> `;
 				}	
 
-				updatemessages.push({ snowflake: banwatch_channel, message: message });
+				const channel = getBanwatch(guildid);
+				if (channel) {
+					updatemessages.push({ snowflake: channel, message: message });
+				}
 			}
 		}
 

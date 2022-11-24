@@ -29,9 +29,14 @@ module.exports = {
 			} 
 		} catch (error) {
 			try {
-				await interaction.reply({ content: '❌ Error: Unknown Error while handling this interaction.', ephemeral: true });
+				await interaction.reply({ 
+					content: '❌ Error: Unknown Error while handling this interaction.', 
+					ephemeral: true 
+				});
 			} catch (error2) {
-				await interaction.editReply({ content: '❌ Error: Unknown Error while handling this interaction.' });
+				await interaction.editReply({ 
+					content: '❌ Error: Unknown Error while handling this interaction.' 
+				});
 			}	
 		}
 	},
@@ -42,8 +47,10 @@ async function handleMoreInfo(interaction) {
 	let original = interaction.message;
 
 	if (original.content.startsWith('Fetching')) {
-		await interaction.reply({ content: '❌ Error: Already fetching more info.', ephemeral: true });
-		return;
+		return await interaction.reply({ 
+			content: '❌ Error: Already fetching more info.', 
+			ephemeral: true 
+		});
 	}
 
 	await interaction.update({ content: 'Fetching Source Bans...' });
@@ -57,11 +64,9 @@ async function handleMoreInfo(interaction) {
 }
 
 async function handleListFriends(interaction) {
-	let steamid = interaction.customId.split(':')[1];
-
 	await interaction.deferReply();
-
-	let plist = JSON.parse(fs.readFileSync('./playerlist.json'));
+	
+	let steamid = interaction.customId.split(':')[1];
 	let friends = {};
 
 	try {

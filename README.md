@@ -10,6 +10,7 @@ __Stickbot features:__
 * Sourcebans scraping
 * Playerlist exporting in various formats
 * Ban watch and notifying
+* Music commands (queue, playlist support, YouTube search)
 
 ## File Formatting
 
@@ -38,29 +39,36 @@ Make sure it's formatted exactly as below, note that `rust_token` is an optional
 
 ```
 {
-    "STEAM-ID-HERE": {
-        "tags": {
-            "cheater": {
-                addedby: DISCORD-USER-ID,
-                date: DATE-ADDED
+    "players" {
+        "STEAM-ID-HERE": {
+            "tags": {
+                "cheater": {
+                    addedby: DISCORD-USER-ID,
+                    date: DATE-ADDED
+                }
+            },
+            "addresses": {
+                "GAME-SERVER-IP": {
+                    game: "NAME-OF-GAME",
+                    date: DATE-PLAYED
+                }
+            },
+            "notifications": {
+                "ban": [
+                    "DISCORD-USER-IDS"
+                ]
+            },
+            "bandata": {
+                "vacbans": NUM-VACBANS,
+                "gamebans": NUM-GAMEBANS,
+                "communityban": TRUE/FALSE,
+                "tradeban": TRUE/FALSE
             }
-        },
-        "addresses": {
-            "GAME-SERVER-IP": {
-                game: "NAME-OF-GAME",
-                date: DATE-PLAYED
-            }
-        },
-        "notifications": {
-            "ban": [
-                "DISCORD-USER-IDS"
-            ]
-        },
-        "bandata": {
-            "vacbans": NUM-VACBANS,
-            "gamebans": NUM-GAMEBANS,
-            "communityban": TRUE/FALSE,
-            "tradeban": TRUE/FALSE
+        }
+    },
+    "servers" {
+        "<DISCORD-GUILD-ID>": {
+            "banwatch": "CHANNEL-ID"
         }
     }
 }

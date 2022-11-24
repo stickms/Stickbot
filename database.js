@@ -6,11 +6,13 @@ const { getBanData } = require('./bot-helpers')
 let db = {};
 
 module.exports = {
-    db, loadDB, saveDB,
+    loadDB, saveDB,
+    getPlayers, getServers,
     setTags, getTags,
     setNotis, getNotis,
     setAddrs, getAddrs,
-    setBans, getBans
+    setBans, getBans,
+    setBanwatch, getBanwatch
 };
 
 function loadDB() {
@@ -24,6 +26,10 @@ function loadDB() {
 
 function saveDB() {
     fs.writeFileSync('./playerlist.json', JSON.stringify(db, null, '\t'));
+}
+
+function getPlayers() {
+    return db.players;
 }
 
 async function createPlayer(steamid) {
@@ -105,4 +111,21 @@ async function setBans(steamid, bans) {
 
     db.players[steamid].bans = bans;
     saveDB();
+}
+
+function setBanwatch(guildid, channelid) {
+    if(!db.servers[guildid]) {
+        db.servers[guildid] = {};
+    }
+
+    db.servers[guildid].banwatch = channelid;
+    saveDB();
+}
+
+function getBanwatch(guildid) {
+    if (!db.servers[guildid]?.banwatch) {
+        return null;
+    }
+
+    return db.servers[guildid].banwatch;
 }

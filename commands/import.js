@@ -8,8 +8,8 @@ module.exports = {
         new SlashCommandBuilder()
 		.setName('import')
 		.setDescription('Import a list of Steam IDs!')
-        .addAttachmentOption(
-            option => option.setName('list')
+        .addAttachmentOption(option => option
+            .setName('list')
             .setDescription('A file with a list of Steam IDs')
             .setRequired(true)
         )

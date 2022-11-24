@@ -13,8 +13,8 @@ module.exports = {
 		new SlashCommandBuilder()
 		.setName('play')
 		.setDescription('Play a song from a search query or url!')
-		.addStringOption(option => 
-			option.setName('query')
+		.addStringOption(option => option
+			.setName('query')
 			.setDescription('Search from YouTube')
 			.setRequired(true)
 		),
@@ -34,8 +34,8 @@ module.exports = {
 		new SlashCommandBuilder()
 		.setName('loop')
 		.setDescription('Clears the entire playlist.')
-        .addStringOption(
-            option => option.setName('mode')
+        .addStringOption(option => option
+			.setName('mode')
 			.setDescription('Loop mode')
 			.setRequired(true)
             .addChoices(

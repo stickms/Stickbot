@@ -6,8 +6,8 @@ module.exports = {
 		new SlashCommandBuilder()
 		.setName('lookup')
 		.setDescription('Lookup a Steam Profile!')
-		.addStringOption(
-			option => option.setName('profile')
+		.addStringOption(option => option
+			.setName('profile')
 			.setDescription('Lookup this Profile')
 			.setRequired(true)
 		)

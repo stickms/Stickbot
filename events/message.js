@@ -22,6 +22,7 @@ module.exports = {
 
             let builder = await createProfile(message.guildId, profileid);
             let embed = await builder.getProfileEmbed();
+            
             if (!embed) {
                 return;
             }

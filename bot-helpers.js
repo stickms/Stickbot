@@ -1,4 +1,3 @@
-const fs = require('node:fs');
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');

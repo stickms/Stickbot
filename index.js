@@ -5,6 +5,8 @@ const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { discord_token } = require('./config.json');
 const { loadDB } = require('./database');
 
+loadDB();
+
 const client = new Client({ 
 	intents: [
 		GatewayIntentBits.Guilds, 
@@ -13,12 +15,6 @@ const client = new Client({
 		GatewayIntentBits.GuildVoiceStates
 	] 
 });
-
-if (!fs.existsSync('./playerlist.json')) {
-	fs.writeFileSync('./playerlist.json', JSON.stringify({}, null, '\t'));
-}
-
-loadDB();
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');

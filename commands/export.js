@@ -1,15 +1,15 @@
 const { SlashCommandBuilder } = require('discord.js');
 const CONSTS = require('../bot-consts.js');
 const SteamID = require('steamid');
-const { db } = require('../database')
+const { getPlayers } = require('../database')
 
 module.exports = {
 	data: [ 
         new SlashCommandBuilder()
 		.setName('export')
 		.setDescription('Exports the cheaterlist with a specified tag and format')
-        .addStringOption(
-            option => option.setName('format')
+        .addStringOption(option => option
+            .setName('format')
             .setDescription('Export playerist for this format')
             .setRequired(true)
             .addChoices(
@@ -32,8 +32,8 @@ module.exports = {
         let fmt = interaction.options.getString('format');
         let tag = interaction.options.getString('tag') ?? 'cheater';
 
-        let result = Object.keys(db.players).map(x => {
-            if (!db.players[x].tags[interaction.guildId]?.[tag]) {
+        let result = Object.keys(getPlayers()).map(x => {
+            if (!getPlayers().tags[interaction.guildId]?.[tag]) {
                 return '';
             }
 
@@ -53,13 +53,13 @@ module.exports = {
             }
         }).join('');
 
-        let filename = fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt';
+        let filename = (fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt');
         let file = { attachment: Buffer.from(result), name: filename };
         let message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
 
         if (fmt == 'lbox') {
-            message += "\u2139\uFE0F Paste the export after \"c1 = \" " 
-                + "under the [pl] section of your config in `%localappdata%`\n";
+            message +=  "\u2139\uFE0F Paste the export after \"c1 = \" "  + 
+                        "under the [pl] section of your config in `%localappdata%`\n";
         }
 
         await interaction.reply({ content: message, files: [ file ] });

@@ -13,7 +13,6 @@ module.exports = {
     PROFILE_URL: 'https://steamcommunity.com/profiles/',
     STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
     MUSIC_ICON: 'https://i.imgur.com/T3BQLEd.png',
-    PASTE_URL: 'https://hastebin.com/documents',
 
     TAGS: [
         { name: 'Cheater', value: 'cheater' },
