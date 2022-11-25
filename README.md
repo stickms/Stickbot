@@ -2,7 +2,7 @@
 Discord bot made in JavaScript with Discord.JS
 
 ## Functionality
-Stickbot is a Discord bot that helps you keep track of Steam profiles that you run into and want to log or keep track of. 
+Stickbot is a Discord bot that helps you keep track of Steam profiles that you want to log or keep track of. 
 
 __Stickbot features:__
 * Steam profile lookups

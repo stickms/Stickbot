@@ -7,7 +7,7 @@ let db = {};
 
 module.exports = {
     loadDB, saveDB,
-    getPlayers, getServers,
+    getPlayers, getGuilds,
     setTags, getTags,
     setNotis, getNotis,
     setAddrs, getAddrs,
@@ -45,12 +45,16 @@ async function createPlayer(steamid) {
     };
 }
 
-function getTags(steamid, guildid) {
-    if (!db.players[steamid]?.tags[guildid]) {
-        return {};
+function getGuilds(steamid) {
+    if (!db.players[steamid]?.tags) {
+        return [];
     }
 
-    return db.players[steamid].tags[guildid];
+    return Object.keys(db.players[steamid].tags);
+}
+
+function getTags(steamid, guildid) {
+    return db.players[steamid]?.tags[guildid] ?? {};
 }
 
 async function setTags(steamid, guildid, tags) {
@@ -63,11 +67,7 @@ async function setTags(steamid, guildid, tags) {
 }
 
 function getNotis(steamid, guildid) {
-    if (!db.players[steamid]?.notifications[guildid]) {
-        return {};
-    }
-
-    return db.players[steamid].notifications[guildid];
+    return db.players[steamid]?.notifications[guildid] ?? {};
 }
 
 async function setNotis(steamid, guildid, notifications) {
@@ -80,11 +80,7 @@ async function setNotis(steamid, guildid, notifications) {
 }
 
 function getAddrs(steamid) {
-    if (!db.players[steamid]?.addresses) {
-        return {};
-    }
-
-    return db.players[steamid].addresses;
+    return db.players[steamid]?.addresses ?? {};
 }
 
 async function setAddrs(steamid, addresses) {
@@ -97,11 +93,7 @@ async function setAddrs(steamid, addresses) {
 }
 
 async function getBans(steamid) {
-    if (!db.players[steamid]?.bans) {
-        return await getBanData(steamid);
-    }
-
-    return db.players[steamid].bans;
+    return db.players[steamid]?.bandata ?? await getBanData(steamid);
 }
 
 async function setBans(steamid, bans) {
@@ -109,7 +101,7 @@ async function setBans(steamid, bans) {
         await createPlayer(steamid);
     }
 
-    db.players[steamid].bans = bans;
+    db.players[steamid].bandata = bans;
     saveDB();
 }
 

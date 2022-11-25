@@ -20,7 +20,7 @@ module.exports = {
 
             let profileid = word.split('/')[4];
 
-            let builder = await createProfile(message.guildId, profileid);
+            let builder = await createProfile(profileid, message.guildId);
             let embed = await builder.getProfileEmbed();
             
             if (!embed) {

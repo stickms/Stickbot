@@ -1,6 +1,6 @@
 const { createProfile } = require('./profile-builder.js');
 const { steam_token } = require('./config.json');
-const { getPlayers, getNotis, setBans, getBans, getAddrs, setAddrs, getBanwatch, } = require('./database');
+const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, setAddrs, getBanwatch } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -13,7 +13,7 @@ async function updatePlayerData(client) {
 	let bandata = [];
 
 	try {
-		let players = Object.keys(getPlayers());
+		const players = Object.keys(getPlayers());
 
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
@@ -24,7 +24,6 @@ async function updatePlayerData(client) {
 					steamids: idlist 
 				},
 				timeout: 2000,
-				validateStatus: () => true  
 			}).catch(e => e));
 
 			bantasks.push(axios.get(CONSTS.BAN_URL, { 
@@ -33,7 +32,6 @@ async function updatePlayerData(client) {
 					steamids: idlist 
 				},
 				timeout: 2000,
-				validateStatus: () => true 
 			}).catch(e => e));
 		}
 
@@ -53,14 +51,13 @@ async function updatePlayerData(client) {
 			}
 		});
 	} catch(error) {
-		//return console.log('Error occurred in Banwatch update');
+		return;
 	}
 
 	let updatemessages = [];
 
 	for (let data of bandata) {
-		const curbans = getBans(data.SteamId);
-		let bans = curbans;
+		let bans = await getBans(data.SteamId, false);
 		let banmessages = [];
 
 		if (data.NumberOfVACBans != bans.vacbans) {
@@ -77,20 +74,18 @@ async function updatePlayerData(client) {
 			bans.tradeban = (data.EconomyBan == 'banned');
 		}
 
-		if (bans != curbans) {
-			await setBans(steamid, bans);
-		}
-
 		if (banmessages.length) {
-			for (let guildid in getPlayers()[data.SteamId].tags) {
-				let builder = await createProfile(guildid, bans.SteamId);
+			await setBans(data.SteamId, bans);
+
+			for (let guildid of getGuilds(data.SteamId)) {
+				let builder = await createProfile(data.SteamId, guildid);
 				let message = {
-					content: `**${bans.SteamId}** has been **${banmessages.join(', ')}**\n`,
+					content: `**${data.SteamId}** has been **${banmessages.join(', ')}**\n`,
 					embeds: await builder.getProfileEmbed(),
-					components: await builder.getProfileComponents(),
+					components: await builder.getProfileComponents()
 				};		
 
-				const notis = getNotis(bans.SteamId, guildid);
+				const notis = getNotis(data.SteamId, guildid);
 
 				if (notis.ban) {
 					for (let userid of notis.ban) {
@@ -107,38 +102,36 @@ async function updatePlayerData(client) {
 	}
 
 	for (let profile of summaries) {
-		if (!profile.hasOwnProperty('gameserverip') || profile.gameserverip.split(':')[1] != '0') {
+		if (!profile['gameserverip'] || profile.gameserverip.split(':')[1] != '0') {
 			continue;
 		}
 
 		let addrs = getAddrs(profile.steamid);
 
+		if (!addrs[profile.gameserverip]) {
+			for (let guildid of getGuilds(profile.steamid)) {
+				const notis = getNotis(profile.steamid, guildid);
+
+				if (notis.log) {
+					let builder = await createProfile(profile.steamid, guildid);
+					let message = {
+						content: `**${profile.steamid}** has a new Address Log`,
+						embeds: await builder.getProfileEmbed(true)
+						//components: await builder.getProfileComponents(),
+					};
+	
+					for (let userid of notis.log) {
+						updatemessages.push({ snowflake: userid, message: message, dm: true });
+					}	
+	
+				}
+			}	
+		}
+
 		addrs[profile.gameserverip] = {
 			game: profile.gameextrainfo ?? 'Unknown Game',
 			date: Math.floor(Date.now() / 1000)
 		};
-
-		for (let guildid in getPlayers()[profile.steamid].tags) {
-			const notis = getNotis(profile.steamid, guildid);
-
-			if (notis.log) {
-				let builder = await createProfile(guildid, profile.steamid);
-				let message = {
-					content: `**${profile.steamid}** has had a new IP Logged\n`,
-					embeds: await builder.getProfileEmbed(),
-					components: await builder.getProfileComponents(),
-				};		
-
-				for (let userid of notis.log) {
-					message.content += `<@${userid}> `;
-				}	
-
-				const channel = getBanwatch(guildid);
-				if (channel) {
-					updatemessages.push({ snowflake: channel, message: message });
-				}
-			}
-		}
 
 		// Delete oldest log if we have more than 6
 		if (Object.keys(addrs).length > 6) {
@@ -150,9 +143,10 @@ async function updatePlayerData(client) {
 	}
 
 	for (let update of updatemessages) {
-		let channel = await client.channels.fetch(update.snowflake);
-
 		try {
+			let channel = update.dm ? await client.users.fetch(update.snowflake, { force: true }) : 
+				await client.channels.fetch(update.snowflake);
+
 			if (channel) await channel.send(update.message);
 		} catch (error) {
 			console.log(`Could not send update ${update}`);

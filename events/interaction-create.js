@@ -29,13 +29,13 @@ module.exports = {
 			} 
 		} catch (error) {
 			try {
+				await interaction.editReply({ 
+					content: '❌ Error: Unknown Error while handling this interaction.' 
+				});
+			} catch (error2) {
 				await interaction.reply({ 
 					content: '❌ Error: Unknown Error while handling this interaction.', 
 					ephemeral: true 
-				});
-			} catch (error2) {
-				await interaction.editReply({ 
-					content: '❌ Error: Unknown Error while handling this interaction.' 
 				});
 			}	
 		}
@@ -55,7 +55,7 @@ async function handleMoreInfo(interaction) {
 
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
-	let builder = await createProfile(interaction.guildId, steamid);
+	let builder = await createProfile(steamid, interaction.guildId);
 	let embed = await builder.getProfileEmbed(true);
 	let comps = await builder.getProfileComponents();
 	let file = builder.getSourceBansFile(); 
@@ -99,8 +99,7 @@ async function handleListFriends(interaction) {
 
 			personadata.push(...chunkdata.data.response.players);	
 		} catch (error) {
-			// await interaction.editReply({ content: '❌ Error checking friend data.' });
-			// return;
+			return await interaction.editReply({ content: '❌ Error checking friend data.' });
 		}
 	}
 
@@ -163,7 +162,7 @@ async function handleModifyTags(interaction) {
 	let original = interaction.message.embeds[0];
 	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
 
-	let builder = await createProfile(interaction.guildId, steamid);
+	let builder = await createProfile(steamid, interaction.guildId);
 	let comps = await builder.getProfileComponents();
 	let embed = null;
 
@@ -204,7 +203,7 @@ async function handleNotifyButton(interaction) {
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
 	let usernotis = getNotis(steamid, interaction.guildId);
-	let userid = +interaction.user.id;
+	let userid = interaction.user.id;
 
 	for (let event of interaction.values) {
 		if (usernotis[event]?.includes(userid)) {

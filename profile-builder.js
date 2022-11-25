@@ -8,16 +8,14 @@ const CONSTS = require('./bot-consts.js');
 const HTMLParser = require('node-html-parser');
 
 class ProfileBuilder {
-    constructor() {
-    }
+    static async initialize(steamid, guildid) {
+        let pb = new ProfileBuilder();
+        pb.steamid = await resolveSteamID(steamid);
+        pb.guildid = guildid;
 
-    static async initialize(serverid, steamid) {
-        let r = new ProfileBuilder();
-        r.serverid = serverid;
-        r.steamid = await resolveSteamID(steamid);
-        r.cheatercount = await r.getCheaterFriendCount();
-        r.srcbansfile = null;
-        return r;
+        pb.cheatercount = await pb.getCheaterFriendCount();
+        pb.srcbansfile = null;
+        return pb;
     }
 
     async getProfileEmbed(moreinfo = false, sourcebans = null) {
@@ -76,7 +74,7 @@ class ProfileBuilder {
             let taglist = '';
             let iplist = '';
     
-            let tagdata = getTags(id64, this.serverid);
+            let tagdata = getTags(id64, this.guildid);
             for (let tag in tagdata) {
                 taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
             } 
@@ -138,7 +136,7 @@ class ProfileBuilder {
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
-        let taglist = getTags(id64, this.serverid);
+        let taglist = getTags(id64, this.guildid);
         for (let tag of CONSTS.TAGS) {
             selectmenu.addOptions({
                 label: `${taglist[tag.value] ? 'Remove' : 'Add'} ${tag.name}`, 
@@ -208,7 +206,7 @@ class ProfileBuilder {
             alertlist += '❌ Trade Ban\n';
         }
         
-        const tags = getTags(id64, this.serverid);
+        const tags = getTags(id64, this.guildid);
 
         for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
             if (tags[CONSTS.TAGS[i].value]) {
@@ -257,7 +255,7 @@ class ProfileBuilder {
         if (frienddata?.['friendslist']?.['friends']) {
             frienddata = frienddata.friendslist.friends;
             for (let i = 0; i < frienddata.length; i++) {
-                const tags = getTags(frienddata[i].steamid, this.serverid);
+                const tags = getTags(frienddata[i].steamid, this.guildid);
                 if (tags['cheater']) cheatercount++;
             } 
         }
@@ -320,8 +318,8 @@ class ProfileBuilder {
     }    
 }
 
-async function createProfile(serverid, steamid) {
-    return await ProfileBuilder.initialize(serverid, steamid);
-}
-
-module.exports = { createProfile };
+module.exports = { 
+    async createProfile(steamid, guildid) {
+        return await ProfileBuilder.initialize(steamid, guildid);
+    } 
+};

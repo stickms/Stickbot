@@ -16,7 +16,7 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		let builder = await createProfile(interaction.guildId, interaction.options.getString('profile'));
+		let builder = await createProfile(interaction.options.getString('profile'), interaction.guildId);
 		let embed = await builder.getProfileEmbed();
 
 		if (!embed || embed.length == 0) {
