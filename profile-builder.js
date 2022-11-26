@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
-const { getTags, getNotis, getAddrs, getBans } = require('./database');
+const { getTags, getAddrs } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -221,7 +221,7 @@ class ProfileBuilder {
         // Place Ban Watch/IP Logs Last
         if (tags['banwatch']) {
             alertlist += '\u2139\uFE0F Ban Watch\n';
-        } if (getAddrs(id64).length) {
+        } if (Object.keys(getAddrs(id64)).length) {
             alertlist += '\u2139\uFE0F IP Logged\n';
         }
     

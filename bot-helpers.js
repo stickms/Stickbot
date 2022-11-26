@@ -16,7 +16,6 @@ async function resolveSteamID(steamid) {
         // Try to check if this is a Vanity URL first
         let response = await axios.get(CONSTS.VANITY_URL, { 
             params: { key: steam_token, vanityurl: steamid }, 
-            validateStatus: () => true,
             timeout: 1500,
         });
 
@@ -43,7 +42,7 @@ async function getBanData(steamid) {
     try {
         let bandata = await axios.get(CONSTS.BAN_URL, { 
             params: { key: steam_token, steamids: steamid },
-            validateStatus: () => true
+            timeout: () => 1500
         });
 
         if (!bandata.data.players[0]) {

@@ -107,8 +107,9 @@ async function updatePlayerData(client) {
 		}
 
 		let addrs = getAddrs(profile.steamid);
+		const ipaddr = profile.gameserverip.split(':')[0];
 
-		if (!addrs[profile.gameserverip]) {
+		if (!addrs[ipaddr]) {
 			for (let guildid of getGuilds(profile.steamid)) {
 				const notis = getNotis(profile.steamid, guildid);
 
@@ -117,7 +118,6 @@ async function updatePlayerData(client) {
 					let message = {
 						content: `**${profile.steamid}** has a new Address Log`,
 						embeds: await builder.getProfileEmbed(true)
-						//components: await builder.getProfileComponents(),
 					};
 	
 					for (let userid of notis.log) {
@@ -128,7 +128,7 @@ async function updatePlayerData(client) {
 			}	
 		}
 
-		addrs[profile.gameserverip] = {
+		addrs[ipaddr] = {
 			game: profile.gameextrainfo ?? 'Unknown Game',
 			date: Math.floor(Date.now() / 1000)
 		};

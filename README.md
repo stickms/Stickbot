@@ -21,10 +21,17 @@ Make sure it's formatted exactly as below, note that `rust_token` is an optional
 
 ```
 {
+    "client_id": "YOUR-BOTS-CLIENT-ID",
     "discord_token": "YOUR-DISCORD-TOKEN",
     "steam_token": "YOUR-STEAMDEV-TOKEN",
     "rust_token": "RUSTBANNED.COM-API-TOKEN",
-    "client_id": "YOUR-BOTS-CLIENT-ID",
+    "soundcloud_id": "SOUNDCLOUD-USER-ID",
+    "spotify_id": {
+        "client_id": "SPOTIFY-USER-ID",
+        "client_secret": "SPOTIFY-API-SECRET",
+        "refresh_token": "SPOTIFY-API-REFRESH",
+        "market": "2-DIGIT-COUNTRY-CODE",
+    },
     "sourceban_urls": [
         "Links of various Sourcebans websites and their SteamID formats",
         "For example:",

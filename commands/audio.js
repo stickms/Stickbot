@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { soundcloud_id, spotify_id } = require('../config.json');
 const CONSTS = require('../bot-consts')
 const play = require('play-dl');
 
@@ -8,6 +9,15 @@ const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnec
 let queue = {};
 let settings = {};
 
+play.setToken({
+	spotify : {
+        ...spotify_id
+    },
+	soundcloud: {
+		client_id: soundcloud_id
+	}
+}) // Await this only when setting data for spotify
+
 module.exports = {
 	data: [ 
 		new SlashCommandBuilder()
@@ -15,7 +25,7 @@ module.exports = {
 		.setDescription('Play a song from a search query or url!')
 		.addStringOption(option => option
 			.setName('query')
-			.setDescription('Search from YouTube')
+			.setDescription('Search from YouTube or SoundCloud')
 			.setRequired(true)
 		),
 
@@ -146,6 +156,8 @@ async function commandPlay(interaction) {
 		return await interaction.reply('❌ Error: Please join a voice channel first.');
 	}
 
+	await interaction.deferReply();
+
 	let connection = getVoiceConnection(interaction.guildId);
 	if (!connection) {
 		connection = joinVoiceChannel({
@@ -177,70 +189,46 @@ async function commandPlay(interaction) {
 	});	
 
 	let query = interaction.options.getString('query');
+	const data = await resolveQuery(query);
 
-	if (query.startsWith('https') && play.yt_validate(query) == 'playlist') {
-		await interaction.deferReply();
-
-		const playlist = await play.playlist_info(query, { incomplete : true });
-		const videos = await playlist.all_videos();
-
-		for (const video of videos) {
-			queue[interaction.guildId].push(video.url);
-
-			if (queue[interaction.guildId].length == 1) {
-				playAudio(interaction.guildId, video.url);
-			}		
-		}
-
-		let embed = new EmbedBuilder()
-			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Playlist', iconURL: CONSTS.MUSIC_ICON })
-			.setThumbnail(playlist.thumbnail?.url)
-			.setDescription(`[${playlist.title}](${playlist.url})`);
-
-		return await interaction.editReply({ embeds: [ embed ] });
-	} else if (!query.startsWith('https') || play.yt_validate(query) != 'video') {
-		let search = await play.search(interaction.options.getString('query'), { limit: 1 });
-		if (!search[0]?.url) {
-			return await interaction.reply('❌ Error: Could not find a related video.');
-		}
-
-		query = search[0].url;
+	if (!data.url) {
+		return await interaction.editReply('❌ Error: Could not find that track.');
 	}
 
-	queue[interaction.guildId].push(query);
-	if (queue[interaction.guildId].length == 1) {
-		playAudio(interaction.guildId, query);
+	for (const track of data.tracks) {
+		queue[interaction.guildId].push(track);
+
+		if (queue[interaction.guildId].length == 1) {
+			playAudio(interaction.guildId, track);
+		}
 	}
 
 	try {
-		const info = (await play.video_basic_info(query)).video_details;
+		const info = await trackData(data.url);
+		if (!info.fields) {
+			return await interaction.editReply('❌ Error: Could not load track info.');
+		}
 
 		let embed = new EmbedBuilder()
 			.setColor(CONSTS.EMBED_CLR)
-			.setAuthor({ name: 'Queued Track', iconURL: CONSTS.MUSIC_ICON })
-			.setThumbnail(info.thumbnails.pop().url)
-			.addFields(
-				{
-					name: 'Track', 
-					value: `[${info.title}](${info.url})`,
-					inline: true
-				}, {
-					name: 'Uploaded By', 
-					value: `[${info.channel.name}](${info.channel.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Views: ${info.views.toLocaleString("en-US")}
-					Likes: ${info.likes.toLocaleString("en-US")}
-					Duration: \`[${info.durationRaw}]\``,
-					inline: false
-				}
-			)
+			.setThumbnail(info.thumbnail)
+			.setAuthor({ 
+				name: `Queued ${data.spotify ?? info.fields[0].name}`, 
+				iconURL: CONSTS.MUSIC_ICON 
+			});
+
+		if (data.spotify) {
+			embed.addFields({
+				name: data.spotify,
+				value: `Added \`${data.tracks.length}\` tracks to queue from Spotify`,
+			});
+		} else {
+			embed.addFields(info.fields);
+		}
 		
-		await interaction.reply({ embeds: [ embed ] });
+		await interaction.editReply({ embeds: [ embed ] });
 	} catch (error) {
-		await interaction.reply('❌ Error: Could not load video info.');
+		await interaction.editReply('❌ Error: Could not load video info.');
 	}
 }
 
@@ -257,8 +245,9 @@ async function commandSkip(interaction) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
-	const info = await play.video_basic_info(queue[interaction.guildId][0]);
-	await interaction.reply(`🎵 Skipping **${info.video_details.title}**...`);
+	const info = await trackData(queue[interaction.guildId][0]);
+	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
+	await interaction.reply(`🎵 Skipping **${title}**...`);
 
 	queue[interaction.guildId].shift();
 
@@ -274,13 +263,14 @@ async function commandSkip(interaction) {
 }
 
 async function commandClear(interaction) {
-	if (!queue[interaction.guildId]?.length) {
+	const connection = getVoiceConnection(interaction.guildId);
+	if (!connection || !queue[interaction.guildId]?.length) {
 		return await interaction.reply('❌ Error: There are currently no tracks in queue.');
 	}
 
 	queue[interaction.guildId] = [];
 	if (settings[interaction.guildId]) {
-		settings[interaction.guildId].loop = {};
+		settings[interaction.guildId].loop = 'off';
 	}
 
 	connection.destroy();
@@ -310,34 +300,23 @@ async function commandNowPlaying(interaction) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
-	const info = (await play.video_basic_info(queue[interaction.guildId][0])).video_details;
+	const info = await trackData(queue[interaction.guildId][0]);
+	if (!info.fields) {
+		return await interaction.reply('❌ Error: Could not load track info.');
+	}
 
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor({ name: 'Now Playing', iconURL: CONSTS.MUSIC_ICON })
-		.setThumbnail(info.thumbnails.pop().url)
-		.addFields(
-			{
-				name: 'Track', 
-				value: `[${info.title}](${info.url})`,
-				inline: true
-			}, {
-				name: 'Uploaded By', 
-				value: `[${info.channel.name}](${info.channel.url})`,
-				inline: true
-			}, {
-				name: 'Statistics', 
-				value: `Views: ${info.views.toLocaleString("en-US")}
-				Likes: ${info.likes.toLocaleString("en-US")}
-				Duration: \`[${info.durationRaw}]\``,
-				inline: false
-			}
-		)
-
+		.setThumbnail(info.thumbnail)
+		.addFields(info.fields)
+	
 	await interaction.reply({ embeds: [ embed ] });
 }
 
 async function commandQueue(interaction) {
+	await interaction.deferReply();
+
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor({ name: 'Queue', iconURL: CONSTS.MUSIC_ICON });
@@ -354,19 +333,16 @@ async function commandQueue(interaction) {
 
 	let infotasks = [];
 	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, length); i++) {
-		infotasks.push(play.video_basic_info(queue[interaction.guildId][i]));
+		infotasks.push(trackData(queue[interaction.guildId][i]).catch(e => e));
 	}
 
 	let infos = [];
 	await Promise.allSettled(infotasks).then((result) => {
 		for (let res of result) {
 			if (res.status == 'fulfilled') {
-				infos.push(res.value.video_details);
+				infos.push(res.value.fields[0].value);
 			} else {
-				infos.push({
-					title: '❌ Error: Unknown Track',
-					url: 'https://youtube.com/'
-				});
+				infos.push('❌ Error: Unknown Track');
 			}
 		}
 	});
@@ -376,20 +352,252 @@ async function commandQueue(interaction) {
 	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, length); i++) {
 		const curinfo = infos[i - (curpage - 1) * 10];
 		if(!curinfo) continue;
-
-		title = curinfo.title;
-		if (title.length > 40) {
-			title = title.substring(0, 40) + '...';
-		}
 		
 		if (i == 0) {
-			desctext += `**Now Playing:** [${title}](${curinfo.url})\n\n`;
+			desctext += `**Now Playing:** ${curinfo}\n\n`;
 		} else {
-			desctext += `**${i + 1}.** [${title}](${curinfo.url})\n`;
+			desctext += `**${i + 1}.** ${curinfo}\n`;
 		}
 	}
 
+	let thumbnail = await (await trackData(queue[interaction.guildId][0])).thumbnail;
+
 	embed.setDescription(desctext);
+	embed.setThumbnail(thumbnail);
 	embed.setFooter({ text: `Page ${curpage}/${maxpages}` });
-	await interaction.reply({ embeds: [ embed ] });
+	await interaction.editReply({ embeds: [ embed ] });
+}
+
+// Resolves query as YT, SoundCloud, or Spotify*
+// Anything unknown is assumed to be a YouTube search
+// Returns an array of URLs
+// Can be length one if a single video or track is requested
+// *Spotify streaming not a thing, so it will search for Spotify tracks on YT
+async function resolveQuery(query) {
+	let valid = play.sp_validate(query);
+	if (valid && valid != 'search') {
+		const spot = await play.spotify(query);
+		if (spot.type == 'track') {
+			const search = await play.search(`${spot.artists[0].name} ${spot.name}`, { limit: 1 });
+			return {
+				url: search[0]?.url,
+				tracks: search[0]?.url ? [ search[0]?.url ] : {}
+			};
+		} else { // 'album' or 'playlist'
+			let promises = [];
+			let data = [];
+			for (const track of await await spot.all_tracks()) {
+				promises.push(play.search(`${track.artists[0].name} ${track.name}`, { limit: 1 }).catch(e => e));
+			}
+
+			await Promise.allSettled(promises).then((result) => {
+				for (let res of result) {
+					if (res.status == 'fulfilled' && res.value?.[0]?.url) {
+						data.push(res.value?.[0]?.url);
+					}
+				}		
+			});
+
+			return {
+				url: data[0],
+				tracks: data,
+				spotify: spot.type == 'album' ? 'Album' : 'Playlist'
+			};
+		}
+	}
+
+	valid = await play.so_validate(query);
+	if (valid && valid != 'search') {
+		const sound = await play.soundcloud(query);
+		if (sound.type == 'track') {
+			return {
+				url: sound.url,
+				tracks: [ query ]
+			};
+		} else if (sound.type == 'playlist') { // 'playlist'
+			const tracks = await sound.all_tracks();
+			return {
+				url: sound.url,
+				tracks: tracks.map(x => x.url)
+			};
+		} else { // 'user'
+			return {};
+		}
+	}
+
+	valid = play.yt_validate(query);
+	if (query.startsWith('https') && valid && valid != 'search') {
+		const type = play.yt_validate(query);
+		if (type == 'video') {
+			return {
+				url: query,
+				tracks: [ query ]
+			};
+		} else if (type == 'playlist') {
+			const playlist = await play.playlist_info(query, { incomplete : true });
+			const tracks = await playlist.all_videos();
+			return {
+				url: playlist.url,
+				tracks: tracks.map(x => x.url)
+			};
+		}
+	}
+
+	// Otherwise, return a YouTube search query for it
+	const search = await play.search(query, { limit: 1 });
+	return {
+		url: search[0]?.url,
+		tracks: search[0]?.url ? [ search[0]?.url ] : {}
+	};
+}
+
+function toDuration(str) {
+	const date = new Date(parseInt(str) * 1000);
+	return date.toISOString().slice(14, 19);
+}
+
+// For use in embeds
+// Spotify is here even though it's not fully supported streaming-wise
+async function trackData(url) {
+	let thumbnail = null;
+	let fields = null;
+
+	if (play.sp_validate(url)) {
+		const spot = await play.spotify(url);
+		thumbnail = spot.thumbnail;
+		
+		if (spot.type == 'track') {
+			fields = [
+				{
+					name: 'Track', 
+					value: `[${spot.name}](${spot.url})`,
+					inline: true
+				}, {
+					name: 'Album', 
+					value: `[${spot.album.name}](${spot.album.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Duration: \`[${toDuration(spot.durationInSec)}]\``,
+					inline: true
+				}
+			];
+		} else if (spot.type == 'playlist') {
+			fields = [
+				{
+					name: 'Playlist', 
+					value: `[${spot.name}](${spot.url})`,
+					inline: true
+				}, {
+					name: 'Created By', 
+					value: `[${spot.owner.name}](${spot.owner.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Tracks: ${spot.tracksCount}
+					Description: \`[${spot.description ?? 'none'}]\``,
+					inline: !!spot.description
+				}
+			];
+		} else { // 'album'
+			fields = [
+				{
+					name: 'Album', 
+					value: `[${spot.name}](${spot.url})`,
+					inline: true
+				}, {
+					name: 'Artist' + (spot.artists.length > 1 ? 's' : ''), 
+					value: spot.artists.map(x => `[${x.name}](${x.url})`),
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Tracks: ${spot.tracksCount}
+					Released: [${spot.release_date}]`,
+					inline: true
+				}
+			];
+		}
+	} else if (await play.so_validate(url)) {
+		const sound = await play.soundcloud(url);
+		thumbnail = sound.thumbnail;
+		
+		if (sound.type == 'track') {
+			fields = [
+				{
+					name: 'Track', 
+					value: `[${sound.name}](${sound.permalink})`,
+					inline: true
+				}, {
+					name: 'Uploaded By', 
+					value: `[${sound.user.name}](${sound.user.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Duration: \`[${toDuration(sound.durationInSec)}]\``,
+					inline: true
+				}
+			];
+		} else if (sound.type == 'playlist') {
+			fields = [
+				{
+					name: sound.sub_type == 'album' ? 'Album' : 'Playlist', 
+					value: `[${sound.name}](${sound.url})`,
+					inline: true
+				}, {
+					name: sound.sub_type == 'album' ? 'Artist' : 'Created By',  
+					value: `[${sound.user.name}](${sound.user.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Tracks: \`[${sound.tracksCount}]\``,
+					inline: true
+				}
+			];
+		}
+	} else if (play.yt_validate(url)) {
+		const type = play.yt_validate(url);
+		if (type == 'video') {
+			const info = (await play.video_basic_info(url)).video_details;
+			thumbnail = info.thumbnails.pop().url;
+			fields = [
+				{
+					name: 'Video', 
+					value: `[${info.title}](${info.url})`,
+					inline: true
+				}, {
+					name: 'Uploaded By', 
+					value: `[${info.channel.name}](${info.channel.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Views: ${info.views.toLocaleString("en-US")}
+					Likes: ${info.likes.toLocaleString("en-US")}
+					Duration: \`[${info.durationRaw}]\``,
+					inline: false
+				}
+			]
+		} else if (type == 'playlist') {
+			const playlist = await play.playlist_info(url, { incomplete : true });
+			thumbnail = playlist.thumbnail?.url;
+			fields = [
+				{
+					name: 'Playlist', 
+					value: `[${playlist.title}](${playlist.url})`,
+					inline: true
+				}, {
+					name: 'Uploaded By', 
+					value: `[${info.channel.name}](${info.channel.url})`,
+					inline: true
+				}, {
+					name: 'Statistics', 
+					value: `Views: ${playlist.views}
+					Last Updated: \`${playlist.lastUpdate}\`
+					Videos: \`[${playlist.videoCount}]\``,
+					inline: false
+				}
+			]
+		}
+	}
+
+	return { 'thumbnail': thumbnail, 'fields': fields };
 }
