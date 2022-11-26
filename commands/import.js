@@ -49,5 +49,7 @@ module.exports = {
                 console.log(`error parsing line: ${line}`);
             }
         }
+
+        await interaction.reply({ content: '✅ Successfully imported cheaters.', ephemeral: true });
 	},
 };

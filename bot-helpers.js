@@ -42,10 +42,10 @@ async function getBanData(steamid) {
     try {
         let bandata = await axios.get(CONSTS.BAN_URL, { 
             params: { key: steam_token, steamids: steamid },
-            timeout: () => 1500
+            timeout: 1500
         });
 
-        if (!bandata.data.players[0]) {
+        if (!bandata?.data?.players[0]) {
             return {};
         }
 

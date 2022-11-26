@@ -38,6 +38,21 @@ module.exports = {
 		.setDescription('Skips the currently playing track.'),
 
 		new SlashCommandBuilder()
+		.setName('move')
+		.setDescription('Moves a track to a new position in the queue.')
+		.addIntegerOption(option => option
+			.setName('track')
+			.setDescription('Position of track to move')
+			.setMinValue(2)
+			.setRequired(true)
+		).addIntegerOption(option => option
+			.setName('position')
+			.setDescription('Where to move the track')
+			.setMinValue(2)
+			.setRequired(true)
+		),
+
+		new SlashCommandBuilder()
 		.setName('clear')
 		.setDescription('Clears the entire playlist.'),
 
@@ -77,6 +92,8 @@ module.exports = {
 			commandLeave(interaction);
 		} else if (interaction.commandName == 'skip') {
 			commandSkip(interaction);
+		} else if (interaction.commandName == 'move') {
+			commandMove(interaction);
 		} else if (interaction.commandName == 'clear') {
 			commandClear(interaction);
 		} else if (interaction.commandName == 'loop') {
@@ -228,6 +245,7 @@ async function commandPlay(interaction) {
 		
 		await interaction.editReply({ embeds: [ embed ] });
 	} catch (error) {
+		console.log(error);
 		await interaction.editReply('❌ Error: Could not load video info.');
 	}
 }
@@ -260,6 +278,30 @@ async function commandSkip(interaction) {
 			settings[interaction.guildId].loop = {};
 		}
 	}
+}
+
+async function commandMove(interaction) {
+	const connection = getVoiceConnection(interaction.guildId);
+	const length = queue[interaction.guildId]?.length;
+	if (!connection || !length) {
+		return await interaction.reply('❌ Error: There are currently no tracks in queue.');
+	}
+
+	const tracknum = interaction.options.getInteger('track');
+	const position = interaction.options.getInteger('position');
+
+	if (tracknum > length) {
+		return await interaction.reply('❌ Error: There is no track at that position in queue.');
+	} else if (position > length) {
+		position = length; // Clamp max value (so people can put '999' if they just want to put a track at the end)
+	}
+
+	const track = queue[interaction.guildId].splice(tracknum - 1, 1);
+	queue[interaction.guildId].splice(position - 1, 0, ...track);
+
+	const info = await trackData(queue[interaction.guildId][position - 1]);
+	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
+	await interaction.reply(`🎵 Moved **${title}** to position \`[${position}]\``);
 }
 
 async function commandClear(interaction) {
@@ -386,7 +428,7 @@ async function resolveQuery(query) {
 		} else { // 'album' or 'playlist'
 			let promises = [];
 			let data = [];
-			for (const track of await await spot.all_tracks()) {
+			for (const track of await spot.all_tracks()) {
 				promises.push(play.search(`${track.artists[0].name} ${track.name}`, { limit: 1 }).catch(e => e));
 			}
 
@@ -575,7 +617,7 @@ async function trackData(url) {
 					Duration: \`[${info.durationRaw}]\``,
 					inline: false
 				}
-			]
+			];
 		} else if (type == 'playlist') {
 			const playlist = await play.playlist_info(url, { incomplete : true });
 			thumbnail = playlist.thumbnail?.url;
@@ -586,7 +628,7 @@ async function trackData(url) {
 					inline: true
 				}, {
 					name: 'Uploaded By', 
-					value: `[${info.channel.name}](${info.channel.url})`,
+					value: `[${playlist.channel.name}](${playlist.channel.url})`,
 					inline: true
 				}, {
 					name: 'Statistics', 
@@ -595,7 +637,11 @@ async function trackData(url) {
 					Videos: \`[${playlist.videoCount}]\``,
 					inline: false
 				}
-			]
+			];
+
+			if (!playlist.channel.name) { // Likely a YouTube 'Mix' which has everything else null
+				fields = [fields[0]];
+			}
 		}
 	}
 

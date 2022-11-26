@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
-const { getTags, getAddrs } = require('./database');
+const { getTags, getAddrs, getBans } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -79,9 +79,11 @@ class ProfileBuilder {
                 taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
             } 
 
-            let addrdata = getAddrs(id64);
-            for (let addr in addrdata) {
-                iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
+            if (this.guildid == '963546826861080636') {
+                let addrdata = getAddrs(id64);
+                for (let addr in addrdata) {
+                    iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
+                }    
             }
     
             if (taglist) embed.addFields({ name: 'Added Tags', value: taglist });
@@ -176,8 +178,12 @@ class ProfileBuilder {
     async getAlertList(timecreated = null) {
         const id64 = this.steamid.getSteamID64();
     
-        let bandata = await getBanData(id64);
         let alertlist = '';
+
+        let bandata = await getBanData(id64);
+        if (Object.keys(bandata).length == 0) {
+            alertlist += '❓ Unknown Ban Info\n';
+        }
 
         if (bandata.vacbans > 0) {
             alertlist += `❌ ${bandata.vacbans} VAC Ban${(bandata.vacbans == 1 ? '' : 's')}\n`;
@@ -221,7 +227,7 @@ class ProfileBuilder {
         // Place Ban Watch/IP Logs Last
         if (tags['banwatch']) {
             alertlist += '\u2139\uFE0F Ban Watch\n';
-        } if (Object.keys(getAddrs(id64)).length) {
+        } if (Object.keys(getAddrs(id64)).length && this.guildid == '963546826861080636') {
             alertlist += '\u2139\uFE0F IP Logged\n';
         }
     

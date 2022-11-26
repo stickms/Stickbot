@@ -53,6 +53,7 @@ async function handleMoreInfo(interaction) {
 		});
 	}
 
+	const oldcontent = original.content;
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
 	let builder = await createProfile(steamid, interaction.guildId);
@@ -60,7 +61,7 @@ async function handleMoreInfo(interaction) {
 	let comps = await builder.getProfileComponents();
 	let file = builder.getSourceBansFile(); 
 
-	await interaction.editReply({ content: null, embeds: embed, components: comps, files: file });
+	await interaction.editReply({ content: oldcontent, embeds: embed, components: comps, files: file });
 }
 
 async function handleListFriends(interaction) {
@@ -186,6 +187,10 @@ async function handleNotifyButton(interaction) {
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
 	for (let noti of CONSTS.NOTIFICATIONS) {
+		if (noti.value == 'log' && interaction.guildId != '963546826861080636') {
+			noti.name = 'Unimplemented';
+		}
+
 		let hasnoti = usernotis[noti.value]?.includes(interaction.user.id);
 		selectmenu.addOptions({
 			label: `${hasnoti ? 'Don\'t notify on:' : 'Notify on:'} ${noti.name}`, 
