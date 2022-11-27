@@ -12,6 +12,7 @@ module.exports = {
     setNotis, getNotis,
     setAddrs, getAddrs,
     setBans, getBans,
+    setWelcome, getWelcome,
     setBanwatch, getBanwatch
 };
 
@@ -105,12 +106,35 @@ async function setBans(steamid, bans) {
     saveDB();
 }
 
-function setBanwatch(guildid, channelid) {
+function setWelcome(guildid, channel = null, join = null, leave = null) {
     if(!db.servers[guildid]) {
         db.servers[guildid] = {};
     }
 
-    db.servers[guildid].banwatch = channelid;
+    const cur = db.servers[guildid].welcome;
+    db.servers[guildid].welcome = {
+        channel: channel ?? cur?.channel,
+        join: join ?? cur?.join,
+        leave: leave ?? cur?.leave 
+    };
+
+    saveDB();
+}
+
+function getWelcome(guildid) {
+    if (!db.servers[guildid]?.welcome) {
+        return {};
+    }
+
+    return db.servers[guildid].welcome;
+}
+
+function setBanwatch(guildid, channel) {
+    if(!db.servers[guildid]) {
+        db.servers[guildid] = {};
+    }
+
+    db.servers[guildid].banwatch = channel;
     saveDB();
 }
 

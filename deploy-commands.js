@@ -11,9 +11,7 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
 	const command = require(filePath);
-	for (const cmd of command.data) {
-		commands.push(cmd.toJSON());
-	}
+	commands.push(command.data.toJSON());
 }
 
 const rest = new REST({ version: '10' }).setToken(discord_token);

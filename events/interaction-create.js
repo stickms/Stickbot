@@ -1,4 +1,4 @@
-const { steam_token, sourceban_urls } = require('../config.json');
+const { steam_token, address_guilds } = require('../config.json');
 const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
 const { setTags, getTags, setNotis, getNotis } = require('../database');
@@ -187,7 +187,7 @@ async function handleNotifyButton(interaction) {
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
 	for (let noti of CONSTS.NOTIFICATIONS) {
-		if (noti.value == 'log' && interaction.guildId != '963546826861080636') {
+		if (noti.value == 'log' && !address_guilds.includes('963546826861080636')) {
 			noti.name = 'Unimplemented';
 		}
 

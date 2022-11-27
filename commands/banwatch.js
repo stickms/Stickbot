@@ -2,25 +2,17 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { setBanwatch } = require('../database');
 
 module.exports = {
-	data: [
-		new SlashCommandBuilder()
-		.setName('banwatch')
-		.setDescription('Set the banwatch channel.')
-        .addChannelOption(option => option
-            .setName('channel')
-            .setDescription('The channel where banwatch messages should be sent')
-            .setRequired(true)
-        )
-	],
+	data: new SlashCommandBuilder()
+    .setName('banwatch')
+    .setDescription('Set the banwatch channel.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+    .addChannelOption(option => option
+        .setName('channel')
+        .setDescription('The channel where banwatch messages should be sent')
+        .setRequired(true)
+    ),
         
 	async execute(interaction) {
-		if(!interaction?.member?.permissions?.has(PermissionFlagsBits.ManageChannels)) {
-            return await interaction.reply({ 
-                content: '❌ Error: You do not have the \`ManageChannels\` permissions.',
-                ephemeral: true
-            });
-        }
-
         const channel = interaction.options.getChannel('channel');
 
         if (channel.type != 0) {

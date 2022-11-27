@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
-const { steam_token, rust_token, sourceban_urls } = require('./config.json');
+const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
-const { getTags, getAddrs, getBans } = require('./database');
+const { getTags, getAddrs } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
@@ -79,7 +79,7 @@ class ProfileBuilder {
                 taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
             } 
 
-            if (this.guildid == '963546826861080636') {
+            if (address_guilds.includes(this.guildid)) {
                 let addrdata = getAddrs(id64);
                 for (let addr in addrdata) {
                     iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
@@ -227,7 +227,7 @@ class ProfileBuilder {
         // Place Ban Watch/IP Logs Last
         if (tags['banwatch']) {
             alertlist += '\u2139\uFE0F Ban Watch\n';
-        } if (Object.keys(getAddrs(id64)).length && this.guildid == '963546826861080636') {
+        } if (Object.keys(getAddrs(id64)).length && address_guilds.includes(this.guildid)) {
             alertlist += '\u2139\uFE0F IP Logged\n';
         }
     

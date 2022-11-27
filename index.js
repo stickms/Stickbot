@@ -12,7 +12,8 @@ const client = new Client({
 		GatewayIntentBits.Guilds, 
 		GatewayIntentBits.GuildMessages, 
 		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildVoiceStates
+		GatewayIntentBits.GuildVoiceStates,
+		GatewayIntentBits.GuildMembers
 	] 
 });
 
@@ -23,9 +24,7 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
 	const command = require(filePath);
-	for (const cmd of command.data) {
-		client.commands.set(cmd.name, command);
-	}
+	client.commands.set(command.data.name, command);
 }
 
 const eventsPath = path.join(__dirname, 'events');

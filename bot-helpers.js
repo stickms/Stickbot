@@ -4,7 +4,7 @@ const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
 module.exports = { 
-    resolveSteamID, getBanData
+    resolveSteamID, getBanData, formatWelcomeMessage
 };
 
 async function resolveSteamID(steamid) {
@@ -60,4 +60,15 @@ async function getBanData(steamid) {
     } catch (error) {
         return {};
     }
+}
+
+function formatWelcomeMessage(message, member) {
+    message = message.replaceAll('{server}', member.guild.name);
+    message = message.replaceAll('{guild}', member.guild.name);
+    message = message.replaceAll('{name}', member.user?.username);
+    message = message.replaceAll('{mention}', `<@${member.user.id}>`);
+    message = message.replaceAll('{disc}', member.user?.discriminator);
+    message = message.replaceAll('{nick}', member.nickname ?? member.user?.username);
+    message = message.replaceAll('{id}', member.user.id);
+    return message;
 }

@@ -1,5 +1,5 @@
 const { createProfile } = require('./profile-builder.js');
-const { steam_token } = require('./config.json');
+const { steam_token, address_guilds } = require('./config.json');
 const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, setAddrs, getBanwatch } = require('./database');
 
 const axios = require('axios');
@@ -113,7 +113,7 @@ async function updatePlayerData(client) {
 			for (let guildid of getGuilds(profile.steamid)) {
 				const notis = getNotis(profile.steamid, guildid);
 
-				if (notis.log) {
+				if (notis.log && address_guilds.includes(guildid)) {
 					let builder = await createProfile(profile.steamid, guildid);
 					let message = {
 						content: `**${profile.steamid}** has a new Address Log`,

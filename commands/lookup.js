@@ -2,16 +2,14 @@ const { SlashCommandBuilder } = require('discord.js');
 const { createProfile } = require('../profile-builder.js');
 
 module.exports = {
-	data: [
-		new SlashCommandBuilder()
-		.setName('lookup')
-		.setDescription('Lookup a Steam Profile!')
-		.addStringOption(option => option
-			.setName('profile')
-			.setDescription('Lookup this Profile')
-			.setRequired(true)
-		)
-	],
+	data: new SlashCommandBuilder()
+	.setName('lookup')
+	.setDescription('Lookup a Steam Profile!')
+	.addStringOption(option => option
+		.setName('profile')
+		.setDescription('Lookup this Profile')
+		.setRequired(true)
+	),
     
 	async execute(interaction) {
 		await interaction.deferReply();

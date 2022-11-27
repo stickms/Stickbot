@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
 const CONSTS = require('../bot-consts')
 const play = require('play-dl');
@@ -19,25 +19,24 @@ play.setToken({
 }) // Await this only when setting data for spotify
 
 module.exports = {
-	data: [ 
-		new SlashCommandBuilder()
+	data: new SlashCommandBuilder()
+	.setName('music')
+	.setDescription('Music Bot commands!')
+	.addSubcommand(command => command
 		.setName('play')
 		.setDescription('Play a song from a search query or url!')
 		.addStringOption(option => option
 			.setName('query')
-			.setDescription('Search from YouTube or SoundCloud')
+			.setDescription('Search from YouTube, Spotify, or SoundCloud')
 			.setRequired(true)
 		),
-
-		new SlashCommandBuilder()
+	).addSubcommand(command => command
 		.setName('leave')
 		.setDescription('Forces the bot to leave the current voice channel.'),
-
-		new SlashCommandBuilder()
+	).addSubcommand(command => command
 		.setName('skip')
 		.setDescription('Skips the currently playing track.'),
-
-		new SlashCommandBuilder()
+	).addSubcommand(command => command
 		.setName('move')
 		.setDescription('Moves a track to a new position in the queue.')
 		.addIntegerOption(option => option
@@ -50,27 +49,24 @@ module.exports = {
 			.setDescription('Where to move the track')
 			.setMinValue(2)
 			.setRequired(true)
-		),
-
-		new SlashCommandBuilder()
+		)
+	).addSubcommand(command => command
 		.setName('clear')
 		.setDescription('Clears the entire playlist.'),
-
-		new SlashCommandBuilder()
+	).addSubcommand(command => command
 		.setName('loop')
 		.setDescription('Clears the entire playlist.')
-        .addStringOption(option => option
+		.addStringOption(option => option
 			.setName('mode')
 			.setDescription('Loop mode')
 			.setRequired(true)
-            .addChoices(
-                { name: 'Disabled', value: 'off' },
-                { name: 'One Track', value: 'one' },
-                { name: 'All Tracks', value: 'all' },
-            )
-        ),
-
-		new SlashCommandBuilder()
+			.addChoices(
+				{ name: 'Disabled', value: 'off' },
+				{ name: 'One Track', value: 'one' },
+				{ name: 'All Tracks', value: 'all' },
+			)
+		)
+	).addSubcommand(command => command
 		.setName('queue')
 		.setDescription('Shows all of the current tracks in queue.')
 		.addIntegerOption(option => 
@@ -78,29 +74,30 @@ module.exports = {
 			.setDescription('Which page of queue should be shown?')
 			.setRequired(false)
 			.setMinValue(1)
-		),
-
-		new SlashCommandBuilder()
+		)
+	).addSubcommand(command => command
 		.setName('nowplaying')
-		.setDescription('Shows the currently playing track.')	 	 
-	],
+		.setDescription('Shows the currently playing track.')
+	),
 
 	async execute(interaction) {
-		if (interaction.commandName == 'play') {
+		const command = interaction.options.getSubcommand();
+
+		if (command == 'play') {
 			commandPlay(interaction);
-		} else if (interaction.commandName == 'leave') {
+		} else if (command == 'leave') {
 			commandLeave(interaction);
-		} else if (interaction.commandName == 'skip') {
+		} else if (command == 'skip') {
 			commandSkip(interaction);
-		} else if (interaction.commandName == 'move') {
+		} else if (command == 'move') {
 			commandMove(interaction);
-		} else if (interaction.commandName == 'clear') {
+		} else if (command == 'clear') {
 			commandClear(interaction);
-		} else if (interaction.commandName == 'loop') {
+		} else if (command == 'loop') {
 			commandLoop(interaction);
-		} else if (interaction.commandName == 'nowplaying') {
+		} else if (command == 'nowplaying') {
 			commandNowPlaying(interaction);
-		} else if (interaction.commandName == 'queue') {
+		} else if (command == 'queue') {
 			commandQueue(interaction);
 		}	
 	}
