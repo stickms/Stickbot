@@ -16,12 +16,13 @@ play.setToken({
 	soundcloud: {
 		client_id: soundcloud_id
 	}
-}) // Await this only when setting data for spotify
+});
 
 module.exports = {
 	data: new SlashCommandBuilder()
 	.setName('music')
 	.setDescription('Music Bot commands!')
+	.setDMPermission(false)
 	.addSubcommand(command => command
 		.setName('play')
 		.setDescription('Play a song from a search query or url!')

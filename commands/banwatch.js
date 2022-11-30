@@ -5,6 +5,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
     .setName('banwatch')
     .setDescription('Set the banwatch channel.')
+    .setDMPermission(false)
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     .addChannelOption(option => option
         .setName('channel')

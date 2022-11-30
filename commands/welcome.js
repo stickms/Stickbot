@@ -6,6 +6,7 @@ module.exports = {
     .setName('welcome')
     .setDescription('Settings for member join/leave messages')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+    .setDMPermission(false)
     .addSubcommand(cmd => cmd
         .setName('channel')
         .setDescription('Select channel for welcome messages to be sent')

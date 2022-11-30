@@ -1,12 +1,13 @@
 const { SlashCommandBuilder } = require('discord.js');
 const CONSTS = require('../bot-consts.js');
 const SteamID = require('steamid');
-const { getPlayers } = require('../database')
+const { getPlayers, getTags } = require('../database')
 
 module.exports = {
 	data: new SlashCommandBuilder()
     .setName('export')
     .setDescription('Exports the cheaterlist with a specified tag and format')
+    .setDMPermission(false)
     .addStringOption(option => option
         .setName('format')
         .setDescription('Export playerist for this format')
@@ -31,7 +32,7 @@ module.exports = {
         let tag = interaction.options.getString('tag') ?? 'cheater';
 
         let result = Object.keys(getPlayers()).map(x => {
-            if (!getPlayers().tags[interaction.guildId]?.[tag]) {
+            if (!getTags(x, interaction.guildId)[tag]) {
                 return '';
             }
 
@@ -50,6 +51,13 @@ module.exports = {
                     return `cat_pl_add ${steamid.accountid} RAGE\n`;
             }
         }).join('');
+
+        if (result.length == 0) {
+            return await interaction.reply({
+                content: '❌ Error: There are no profiles with that tag.',
+                ephemeral: true
+            });
+        }
 
         let filename = (fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt');
         let file = { attachment: Buffer.from(result), name: filename };

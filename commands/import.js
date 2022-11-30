@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { setTags, getTags } = require('../database');
 const axios = require('axios');
 const SteamID = require('steamid');
@@ -7,6 +7,8 @@ module.exports = {
 	data: new SlashCommandBuilder()
     .setName('import')
     .setDescription('Import a list of Steam IDs!')
+    .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addAttachmentOption(option => option
         .setName('list')
         .setDescription('A file with a list of Steam IDs')
@@ -16,15 +18,11 @@ module.exports = {
 	async execute(interaction) {
 		let idlist = interaction.options.getAttachment('list');
 
-        await interaction.client.application.fetch();
-        if (interaction.user.id != interaction.client.application.owner.id) {
-            await interaction.reply({ content: '❌ Error: This command is only for the bot owner.', ephemeral: true });
-            return;
-        }
-
         if (!idlist.contentType.includes('text/plain')) {
-            await interaction.reply({ content: '❌ Error: Not a valid file type.', ephemeral: true });
-            return;
+            return await interaction.reply({
+                content: '❌ Error: Not a valid file type.',
+                ephemeral: true
+            });
         }
 
         let fulltext = (await axios.get(idlist.url, { timeout: 5000 })).data;
