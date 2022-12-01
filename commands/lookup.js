@@ -5,7 +5,6 @@ module.exports = {
 	data: new SlashCommandBuilder()
 	.setName('lookup')
 	.setDescription('Lookup a Steam Profile!')
-	.setDMPermission(false)
 	.addStringOption(option => option
 		.setName('profile')
 		.setDescription('Lookup this Profile')
@@ -15,14 +14,18 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		let builder = await createProfile(interaction.options.getString('profile'), interaction.guildId);
-		let embed = await builder.getProfileEmbed();
+		const builder = await createProfile(interaction.options.getString('profile'), interaction.guildId);
+		const embed = await builder.getProfileEmbed();
 
 		if (!embed || embed.length == 0) {
 			await interaction.editReply({ content: '❌ Error: Could not find profile.' });
 		} 
 		else {
-			let comps = await builder.getProfileComponents();
+			const comps = null;
+			if (interaction.inGuild()) {
+				comps = await builder.getProfileComponents();
+			}
+
 			await interaction.editReply({ embeds: embed, components: comps }); 
 		}
 	},

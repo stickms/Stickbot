@@ -12,43 +12,47 @@ async function updatePlayerData(client) {
 	let summaries = [];
 	let bandata = [];
 
-	const players = Object.keys(getPlayers());
+	try {
+		const players = Object.keys(getPlayers());
 
-	for (let i = 0; i < players.length; i += 100) {
-		let idlist = players.slice(i, i + 100).join(',');
+		for (let i = 0; i < players.length; i += 100) {
+			let idlist = players.slice(i, i + 100).join(',');
 
-		summarytasks.push(axios.get(CONSTS.SUMMARY_URL, { 
-			params: { 
-				key: steam_token, 
-				steamids: idlist 
-			},
-			timeout: 2000,
-		}).catch(e => e));
+			summarytasks.push(axios.get(CONSTS.SUMMARY_URL, { 
+				params: { 
+					key: steam_token, 
+					steamids: idlist 
+				},
+				timeout: CONSTS.REQ_TIMEOUT
+			}).catch(e => e));
 
-		bantasks.push(axios.get(CONSTS.BAN_URL, { 
-			params: { 
-				key: steam_token, 
-				steamids: idlist 
-			},
-			timeout: 2000,
-		}).catch(e => e));
+			bantasks.push(axios.get(CONSTS.BAN_URL, { 
+				params: { 
+					key: steam_token, 
+					steamids: idlist 
+				},
+				timeout: CONSTS.REQ_TIMEOUT
+			}).catch(e => e));
+		}
+
+		await Promise.allSettled(summarytasks).then(result => {
+			for (const get of result) {
+				if (get.status == 'fulfilled' && get.value?.data?.response?.players) {
+					summaries.push(...get.value.data.response.players);
+				}
+			}
+		});
+
+		await Promise.allSettled(bantasks).then(result => {
+			for (const get of result) {
+				if (get.status == 'fulfilled' && get.value?.data?.players) {
+					bandata.push(...get.value.data.players);
+				}
+			}
+		}); 
+	} catch (error) {
+		return;
 	}
-
-	await Promise.allSettled(summarytasks).then(result => {
-		for (const get of result) {
-			if (get.status == 'fulfilled' && get.value?.data?.response?.players) {
-				summaries.push(...get.value.data.response.players);
-			}
-		}
-	});
-
-	await Promise.allSettled(bantasks).then(result => {
-		for (const get of result) {
-			if (get.status == 'fulfilled' && get.value?.data?.players) {
-				bandata.push(...get.value.data.players);
-			}
-		}
-	});
 
 	let updatemessages = [];
 

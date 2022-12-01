@@ -73,7 +73,7 @@ async function handleListFriends(interaction) {
 	try {
 		friends = (await axios.get(CONSTS.FRIEND_URL, { 
 			params: { key: steam_token, steamid: steamid }, 
-			timeout: 1500,
+			timeout: CONSTS.REQ_TIMEOUT,
 			validateStatus: () => true 
 		})).data.friendslist.friends;
 	} catch (error) {
@@ -94,7 +94,7 @@ async function handleListFriends(interaction) {
 					key: steam_token, 
 					steamids: chunk.map(val => val.steamid).join(',') 
 				}, 
-				timeout: 1500,
+				timeout: CONSTS.REQ_TIMEOUT,
 				validateStatus: () => true 
 			});
 

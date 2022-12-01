@@ -194,11 +194,10 @@ class ProfileBuilder {
                 let rustdata = await axios.get(CONSTS.RUST_URL, { 
                     params: { apikey: rust_token, steamid64: id64 },
                     headers: { 'User-Agent': 'node-js-app' },
-                    timeout: 1000,
-                    validateStatus: () => true
+                    timeout: CONSTS.REQ_TIMEOUT
                 });
 
-                if (!rustdata.data.error && rustdata.data.response[0].url) {
+                if (rustdata?.data?.response[0]?.url) {
                     alertlist += '❌ Rust Ban\n';
                 }
             } catch (error) {
@@ -248,7 +247,7 @@ class ProfileBuilder {
             let response = await axios.get(CONSTS.FRIEND_URL, { 
                 params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
                 validateStatus: () => true,
-                timeout: 1500
+                timeout: CONSTS.REQ_TIMEOUT
             });
 
             frienddata = response.data;
@@ -283,7 +282,9 @@ class ProfileBuilder {
                 url += CONSTS.SRCBAN_EXT + this.steamid.getSteam2RenderedID(false);
             }
             
-            tasks.push(axios.get(url, { timeout: 3000, validateStatus: () => true }));
+            tasks.push(axios.get(url, { 
+                timeout: CONSTS.REQ_TIMEOUT, 
+                }).catch(e => e));
         }
     
         await Promise.allSettled(tasks).then(async (results) => {
@@ -292,8 +293,7 @@ class ProfileBuilder {
                     data.push(results[i]);
                 }
             }
-        },
-        (rejected) => console.log(`${rejected.length} url errors`));
+        });
     
         for (let i in data) {
             if (!data[i].value.data) {

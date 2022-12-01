@@ -7,30 +7,42 @@ module.exports = {
             return;
         }
 
-        let words = message.content.split(' ');
-        if (words.length > 100) {
+        if (message.content.length > 200) {
             return;
         }
 
-        for (let word of words) {
-            if (!word.startsWith('https://steamcommunity.com/id/') &&
-                !word.startsWith('https://steamcommunity.com/profiles/')) {
-                continue;
+        try {
+            const url = new URL(message.content);
+            if (!url.hostname.endsWith('steamcommunity.com')) {
+                return;
             }
 
-            let profileid = word.split('/')[4];
+            if (!url.pathname.startsWith('/profiles/') && 
+                !url.pathname.startsWith('/id/')) {
+                return;
+            }
 
-            let builder = await createProfile(profileid, message.guildId);
+            const steamid = url.pathname.split('/')[2];
+
+            let builder = await createProfile(steamid, message.guildId);
             let embed = await builder.getProfileEmbed();
-            
             if (!embed) {
                 return;
             }
 
-            let comps = await builder.getProfileComponents();
+            let comps = null;
+            if (message.guildId) {
+                comps = await builder.getProfileComponents();
+            }
 
             await message.suppressEmbeds();
-            await message.reply({ embeds: embed, components: comps, allowedMentions: { repliedUser: false } });
+            await message.reply({
+                embeds: embed,
+                components: comps,
+                allowedMentions: { repliedUser: false }
+            });
+        } catch (error) {
+            return; // Not a valid URL
         }
     },
 };
