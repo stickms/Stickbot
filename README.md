@@ -4,7 +4,7 @@ Discord bot made in JavaScript with Discord.JS
 
 ## Functionality
 
-Stickbot is a Discord bot that helps you keep track of Steam profiles that you want to log or keep track of. 
+Stickbot is a Discord bot that helps you keep track of Steam profiles that you want to log or keep track of.
 
 __Stickbot features:__
 
@@ -28,7 +28,7 @@ __Stickbot features:__
 
 Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_id`, and `spotify_id` are optional:
 
-```json
+```yaml
 {
     "client_id": "YOUR-BOTS-CLIENT-ID",
     "discord_token": "YOUR-DISCORD-TOKEN",
@@ -52,7 +52,7 @@ Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_i
 
 `playerlist.json` will be automatically created when the bot runs for the first time and doesn't automatically detect the file. Its format is as follows:
 
-```json
+```yaml
 {
     "players": {
         "STEAM-ID-HERE": {
