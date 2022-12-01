@@ -5,6 +5,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 	.setName('lookup')
 	.setDescription('Lookup a Steam Profile!')
+	.setDMPermission(false)
 	.addStringOption(option => option
 		.setName('profile')
 		.setDescription('Lookup this Profile')
@@ -21,11 +22,7 @@ module.exports = {
 			await interaction.editReply({ content: '❌ Error: Could not find profile.' });
 		} 
 		else {
-			const comps = null;
-			if (interaction.inGuild()) {
-				comps = await builder.getProfileComponents();
-			}
-
+			const comps = await builder.getProfileComponents();
 			await interaction.editReply({ embeds: embed, components: comps }); 
 		}
 	},

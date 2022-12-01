@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const CONSTS = require('../bot-consts.js');
 const SteamID = require('steamid');
-const { getPlayers, getTags } = require('../database')
+const { getPlayers, getTags } = require('../database');
 
 module.exports = {
 	data: new SlashCommandBuilder()

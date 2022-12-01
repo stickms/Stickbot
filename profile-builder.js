@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, SelectMenuBuilder, ButtonStyle } = require('discord.js')
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
 const { resolveSteamID, getBanData } = require('./bot-helpers.js');
 const { getTags, getAddrs } = require('./database');
@@ -133,7 +133,7 @@ class ProfileBuilder {
 
         const id64 = this.steamid.getSteamID64();
     
-        var selectmenu = new SelectMenuBuilder()
+        var selectmenu = new StringSelectMenuBuilder()
                             .setCustomId(`modifytags:${this.steamid.getSteamID64()}`)
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
@@ -201,7 +201,7 @@ class ProfileBuilder {
                     alertlist += '❌ Rust Ban\n';
                 }
             } catch (error) {
-                console.log('Error grabbing Rust Bandata');
+                //console.log('Error grabbing Rust Bandata');
             }
         } 
         
@@ -246,7 +246,6 @@ class ProfileBuilder {
         try {
             let response = await axios.get(CONSTS.FRIEND_URL, { 
                 params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
-                validateStatus: () => true,
                 timeout: CONSTS.REQ_TIMEOUT
             });
 
@@ -284,7 +283,7 @@ class ProfileBuilder {
             
             tasks.push(axios.get(url, { 
                 timeout: CONSTS.REQ_TIMEOUT, 
-                }).catch(e => e));
+            }).catch(e => e));
         }
     
         await Promise.allSettled(tasks).then(async (results) => {

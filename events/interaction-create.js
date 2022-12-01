@@ -1,6 +1,6 @@
 const { steam_token, address_guilds } = require('../config.json');
 const { createProfile } = require('../profile-builder.js');
-const { EmbedBuilder, ActionRowBuilder, SelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { setTags, getTags, setNotis, getNotis } = require('../database');
 
 const axios = require('axios');
@@ -20,7 +20,7 @@ module.exports = {
 				} else if (customid.startsWith('notifybutton')) {
 					await handleNotifyButton(interaction);
 				}
-			} else if (interaction.isSelectMenu()) {
+			} else if (interaction.isStringSelectMenu()) {
 				if (customid.startsWith('modifytags')) {
 					await handleModifyTags(interaction);
 				} else if (customid.startsWith('notifymenu')) {
@@ -181,7 +181,7 @@ async function handleNotifyButton(interaction) {
 	let steamid = interaction.customId.split(':')[1];
 	let usernotis = getNotis(steamid, interaction.guildId);
 
-	var selectmenu = new SelectMenuBuilder()
+	var selectmenu = new StringSelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
 		.setPlaceholder('Notification Settings')
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);

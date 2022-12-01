@@ -1,10 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
-const CONSTS = require('../bot-consts')
+const CONSTS = require('../bot-consts');
 const play = require('play-dl');
 
 const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, 
-		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice')
+		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 
 let queue = {};
 let settings = {};
