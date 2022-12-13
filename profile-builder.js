@@ -20,7 +20,7 @@ class ProfileBuilder {
 
     async getProfileEmbed(moreinfo = false, sourcebans = null) {
         if (this.steamid == null) {
-            return [];
+            return null;
         }
 
         const id64 = this.steamid.getSteamID64();
@@ -30,10 +30,12 @@ class ProfileBuilder {
             let response = await axios.get(CONSTS.SUMMARY_URL, { params: { key: steam_token, steamids: id64 } });
             data = response.data.response.players[0];
         } catch (error) {
-            return [];
+            return null;
         }
     
-        let idlist = `${id64}\n${this.steamid.getSteam3RenderedID()}\n${this.steamid.getSteam2RenderedID(true)}\n`;
+        let idlist = `${id64}\n` +
+                     `${this.steamid.getSteam3RenderedID()}\n` + 
+                     `${this.steamid.getSteam2RenderedID(true)}\n`;
     
         if(data.profileurl.includes('id/')) {
             idlist += data.profileurl.split('/')[4];
@@ -48,16 +50,19 @@ class ProfileBuilder {
     
         const embed = new EmbedBuilder()
             .setColor(CONSTS.EMBED_CLR)
-            .setAuthor({ name: data.personaname, iconURL: CONSTS.STEAM_ICON, url: `${CONSTS.PROFILE_URL}${id64}/`})
             .setThumbnail(data.avatarfull)
-            .addFields(
+            .setAuthor({ 
+                name: data.personaname, 
+                iconURL: CONSTS.STEAM_ICON, 
+                url: `${CONSTS.PROFILE_URL}${id64}`
+            }).addFields(
                 { name: 'Steam IDs', value: idlist, inline: true },
                 { name: 'Alerts', value: alertlist, inline: true},
                 { name: 'Quick Links', value: quicklinks, inline: true}
             );
 
-        if (data.gameextrainfo != null) {
-            if (data.gameserverip != null) {
+        if (data.gameextrainfo) {
+            if (data.gameserverip) {
                 embed.addFields({ 
                     name: 'Now Playing', 
                     value: `**${data.gameextrainfo}** on \`${data.gameserverip}\``
@@ -70,25 +75,23 @@ class ProfileBuilder {
             }
         }
     
-        if (moreinfo == true) {
-            let taglist = '';
-            let iplist = '';
-    
-            let tagdata = getTags(id64, this.guildid);
-            for (let tag in tagdata) {
-                taglist += `\`${tag}\` - <@${tagdata[tag].addedby}> on <t:${tagdata[tag].date}:D>\n`;
-            } 
+        if (moreinfo == true) {    
+            const tagdata = getTags(id64, this.guildid);
+            const taglist = Object.entries(tagdata).map(([k, v]) => { 
+                return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
+            });
 
-            if (address_guilds.includes(this.guildid)) {
-                let addrdata = getAddrs(id64);
-                for (let addr in addrdata) {
-                    iplist += `\`${addr}\` - *${addrdata[addr].game}* on <t:${addrdata[addr].date}:D>\n`;
-                }    
+            const addrdata = getAddrs(id64);
+            const iplist = Object.entries(addrdata).map(([k, v]) => { 
+                return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
+            });
+    
+            if (taglist?.length) {
+                embed.addFields({ name: 'Added Tags', value: taglist.join('\n') });
+            } if (iplist?.length && address_guilds.includes(this.guildid)) {
+                embed.addFields({ name: 'Logged IPs', value: iplist.join('\n') });
             }
-    
-            if (taglist) embed.addFields({ name: 'Added Tags', value: taglist });
-            if (iplist) embed.addFields({ name: 'Logged IPs', value: iplist });
-    
+
             if (sourcebans == null) {
                 sourcebans = await this.getSourceBans();
                 let requireupload = false;
@@ -128,7 +131,7 @@ class ProfileBuilder {
     
     async getProfileComponents() {
         if (this.steamid == null) {
-            return [];
+            return null;
         }
 
         const id64 = this.steamid.getSteamID64();
@@ -201,7 +204,7 @@ class ProfileBuilder {
                     alertlist += '❌ Rust Ban\n';
                 }
             } catch (error) {
-                //console.log('Error grabbing Rust Bandata');
+                // ignore
             }
         } 
         
@@ -216,12 +219,12 @@ class ProfileBuilder {
         for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
             if (tags[CONSTS.TAGS[i].value]) {
                 alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
-            }    
+            }
         }
 
         if (this.cheatercount > 0) {
-            alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}`;
-        }    
+            alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}\n`;
+        }
 
         // Place Ban Watch/IP Logs Last
         if (tags['banwatch']) {
@@ -256,10 +259,10 @@ class ProfileBuilder {
     
         let cheatercount = 0;
     
-        if (frienddata?.['friendslist']?.['friends']) {
+        if (frienddata?.friendslist?.friends) {
             frienddata = frienddata.friendslist.friends;
-            for (let i = 0; i < frienddata.length; i++) {
-                const tags = getTags(frienddata[i].steamid, this.guildid);
+            for (const val of Object.values(frienddata)) {
+                const tags = getTags(val.steamid, this.guildid);
                 if (tags['cheater']) cheatercount++;
             } 
         }
@@ -295,7 +298,7 @@ class ProfileBuilder {
         });
     
         for (let i in data) {
-            if (!data[i].value.data) {
+            if (!data[i]?.value?.data) {
                 continue;
             }
             
