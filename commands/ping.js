@@ -6,6 +6,8 @@ module.exports = {
 	.setDescription('Replies with Pong!'),
         
 	async execute(interaction) {
-		await interaction.reply('Pong!');
+		const start = performance.now();
+		const msg = await interaction.reply({ content: 'Pong!', fetchReply: true });
+		await msg.edit(`Pong! ${Math.ceil((performance.now() - start))}ms`);
 	},
 };

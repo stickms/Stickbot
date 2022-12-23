@@ -12,7 +12,6 @@ class ProfileBuilder {
         let pb = new ProfileBuilder();
         pb.steamid = await resolveSteamID(steamid);
         pb.guildid = guildid;
-
         pb.cheatercount = await pb.getCheaterFriendCount();
         pb.srcbansfile = null;
         return pb;
@@ -260,8 +259,7 @@ class ProfileBuilder {
         let cheatercount = 0;
     
         if (frienddata?.friendslist?.friends) {
-            frienddata = frienddata.friendslist.friends;
-            for (const val of Object.values(frienddata)) {
+            for (const val of Object.values(frienddata.friendslist.friends)) {
                 const tags = getTags(val.steamid, this.guildid);
                 if (tags['cheater']) cheatercount++;
             } 

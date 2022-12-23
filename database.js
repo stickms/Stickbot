@@ -21,8 +21,8 @@ function loadDB() {
         db = JSON.parse(fs.readFileSync('./playerlist.json'));
     }
 
-    if (!db.players) db.players = {};
-    if (!db.servers) db.servers = {};
+    if (!db?.players) db.players = {};
+    if (!db?.servers) db.servers = {};
 }
 
 function saveDB() {
