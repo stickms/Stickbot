@@ -14,12 +14,11 @@ class GuildTracker {
     createPlayer() {
         this.audioplayer = createAudioPlayer({
             behaviors: { 
-                noSubscriber: NoSubscriberBehavior.Pause,
-                maxMissedFrames: undefined
+                noSubscriber: NoSubscriberBehavior.Pause
             }
         });
 
-        this.audioplayer.on(AudioPlayerStatus.Idle, async () => {
+        this.audioplayer.on(AudioPlayerStatus.Idle, () => {
             if (this.loop == 'one') {
                 this.queue.splice(1, 0, this.queue[0]);
             } else if (this.loop == 'all') {
@@ -28,8 +27,8 @@ class GuildTracker {
     
             this.queue.shift();
     
-            if (this.queue[0]) {
-                playAudio(this.queue[0]); 
+            if (this.queue.length) {
+                this.playAudio(this.queue[0]); 
             } else {
                 this.loop = 'off';
             }
