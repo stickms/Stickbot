@@ -28,6 +28,9 @@ module.exports = {
 			.setName('query')
 			.setDescription('Search from YouTube, Spotify, or SoundCloud')
 			.setRequired(true)
+		).addBooleanOption(option => option
+			.setName('shuffle')
+			.setDescription('Shuffle the imported playlist/album?')
 		),
 	).addSubcommand(command => command
 		.setName('join')
@@ -139,7 +142,12 @@ async function commandPlay(interaction) {
 	});	
 
 	const query = interaction.options.getString('query');
-	const data = await resolveQuery(query);
+	let data = await resolveQuery(query);
+
+	if (interaction.options.getBoolean('shuffle')) {
+		// Technically not a truly random sort
+		data.tracks.sort(() => Math.random() - 0.5);
+	}
 
 	if (!data.url) {
 		return await interaction.editReply('❌ Error: Could not find that track.');
@@ -184,8 +192,6 @@ async function commandJoin(interaction) {
 		return await interaction.reply('❌ Error: Please join a voice channel first.');
 	}
 
-	const hasconnection = getVoiceConnection(interaction.guildId);
-
 	const connection = joinVoiceChannel({
 		channelId: interaction.member.voice.channel.id,
 		guildId: interaction.guildId,
@@ -205,7 +211,6 @@ async function commandJoin(interaction) {
 	});	
 
 	connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
-
 	await interaction.reply(`🎵 Joined voice channel <#${interaction.member.voice.channel.id}>`);
 }
 
@@ -230,7 +235,6 @@ async function commandSkip(interaction) {
 	audiobot.get(interaction.guildId).skip();
 }
 
-// TODO
 async function commandMove(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
 
@@ -310,8 +314,7 @@ async function commandQueue(interaction) {
 		.setAuthor({ name: 'Queue', iconURL: CONSTS.MUSIC_ICON });
 
 	const queue = audiobot.get(interaction.guildId).getQueue();
-	const length = queue.length;
-	if (!length) {
+	if (!queue.length) {
 		embed.setDescription('❌ Nothing in Queue');
 		embed.setFooter({ text: 'Page 1/1' });
 		return await interaction.reply({ embeds: [ embed ] });
@@ -319,11 +322,11 @@ async function commandQueue(interaction) {
 
 	await interaction.deferReply();
 
-	const maxpages = Math.max(Math.ceil(length / 10), 1);
+	const maxpages = Math.max(Math.ceil(queue.length / 10), 1);
 	const curpage = Math.min(Math.max(interaction.options.getInteger('page'), 1), maxpages);
 
 	let infotasks = [];
-	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, length); i++) {
+	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, queue.length); i++) {
 		infotasks.push(trackData(queue[i]).catch(e => e));
 	}
 
@@ -340,7 +343,7 @@ async function commandQueue(interaction) {
 
 	let desctext = '';
 
-	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, length); i++) {
+	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, queue.length); i++) {
 		const curinfo = infos[i - (curpage - 1) * 10];
 		if(!curinfo) continue;
 		
@@ -443,8 +446,11 @@ async function resolveQuery(query) {
 }
 
 function toDuration(str) {
-	const date = new Date(parseInt(str) * 1000);
-	return date.toISOString().slice(14, 19);
+	const num = parseInt(str);
+	const secs = String(num % 60).padStart(2, '0');
+	const mins = String(Math.floor((num / 60) % 60)).padStart(2, '0');
+	const hrs = String(Math.floor(num / 3600)).padStart(2, '0');
+	return `${hrs > 0 ? hrs : ''}:` + `${mins}:${secs}`;
 }
 
 // For use in embeds

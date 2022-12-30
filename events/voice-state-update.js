@@ -21,12 +21,14 @@ module.exports = {
         // Leaves the voice channel, and also pauses playback
         connection.destroy();
 
-        const chanid = audiobot.get(oldState.guild.id).getTextChannel();
+        const tracker = audiobot.get(oldState.guild.id);
+        const chanid = tracker.getTextChannel();
         if (!chanid) {
             return;
         }
 
         channel = await oldState.guild.channels.fetch(chanid);
-        await channel.send('🎵 Voice Chanel empty, pausing playback...');
+        const mode = tracker.getQueue().length ? 'pausing playback' : 'disconnecting';
+        await channel.send(`🎵 Voice Chanel empty, ${mode}...`);
 	},
 };
