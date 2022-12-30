@@ -1,13 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
+const { audiobot } = require('../audio-player');
 const CONSTS = require('../bot-consts');
 const play = require('play-dl');
 
 const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, 
 		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
-
-let queue = {};
-let settings = {};
 
 play.setToken({
 	spotify : {
@@ -31,6 +29,9 @@ module.exports = {
 			.setDescription('Search from YouTube, Spotify, or SoundCloud')
 			.setRequired(true)
 		),
+	).addSubcommand(command => command
+		.setName('join')
+		.setDescription('Have the bot join your current voice channel!'),
 	).addSubcommand(command => command
 		.setName('leave')
 		.setDescription('Forces the bot to leave the current voice channel.'),
@@ -86,6 +87,8 @@ module.exports = {
 
 		if (command == 'play') {
 			commandPlay(interaction);
+		} else if (command == 'join') {
+			commandJoin(interaction);
 		} else if (command == 'leave') {
 			commandLeave(interaction);
 		} else if (command == 'skip') {
@@ -104,68 +107,6 @@ module.exports = {
 	}
 };
 
-async function playAudio(guildId, url) {
-	if (!url) return;
-
-	const connection = getVoiceConnection(guildId);
-	if (!connection) return;
-
-	let stream = await play.stream(url);
-
-	let resource = createAudioResource(stream.stream, { inputType: stream.type });
-	let player = createAudioPlayer({
-		behaviors: { 
-			noSubscriber: NoSubscriberBehavior.Play,
-			maxMissedFrames: 100
-		}
-	});
-
-	player.on(AudioPlayerStatus.Playing, async () => {
-		if (settings[guildId]?.timeout) {
-			clearTimeout(settings[guildId].timeout);
-		}
-	});
-
-	player.on(AudioPlayerStatus.Idle, async () => {
-		if (settings[guildId]) {
-			if (settings[guildId].loop == 'one') {
-				queue[guildId].splice(1, 0, queue[guildId][0]);
-			} else if (settings[guildId].loop == 'all') {
-				queue[guildId].push(queue[guildId][0]);
-			}
-		}
-
-		queue[guildId].shift();
-
-		if (queue[guildId][0]) {
-			playAudio(guildId, queue[guildId][0]); // Play next song in queue
-		} else {
-			try {
-				if (!settings[guildId]) {
-					settings[guildId] = {};
-				}
-
-				settings[guildId].timeout = setTimeout(() => {
-					try {
-						connection.destroy();
-					} catch (error) {
-						// Already left
-					}
-				}, 120_000); // 2 Mins
-
-				if (settings[guildId]) {
-					settings[guildId].loop = {};
-				}
-			} catch (error) {
-				// Connection has already been destroyed
-			}
-		}
-	});
-
-	player.play(resource);
-	connection.subscribe(player);
-}
-
 async function commandPlay(interaction) {
 	if (!interaction.member.voice?.channel)  {
 		return await interaction.reply('❌ Error: Please join a voice channel first.');
@@ -180,10 +121,8 @@ async function commandPlay(interaction) {
 			guildId: interaction.guildId,
 			adapterCreator: interaction.guild.voiceAdapterCreator
 		});
-	}
 
-	if (!queue[interaction.guildId]) {
-		queue[interaction.guildId] = [];
+		connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
 	}
 
 	// Handle disconnects
@@ -195,15 +134,11 @@ async function commandPlay(interaction) {
 			]);
 		} catch (error) {
 			connection.destroy();
-			queue[interaction.guildId] = [];
-
-			if (settings[interaction.guildId]) {
-				settings[interaction.guildId].loop = {};
-			}
+			audiobot.get(interaction.guildId).resetAll();
 		}
 	});	
 
-	let query = interaction.options.getString('query');
+	const query = interaction.options.getString('query');
 	const data = await resolveQuery(query);
 
 	if (!data.url) {
@@ -211,11 +146,7 @@ async function commandPlay(interaction) {
 	}
 
 	for (const track of data.tracks) {
-		queue[interaction.guildId].push(track);
-
-		if (queue[interaction.guildId].length == 1) {
-			playAudio(interaction.guildId, track);
-		}
+		audiobot.get(interaction.guildId).addQueue(track, interaction.channelId);
 	}
 
 	try {
@@ -248,6 +179,36 @@ async function commandPlay(interaction) {
 	}
 }
 
+async function commandJoin(interaction) {
+	if (!interaction.member.voice?.channel)  {
+		return await interaction.reply('❌ Error: Please join a voice channel first.');
+	}
+
+	const hasconnection = getVoiceConnection(interaction.guildId);
+
+	const connection = joinVoiceChannel({
+		channelId: interaction.member.voice.channel.id,
+		guildId: interaction.guildId,
+		adapterCreator: interaction.guild.voiceAdapterCreator
+	});
+
+	connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+		try {
+			await Promise.race([
+				entersState(connection, VoiceConnectionStatus.Signalling, 2000),
+				entersState(connection, VoiceConnectionStatus.Connecting, 2000),
+			]);
+		} catch (error) {
+			connection.destroy();
+			audiobot.get(interaction.guildId).resetAll();
+		}
+	});	
+
+	connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
+
+	await interaction.reply(`🎵 Joined voice channel <#${interaction.member.voice.channel.id}>`);
+}
+
 async function commandLeave(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
 	connection.destroy();
@@ -257,30 +218,26 @@ async function commandLeave(interaction) {
 
 async function commandSkip(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection || !queue[interaction.guildId]?.length) {
+	const queue = audiobot.get(interaction.guildId).getQueue();
+	if (!connection || !queue.length) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
-	const info = await trackData(queue[interaction.guildId][0]);
+	const info = await trackData(queue[0]);
 	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
 	await interaction.reply(`🎵 Skipping **${title}**...`);
 
-	queue[interaction.guildId].shift();
-
-	if (queue[interaction.guildId][0]) {
-		await playAudio(interaction.guildId, queue[interaction.guildId][0]); 
-	} else {
-		connection.destroy();
-
-		if (settings[interaction.guildId]) {
-			settings[interaction.guildId].loop = {};
-		}
-	}
+	audiobot.get(interaction.guildId).skip();
 }
 
+// TODO
 async function commandMove(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	const length = queue[interaction.guildId]?.length;
+
+	// Not constant to allow for modifications
+	let queue = audiobot.get(interaction.guildId).getQueue();
+
+	const length = queue.length;
 	if (!connection || !length) {
 		return await interaction.reply('❌ Error: There are currently no tracks in queue.');
 	}
@@ -294,40 +251,32 @@ async function commandMove(interaction) {
 		position = length; // Clamp max value (so people can put '999' if they just want to put a track at the end)
 	}
 
-	const track = queue[interaction.guildId].splice(tracknum - 1, 1);
-	queue[interaction.guildId].splice(position - 1, 0, ...track);
+	const track = queue.splice(tracknum - 1, 1);
+	queue.splice(position - 1, 0, ...track);
 
-	const info = await trackData(queue[interaction.guildId][position - 1]);
+	const info = await trackData(queue[position - 1]);
 	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
 	await interaction.reply(`🎵 Moved **${title}** to position \`[${position}]\``);
 }
 
 async function commandClear(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection || !queue[interaction.guildId]?.length) {
+	const queue = audiobot.get(interaction.guildId).getQueue();
+	if (!connection || !queue.length) {
 		return await interaction.reply('❌ Error: There are currently no tracks in queue.');
 	}
 
-	queue[interaction.guildId] = [];
-	if (settings[interaction.guildId]) {
-		settings[interaction.guildId].loop = 'off';
-	}
-
-	connection.destroy();
-
+	audiobot.get(interaction.guildId).clear();
 	await interaction.reply('🎵 Cleared Playlist!');
 }
 
 async function commandLoop(interaction) {
-	if (!settings[interaction.guildId]) {
-		settings[interaction.guildId] = { };
-	}
+	const mode = interaction.options.getString('mode');
+	audiobot.get(interaction.guildId).setLoop(mode);
 
-	settings[interaction.guildId].loop = interaction.options.getString('mode');
-
-	if (settings[interaction.guildId].loop == 'one') {
+	if (mode == 'one') {
 		await interaction.reply('🎵 Playlist will now loop the current track.');
-	} else if (settings[interaction.guildId].loop == 'all') {
+	} else if (mode == 'all') {
 		await interaction.reply('🎵 Playlist will now loop all tracks.');
 	} else {
 		await interaction.reply('🎵 Playlist looping is now disabled.');
@@ -336,11 +285,12 @@ async function commandLoop(interaction) {
 
 async function commandNowPlaying(interaction) {
 	const connection = getVoiceConnection(interaction.guildId);
-	if (!connection || !queue[interaction.guildId]?.[0]) {
+	const queue = audiobot.get(interaction.guildId).getQueue();
+	if (!connection || !queue.length) {
 		return await interaction.reply('❌ Error: Not currently playing any tracks.');
 	}
 
-	const info = await trackData(queue[interaction.guildId][0]);
+	const info = await trackData(queue[0]);
 	if (!info.fields) {
 		return await interaction.reply('❌ Error: Could not load track info.');
 	}
@@ -355,25 +305,26 @@ async function commandNowPlaying(interaction) {
 }
 
 async function commandQueue(interaction) {
-	await interaction.deferReply();
-
 	let embed = new EmbedBuilder()
 		.setColor(CONSTS.EMBED_CLR)
 		.setAuthor({ name: 'Queue', iconURL: CONSTS.MUSIC_ICON });
 
-	const length = queue[interaction.guildId]?.length;
+	const queue = audiobot.get(interaction.guildId).getQueue();
+	const length = queue.length;
 	if (!length) {
 		embed.setDescription('❌ Nothing in Queue');
 		embed.setFooter({ text: 'Page 1/1' });
 		return await interaction.reply({ embeds: [ embed ] });
 	}
 
+	await interaction.deferReply();
+
 	const maxpages = Math.max(Math.ceil(length / 10), 1);
 	const curpage = Math.min(Math.max(interaction.options.getInteger('page'), 1), maxpages);
 
 	let infotasks = [];
 	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, length); i++) {
-		infotasks.push(trackData(queue[interaction.guildId][i]).catch(e => e));
+		infotasks.push(trackData(queue[i]).catch(e => e));
 	}
 
 	let infos = [];
@@ -400,11 +351,11 @@ async function commandQueue(interaction) {
 		}
 	}
 
-	let thumbnail = await (await trackData(queue[interaction.guildId][0])).thumbnail;
-
+	let thumbnail = await (await trackData(queue[0])).thumbnail;
 	embed.setDescription(desctext);
 	embed.setThumbnail(thumbnail);
 	embed.setFooter({ text: `Page ${curpage}/${maxpages}` });
+
 	await interaction.editReply({ embeds: [ embed ] });
 }
 
@@ -559,7 +510,7 @@ async function trackData(url) {
 		}
 	} else if (await play.so_validate(url)) {
 		const sound = await play.soundcloud(url);
-		thumbnail = sound.thumbnail;
+		thumbnail = sound.thumbnail ?? sound.user.thumbnail;
 		
 		if (sound.type == 'track') {
 			fields = [

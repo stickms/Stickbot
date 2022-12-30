@@ -9,7 +9,7 @@ const CONSTS = require('../bot-consts.js');
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
-		let customid = interaction.customId;
+		const customid = interaction.customId;
 
 		try {
 			if (interaction.isButton()) {
