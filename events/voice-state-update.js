@@ -1,5 +1,5 @@
 const { getVoiceConnection } = require('@discordjs/voice');
-const { audiobot } = require('../audio-player');
+const { audiobot } = require('../audio-bot');
 
 module.exports = {
 	name: 'voiceStateUpdate',

@@ -81,7 +81,9 @@ class ProfileBuilder {
             });
 
             const addrdata = getAddrs(id64);
-            const iplist = Object.entries(addrdata).map(([k, v]) => { 
+            const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
+                .sort(function (a, b) { return b[1].date - a[1].date; })
+                .map(([k, v]) => { 
                 return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
             });
     
@@ -283,7 +285,7 @@ class ProfileBuilder {
             }
             
             tasks.push(axios.get(url, { 
-                timeout: CONSTS.REQ_TIMEOUT, 
+                timeout: 2000,          // Sourceban Websites are crappy
             }).catch(e => e));
         }
     

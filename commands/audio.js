@@ -1,11 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
-const { audiobot } = require('../audio-player');
+const { audiobot } = require('../audio-bot');
 const CONSTS = require('../bot-consts');
 const play = require('play-dl');
 
-const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, 
-		entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, getVoiceConnection, 
+		entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 play.setToken({
 	spotify : {
@@ -30,7 +30,7 @@ module.exports = {
 			.setRequired(true)
 		).addBooleanOption(option => option
 			.setName('shuffle')
-			.setDescription('Shuffle the imported playlist/album?')
+			.setDescription('Shuffles the imported playlist/album')
 		),
 	).addSubcommand(command => command
 		.setName('join')
@@ -206,7 +206,6 @@ async function commandJoin(interaction) {
 			]);
 		} catch (error) {
 			connection.destroy();
-			audiobot.get(interaction.guildId).resetAll();
 		}
 	});	
 

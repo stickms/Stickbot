@@ -31,16 +31,16 @@ module.exports = {
         let fmt = interaction.options.getString('format');
         let tag = interaction.options.getString('tag') ?? 'cheater';
 
-        let result = Object.keys(getPlayers()).map(x => {
-            if (!getTags(x, interaction.guildId)[tag]) {
+        let result = Object.keys(getPlayers()).map(id64 => {
+            if (!getTags(id64, interaction.guildId)[tag]) {
                 return '';
             }
 
-            let steamid = new SteamID(x);
+            let steamid = new SteamID(id64);
 
             switch(fmt) {
                 case 'id64':
-                    return x + '\n';
+                    return id64 + '\n';
                 case 'id3':
                     return steamid.getSteam3RenderedID() + '\n';
                 case 'id2':
@@ -59,9 +59,9 @@ module.exports = {
             });
         }
 
-        let filename = (fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt');
-        let file = { attachment: Buffer.from(result), name: filename };
-        let message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
+        const filename = (fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt');
+        const file = { attachment: Buffer.from(result), name: filename };
+        const message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
 
         if (fmt == 'lbox') {
             message +=  "\u2139\uFE0F Paste the export after \"c1 = \" "  + 
