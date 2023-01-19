@@ -35,21 +35,13 @@ async function updatePlayerData(client) {
 			}).catch(e => e));
 		}
 
-		await Promise.allSettled(summarytasks).then(result => {
-			for (const get of result) {
-				if (get.status == 'fulfilled' && get.value?.data?.response?.players) {
-					summaries.push(...get.value.data.response.players);
-				}
-			}
-		});
+		summaries = (await Promise.allSettled(summarytasks)).filter(x => {
+			return x.status == 'fulfilled' && x.value?.data?.response?.players;
+		}).map(x => x.value.data.response.players).flat();
 
-		await Promise.allSettled(bantasks).then(result => {
-			for (const get of result) {
-				if (get.status == 'fulfilled' && get.value?.data?.players) {
-					bandata.push(...get.value.data.players);
-				}
-			}
-		}); 
+		bandata = (await Promise.allSettled(bantasks)).filter(x => {
+			return x.status == 'fulfilled' && x.value?.data?.players;
+		}).map(x => x.value.data.players).flat();
 	} catch (error) {
 		return;
 	}
@@ -57,20 +49,25 @@ async function updatePlayerData(client) {
 	let updatemessages = [];
 
 	for (let data of bandata) {
-		let bans = await getBans(data.SteamId, false);
+		let bans = await getBans(data.SteamId);
+		
+		if (Object.keys(bans).length == 0) {
+            continue;
+        }
+
 		let banmessages = [];
 
 		if (data.NumberOfVACBans != bans.vacbans) {
-			banmessages.push(data.NumberOfVACBans > bans.vacbans ? 'VAC Banned' : 'Un-VAC Banned');
+			banmessages.push((data.NumberOfVACBans > bans.vacbans ? '' : 'Un-') + 'VAC Banned');
 			bans.vacbans = data.NumberOfVACBans;
 		} if (data.NumberOfGameBans != bans.gamebans) {
-			banmessages.push(data.NumberOfGameBans > bans.gamebans ? 'Game Banned' : 'Un-Game Banned');
+			banmessages.push((data.NumberOfGameBans > bans.gamebans ? '' : 'Un-') + 'Game Banned');
 			bans.gamebans = data.NumberOfGameBans;
 		} if (data.CommunityBanned != bans.communityban) {
-			banmessages.push(data.CommunityBanned ? 'Community Banned' : 'Un-Community Banned');
+			banmessages.push((data.CommunityBanned ? '' : 'Un-') + 'Community Banned');
 			bans.communityban = data.CommunityBanned;
 		} if ((data.EconomyBan == 'banned') != bans.tradeban) {
-			banmessages.push((data.EconomyBan == 'banned') ? 'Trade Banned' : 'Un-Trade Banned');
+			banmessages.push(((data.EconomyBan == 'banned') ? '' : 'Un-') + 'Trade Banned');
 			bans.tradeban = (data.EconomyBan == 'banned');
 		}
 
@@ -83,7 +80,7 @@ async function updatePlayerData(client) {
 					content: `**${data.SteamId}** has been **${banmessages.join(', ')}**\n`,
 					embeds: await builder.getProfileEmbed(),
 					components: await builder.getProfileComponents()
-				};		
+				};
 
 				const notis = getNotis(data.SteamId, guildid);
 

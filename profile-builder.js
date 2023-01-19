@@ -181,8 +181,16 @@ class ProfileBuilder {
 
     async getAlertList(timecreated = null) {
         const id64 = this.steamid.getSteamID64();
-    
+        const sr_tags = await this.getSteamRepData();
         let alertlist = '';
+
+        if (sr_tags.includes('VALVE ADMIN')) {
+            alertlist += '☑️ Valve Employee\n';
+        } if (sr_tags.includes('SR ADMIN')) {
+            alertlist += '☑️ SteamRep Admin\n';
+        } if (sr_tags.some(x => !x.startsWith('VALVE') && !x.startsWith('SR') && x.includes('ADMIN'))) {
+            alertlist += '☑️ Community Admin\n';
+        }
 
         let bandata = await getBanData(id64);
         if (Object.keys(bandata).length == 0) {
@@ -213,6 +221,8 @@ class ProfileBuilder {
             alertlist += '❌ Community Ban\n';
         } if (bandata.tradeban) {
             alertlist += '❌ Trade Ban\n';
+        } if (sr_tags.includes('SR SCAMMER')) {
+            alertlist += '❌ SteamRep Scammer\n';
         }
         
         const tags = getTags(id64, this.guildid);
@@ -242,13 +252,32 @@ class ProfileBuilder {
         }
     
         return alertlist.length ? alertlist : '✅ None';
-    }    
+    }
+
+    async getSteamRepData() {
+        const id64 = this.steamid.getSteamID64();
+
+        try {
+            const response = await axios.get(CONSTS.STEAMREP_URL + id64, { 
+                params: { json: 1, extended: 1 }, 
+                timeout: CONSTS.REQ_TIMEOUT
+            });
+
+            if (!response?.data?.steamrep) {
+                return [];
+            }
+
+            return response.data.steamrep.reputation.full.split(',');
+        } catch (error) {
+            return [];
+        }
+    }
 
     async getCheaterFriendCount() {
         let frienddata = {};
         
         try {
-            let response = await axios.get(CONSTS.FRIEND_URL, { 
+            const response = await axios.get(CONSTS.FRIEND_URL, { 
                 params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
                 timeout: CONSTS.REQ_TIMEOUT
             });
@@ -285,24 +314,22 @@ class ProfileBuilder {
             }
             
             tasks.push(axios.get(url, { 
-                timeout: 2000,          // Sourceban Websites are crappy
+                timeout: 3000,              // Sourceban Websites are crappy
             }).catch(e => e));
         }
     
-        await Promise.allSettled(tasks).then(async (results) => {
-            for (let i = 0; i < results.length; i++) {
-                if (results[i].status == 'fulfilled') {
-                    data.push(results[i]);
-                }
-            }
-        });
+        const results = await Promise.allSettled(tasks);
     
-        for (let i in data) {
-            if (!data[i]?.value?.data) {
+        for (let i in results) {
+            if (results[i].status != 'fulfilled') {
+                continue;
+            }
+
+            if (!results[i]?.value?.data) {
                 continue;
             }
             
-            let htmldata = HTMLParser.parse(data[i].value.data);
+            let htmldata = HTMLParser.parse(results[i].value.data);
             let tables = htmldata.getElementsByTagName('table');
     
             for (let t in tables) {
@@ -316,7 +343,7 @@ class ProfileBuilder {
                     var nodes = trs[row].getElementsByTagName('td');
     
                     if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
-                        sourcebans.push({ url: data[i].value.config.url, reason: nodes[1].innerText });
+                        sourcebans.push({ url: results[i].value.config.url, reason: nodes[1].innerText });
                     }
                 }
             }

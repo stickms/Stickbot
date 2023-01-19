@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { setWelcome, getWelcome } = require('../database');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { setWelcome } = require('../database');
+const CONSTS = require('../bot-consts');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -28,10 +29,15 @@ module.exports = {
             .setName('message')
             .setDescription('Customize the message to be sent')
         )
+    ).addSubcommand(cmd => cmd
+        .setName('format')
+        .setDescription('Shows Welcome message formatting info')
     ),
         
 	async execute(interaction) {
-		if (interaction.options.getSubcommand() == 'channel') {
+        const sub = interaction.options.getSubcommand();
+
+		if (sub == 'channel') {
             const channel = interaction.options.getChannel('channel');
             if (!channel || !channel.id || channel.type != 0) {
                 return await interaction.reply({ 
@@ -42,7 +48,7 @@ module.exports = {
 
             setWelcome(interaction.guildId, channel.id);
             await interaction.reply(`\u2139\uFE0F Welcome messages will now be posted in <#${channel.id}>`);
-        } else if (interaction.options.getSubcommand() == 'join') {
+        } else if (sub == 'join') {
             const message = interaction.options.getString('message');
             if (!message || message.length > 256) {
                 return await interaction.reply({ 
@@ -52,8 +58,8 @@ module.exports = {
             }
 
             setWelcome(interaction.guildId, null, message);
-            await interaction.reply(`✅ Set user welcome message successfully.`);
-        } else if (interaction.options.getSubcommand() == 'leave') {
+            await interaction.reply('✅ Set user welcome message successfully.');
+        } else if (sub == 'leave') {
             const message = interaction.options.getString('message');
             if (!message || message.length > 256) {
                 return await interaction.reply({ 
@@ -63,7 +69,21 @@ module.exports = {
             }
 
             setWelcome(interaction.guildId, null, null, message);
-            await interaction.reply(`✅ Set user goodbye message successfully.`);
+            await interaction.reply('✅ Set user goodbye message successfully.');
+        } else if (sub == 'format') {
+            let embed = new EmbedBuilder()
+			.setColor(CONSTS.EMBED_CLR)
+			.setTitle('Welcome Message Formatting')
+            .setDescription(`
+            \`{server}\`/\`{guild}\` -> Current Server Name
+            \`{name}\` -> User's Discord Username
+            \`{nick}\` -> User's Server Nickanme (defaults to username)
+            \`{mention}\` -> User Mention
+            \`{disc}\` -> User's discriminator (e.g. #1234)
+            \`{id}\` -> Discord User ID
+            `);
+
+            await interaction.reply({ embeds: [ embed ], ephemeral: true });
         }
 	},
 };

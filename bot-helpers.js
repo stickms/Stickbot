@@ -63,12 +63,12 @@ async function getBanData(steamid) {
 }
 
 function formatWelcomeMessage(message, member) {
+    message = message.replaceAll('{mention}', `<@${member.user.id}>`);
+    message = message.replaceAll('{disc}', member.user?.discriminator);
+    message = message.replaceAll('{id}', member.user.id);
     message = message.replaceAll('{server}', member.guild.name);
     message = message.replaceAll('{guild}', member.guild.name);
     message = message.replaceAll('{name}', member.user?.username);
-    message = message.replaceAll('{mention}', `<@${member.user.id}>`);
-    message = message.replaceAll('{disc}', member.user?.discriminator);
     message = message.replaceAll('{nick}', member.nickname ?? member.user?.username);
-    message = message.replaceAll('{id}', member.user.id);
     return message;
 }

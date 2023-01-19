@@ -8,6 +8,7 @@ module.exports = {
     FRIEND_URL: 'https://api.steampowered.com/ISteamUser/GetFriendList/v1/',
     VANITY_URL: 'https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/',
     BAN_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/',
+    STEAMREP_URL: 'https://steamrep.com/api/beta3/reputation/',
     RUST_URL: 'https://rustbanned.com/api/eac_ban_check_v2.php',
 
     SRCBAN_EXT: 'index.php?p=banlist&advType=steamid&advSearch=',

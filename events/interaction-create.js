@@ -30,14 +30,18 @@ module.exports = {
 		} catch (error) {
 			try {
 				await interaction.editReply({ 
-					content: '❌ Error: Unknown Error while handling this interaction.' 
+					content: '❌ Error: Unknown Error while executing this command.'
 				});
-			} catch (error2) {
-				await interaction.reply({ 
-					content: '❌ Error: Unknown Error while handling this interaction.', 
-					ephemeral: true 
-				});
-			}	
+			} catch (error) {
+				try {
+					await interaction.reply({ 
+						content: '❌ Error: Unknown Error while executing this command.',
+						ephemeral: true
+					});
+				} catch (error) {
+					// Likely cannot send a message to this channel
+				}
+			}
 		}
 	},
 };

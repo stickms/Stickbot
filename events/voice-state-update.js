@@ -27,8 +27,12 @@ module.exports = {
             return;
         }
 
-        channel = await oldState.guild.channels.fetch(chanid);
-        const mode = tracker.getQueue().length ? 'pausing playback' : 'disconnecting';
-        await channel.send(`🎵 Voice Chanel empty, ${mode}...`);
+        try {
+            channel = await oldState.guild.channels.fetch(chanid);
+            const mode = tracker.getQueue().length ? 'pausing playback' : 'disconnecting';
+            await channel.send(`🎵 Voice Chanel empty, ${mode}...`);    
+        } catch (error) {
+            // Sometimes we can't send a message in the corresponding channel
+        }
 	},
 };

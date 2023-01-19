@@ -54,9 +54,13 @@ client.on('interactionCreate', async interaction => {
 		console.error(error);
 		
 		try {
-			await interaction.reply({ content: '❌ Error: Unknown Error while executing this command.', ephemeral: true });
-		} catch (error2) {
 			await interaction.editReply({ content: '❌ Error: Unknown Error while executing this command.' });
+		} catch (error) {
+			try {
+				await interaction.reply({ content: '❌ Error: Unknown Error while executing this command.', ephemeral: true });
+			} catch (error) {
+				// Likely cannot send a message to this channel
+			}
 		}
 	}
 });

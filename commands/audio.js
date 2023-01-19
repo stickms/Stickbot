@@ -329,14 +329,11 @@ async function commandQueue(interaction) {
 		infotasks.push(trackData(queue[i]).catch(e => e));
 	}
 
-	let infos = [];
-	await Promise.allSettled(infotasks).then((result) => {
-		for (let res of result) {
-			if (res.status == 'fulfilled') {
-				infos.push(res.value.fields[0].value);
-			} else {
-				infos.push('❌ Error: Unknown Track');
-			}
+	const infos = (await Promise.allSettled(infotasks)).map(x => {
+		if (x.status == 'fulfilled') {
+			return x.value.fields[0].value;
+		} else {
+			return '❌ Error: Unknown Track';
 		}
 	});
 

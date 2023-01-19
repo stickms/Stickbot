@@ -16,6 +16,7 @@ module.exports = {
 	async execute(interaction) {
         const channel = interaction.options.getChannel('channel');
 
+        // Channels of type 0 are text channels
         if (channel.type != 0) {
             return await interaction.reply({ 
                 content: '❌ Error: Must be a text channel.',
