@@ -146,7 +146,7 @@ async function updatePlayerData(client) {
 
 			if (channel) await channel.send(update.message);
 		} catch (error) {
-			console.log(`Could not send update ${update}`);
+			// May be lacking perms, or user does not allow DMs
 		}
 	}
 }

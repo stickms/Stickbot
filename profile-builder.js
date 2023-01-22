@@ -302,7 +302,6 @@ class ProfileBuilder {
     async getSourceBans() {
         let sourcebans = [];
         let tasks = [];
-        let data = [];
     
         for (let url of Object.keys(sourceban_urls)) {
             if (sourceban_urls[url] == 3) {
@@ -320,30 +319,30 @@ class ProfileBuilder {
     
         const results = await Promise.allSettled(tasks);
     
-        for (let i in results) {
-            if (results[i].status != 'fulfilled') {
+        for (const result of results) {
+            if (result.status != 'fulfilled') {
                 continue;
             }
 
-            if (!results[i]?.value?.data) {
+            if (!result?.value?.data) {
                 continue;
             }
             
-            let htmldata = HTMLParser.parse(results[i].value.data);
+            let htmldata = HTMLParser.parse(result.value.data);
             let tables = htmldata.getElementsByTagName('table');
     
-            for (let t in tables) {
-                var tds = tables[t].getElementsByTagName('td');
+            for (const table of tables) {
+                var tds = table.getElementsByTagName('td');
                 if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
                     continue;
                 }
     
-                var trs = tables[t].getElementsByTagName('tr');
-                for (let row in trs) {
-                    var nodes = trs[row].getElementsByTagName('td');
+                var trs = table.getElementsByTagName('tr');
+                for (const row of trs) {
+                    var nodes = row.getElementsByTagName('td');
     
                     if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
-                        sourcebans.push({ url: results[i].value.config.url, reason: nodes[1].innerText });
+                        sourcebans.push({ url: result.value.config.url, reason: nodes[1].innerText });
                     }
                 }
             }

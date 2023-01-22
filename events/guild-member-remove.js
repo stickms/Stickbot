@@ -10,9 +10,13 @@ module.exports = {
         const channel = await member.guild.channels.fetch(welcome.channel);
         if (!channel) return;
 
-        await channel.send({ 
-            content: formatWelcomeMessage(welcome.leave, member),
-            allowedMentions: { parse: [] }
-        });
+        try {
+            await channel.send({
+                content: formatWelcomeMessage(welcome.leave, member),
+                allowedMentions: { parse: [] }
+            });
+        } catch (error) {
+            // Likely doesn't have the necessary permissions
+        }
 	},
 };
