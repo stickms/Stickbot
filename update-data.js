@@ -1,14 +1,12 @@
 const { createProfile } = require('./profile-builder.js');
 const { steam_token, address_guilds } = require('./config.json');
-const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, setAddrs, getBanwatch } = require('./database');
+const { getPlayers, getGuilds, getNotis, setBans, getBans, 
+		getAddrs, setAddrs, getBanwatch } = require('./database');
 
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 
 async function updatePlayerData(client) {
-	let summarytasks = [];
-	let bantasks = [];
-	
 	let summaries = [];
 	let bandata = [];
 
@@ -18,7 +16,7 @@ async function updatePlayerData(client) {
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
 
-			summarytasks.push(axios.get(CONSTS.SUMMARY_URL, { 
+			summaries.push(axios.get(CONSTS.SUMMARY_URL, { 
 				params: { 
 					key: steam_token, 
 					steamids: idlist 
@@ -26,7 +24,7 @@ async function updatePlayerData(client) {
 				timeout: CONSTS.REQ_TIMEOUT
 			}).catch(e => e));
 
-			bantasks.push(axios.get(CONSTS.BAN_URL, { 
+			bandata.push(axios.get(CONSTS.BAN_URL, { 
 				params: { 
 					key: steam_token, 
 					steamids: idlist 
@@ -35,11 +33,11 @@ async function updatePlayerData(client) {
 			}).catch(e => e));
 		}
 
-		summaries = (await Promise.allSettled(summarytasks)).filter(x => {
+		summaries = (await Promise.allSettled(summaries)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.data?.response?.players;
 		}).map(x => x.value.data.response.players).flat();
 
-		bandata = (await Promise.allSettled(bantasks)).filter(x => {
+		bandata = (await Promise.allSettled(bandata)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.data?.players;
 		}).map(x => x.value.data.players).flat();
 	} catch (error) {

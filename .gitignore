@@ -129,6 +129,9 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+#macOS
+.DS_Store
+
 # Stickbot
 playerlist.json
 config.json

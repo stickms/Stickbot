@@ -1,6 +1,6 @@
 const play = require('play-dl');
-const { joinVoiceChannel, createAudioResource, createAudioPlayer, getVoiceConnection, 
-    entersState, NoSubscriberBehavior, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const { createAudioResource, createAudioPlayer, getVoiceConnection, 
+        NoSubscriberBehavior, AudioPlayerStatus, } = require('@discordjs/voice');
 
 class GuildTracker {
     constructor(guildId) {

@@ -320,31 +320,35 @@ class ProfileBuilder {
         const results = await Promise.allSettled(tasks);
     
         for (const result of results) {
-            if (result.status != 'fulfilled') {
+            if (result?.status != 'fulfilled') {
                 continue;
             }
 
             if (!result?.value?.data) {
                 continue;
             }
-            
-            let htmldata = HTMLParser.parse(result.value.data);
-            let tables = htmldata.getElementsByTagName('table');
-    
-            for (const table of tables) {
-                var tds = table.getElementsByTagName('td');
-                if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
-                    continue;
-                }
-    
-                var trs = table.getElementsByTagName('tr');
-                for (const row of trs) {
-                    var nodes = row.getElementsByTagName('td');
-    
-                    if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
-                        sourcebans.push({ url: result.value.config.url, reason: nodes[1].innerText });
+
+            try {
+                let htmldata = HTMLParser.parse(result.value.data);
+                let tables = htmldata.getElementsByTagName('table');
+        
+                for (const table of tables) {
+                    var tds = table.getElementsByTagName('td');
+                    if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
+                        continue;
+                    }
+        
+                    var trs = table.getElementsByTagName('tr');
+                    for (const row of trs) {
+                        var nodes = row.getElementsByTagName('td');
+        
+                        if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
+                            sourcebans.push({ url: result.value.config.url, reason: nodes[1].innerText });
+                        }
                     }
                 }
+            } catch (error) {
+                continue;
             }
         }
     

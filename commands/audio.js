@@ -119,13 +119,17 @@ async function commandPlay(interaction) {
 
 	let connection = getVoiceConnection(interaction.guildId);
 	if (!connection) {
-		connection = joinVoiceChannel({
-			channelId: interaction.member.voice.channel.id,
-			guildId: interaction.guildId,
-			adapterCreator: interaction.guild.voiceAdapterCreator
-		});
-
-		connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
+		try {
+			connection = joinVoiceChannel({
+				channelId: interaction.member.voice.channel.id,
+				guildId: interaction.guildId,
+				adapterCreator: interaction.guild.voiceAdapterCreator
+			});
+	
+			connection.subscribe(audiobot.get(interaction.guildId).getPlayer());	
+		} catch (error) {
+			return await interaction.reply('❌ Error: Could not join voice channel.');
+		}
 	}
 
 	// Handle disconnects
@@ -182,7 +186,6 @@ async function commandPlay(interaction) {
 		
 		await interaction.editReply({ embeds: [ embed ] });
 	} catch (error) {
-		console.log(error);
 		await interaction.editReply('❌ Error: Could not load video info.');
 	}
 }
@@ -192,25 +195,29 @@ async function commandJoin(interaction) {
 		return await interaction.reply('❌ Error: Please join a voice channel first.');
 	}
 
-	const connection = joinVoiceChannel({
-		channelId: interaction.member.voice.channel.id,
-		guildId: interaction.guildId,
-		adapterCreator: interaction.guild.voiceAdapterCreator
-	});
+	try {
+		let connection = joinVoiceChannel({
+			channelId: interaction.member.voice.channel.id,
+			guildId: interaction.guildId,
+			adapterCreator: interaction.guild.voiceAdapterCreator
+		});
 
-	connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
-		try {
-			await Promise.race([
-				entersState(connection, VoiceConnectionStatus.Signalling, 2000),
-				entersState(connection, VoiceConnectionStatus.Connecting, 2000),
-			]);
-		} catch (error) {
-			connection.destroy();
-		}
-	});	
+		connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
+			try {
+				await Promise.race([
+					entersState(connection, VoiceConnectionStatus.Signalling, 2000),
+					entersState(connection, VoiceConnectionStatus.Connecting, 2000),
+				]);
+			} catch (error) {
+				connection.destroy();
+			}
+		});	
 
-	connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
-	await interaction.reply(`🎵 Joined voice channel <#${interaction.member.voice.channel.id}>`);
+		connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
+		await interaction.reply(`🎵 Joined voice channel <#${interaction.member.voice.channel.id}>`);
+	} catch (error) {
+		return await interaction.reply('❌ Error: Could not join voice channe;.');
+	}
 }
 
 async function commandLeave(interaction) {
@@ -362,7 +369,7 @@ async function commandQueue(interaction) {
 // Anything unknown is assumed to be a YouTube search
 // Returns an array of URLs
 // Can be length one if a single video or track is requested
-// *Spotify streaming not a thing, so it will search for Spotify tracks on YT
+// * Spotify streaming not a thing, so it will search for Spotify tracks on YT
 async function resolveQuery(query) {
 	let valid = play.sp_validate(query);
 	if (valid && valid != 'search') {
