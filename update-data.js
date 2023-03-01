@@ -118,7 +118,6 @@ async function updatePlayerData(client) {
 					for (let userid of notis.log) {
 						updatemessages.push({ snowflake: userid, message: message, dm: true });
 					}	
-	
 				}
 			}	
 		}
