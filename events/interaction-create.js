@@ -48,16 +48,15 @@ module.exports = {
 
 async function handleMoreInfo(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let original = interaction.message;
 
-	if (original.content.startsWith('Fetching')) {
+	if (interaction.message.content?.startsWith('Fetching')) {
 		return await interaction.reply({ 
 			content: '❌ Error: Already fetching more info.', 
 			ephemeral: true 
 		});
 	}
 
-	const oldcontent = original.content;
+	const oldcontent = interaction.message.content;
 	await interaction.update({ content: 'Fetching Source Bans...' });
 
 	let builder = await createProfile(steamid, interaction.guildId);

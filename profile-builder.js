@@ -95,6 +95,7 @@ class ProfileBuilder {
 
             if (sourcebans == null) {
                 sourcebans = await this.getSourceBans();
+
                 let requireupload = false;
                 let banlist = '';
                 let bantext = '';
@@ -138,7 +139,7 @@ class ProfileBuilder {
         const id64 = this.steamid.getSteamID64();
     
         var selectmenu = new StringSelectMenuBuilder()
-                            .setCustomId(`modifytags:${this.steamid.getSteamID64()}`)
+                            .setCustomId(`modifytags:${id64}`)
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
@@ -154,11 +155,11 @@ class ProfileBuilder {
         
         let buttonrow = new ActionRowBuilder().addComponents([
             new ButtonBuilder()
-                .setCustomId(`moreinfo:${this.steamid.getSteamID64()}`)
+                .setCustomId(`moreinfo:${id64}`)
                 .setLabel('More Info')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId(`notifybutton:${this.steamid.getSteamID64()}`)
+                .setCustomId(`notifybutton:${id64}`)
                 .setLabel('Notifications')
                 .setStyle(ButtonStyle.Primary)
             ]);
@@ -166,7 +167,7 @@ class ProfileBuilder {
         if (this.cheatercount > 0) {
             buttonrow.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`friendinfo:${this.steamid.getSteamID64()}`)
+                    .setCustomId(`friendinfo:${id64}`)
                     .setLabel('List Friends')
                     .setStyle(ButtonStyle.Primary)
             );
@@ -318,6 +319,9 @@ class ProfileBuilder {
         }
     
         const results = await Promise.allSettled(tasks);
+        if (!results || results.length == 0) {
+            return [];
+        }
     
         for (const result of results) {
             if (result?.status != 'fulfilled') {

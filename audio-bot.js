@@ -4,11 +4,12 @@ const { createAudioResource, createAudioPlayer, getVoiceConnection,
 
 class GuildTracker {
     constructor(guildId) {
-        this.createPlayer();
         this.id = guildId;
         this.textchan = 0;
         this.queue = [];
         this.loop = 'off';
+
+        this.createPlayer();
     }
 
     createPlayer() {
