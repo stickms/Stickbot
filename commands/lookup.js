@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { createProfile } = require('../profile-builder.js');
+const { resolveSteamID } = require('../bot-helpers.js');
+const { getProfile } = require('../profile-builder.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -15,15 +16,25 @@ module.exports = {
 	async execute(interaction) {
 		await interaction.deferReply();
 
-		const builder = await createProfile(interaction.options.getString('profile'), interaction.guildId);
-		const embed = await builder.getProfileEmbed();
+		const query = interaction.options.getString('profile');
+		const steamid = await resolveSteamID(query);
 
-		if (!embed || embed.length == 0) {
-			await interaction.editReply({ content: '❌ Error: Could not find profile.' });
-		} 
-		else {
-			const comps = await builder.getProfileComponents();
-			await interaction.editReply({ embeds: embed, components: comps }); 
+		if (!steamid) {
+			return await interaction.editReply({
+				content: '❌ Error: Could not find profile.'
+			});
 		}
+
+		const profile = await getProfile(steamid.getSteamID64(), interaction.guildId);
+		if (!profile.getEmbed()) {
+			return await interaction.editReply({
+				content: '❌ Error: Could not load profile data.'
+			});
+		}
+
+		await interaction.editReply({
+			embeds: profile.getEmbed(),
+			components: profile.getComponents()
+		});
 	},
 };

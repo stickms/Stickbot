@@ -4,8 +4,27 @@ const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
 module.exports = { 
-    resolveSteamID, getBanData, formatWelcomeMessage
+    httpsGet, resolveSteamID,
+    getBanData, formatWelcomeMessage
 };
+
+async function httpsGet(url, params={}, timeout=1000) {
+    try {
+        const response = await axios.get(url, { 
+            params: params, 
+            timeout: timeout,
+            validateStatus: () => true
+        });
+
+        if (!response || response.status < 200 || response.status >= 300) {
+            return null;
+        }
+
+        return response;
+    } catch (error) {
+        return null;
+    }
+}
 
 async function resolveSteamID(steamid) {
     try {
@@ -14,21 +33,18 @@ async function resolveSteamID(steamid) {
         }
 
         // Try to check if this is a Vanity URL first
-        let response = await axios.get(CONSTS.VANITY_URL, { 
-            params: { key: steam_token, vanityurl: steamid }, 
-            timeout: CONSTS.REQ_TIMEOUT
-        }).catch(e => e);
+        const response = await httpsGet(CONSTS.VANITY_URL, {
+            key: steam_token,
+            vanityurl: steamid
+        });
 
-        let data = response.data.response;
-
-        if (data.steamid) {
-            return new SteamID(data.steamid);
+        if (response?.data?.response?.steamid) {
+            return new SteamID(response.data.response.steamid);
         }    
         else {
             // Check if it's a regular steamid format
             return new SteamID(steamid);
         }
-        
     } catch (error) {
         return null;
     }
@@ -40,12 +56,12 @@ async function getBanData(steamid) {
     }
 
     try {
-        let bandata = await axios.get(CONSTS.BAN_URL, { 
-            params: { key: steam_token, steamids: steamid },
-            timeout: CONSTS.REQ_TIMEOUT
-        }).catch(e => e);
+        let bandata = await httpsGet(CONSTS.BAN_URL, {
+            key: steam_token,
+            steamids: steamid
+        });
 
-        if (!bandata?.data?.players[0]) {
+        if (!bandata?.data?.players?.[0]) {
             return {};
         }
 

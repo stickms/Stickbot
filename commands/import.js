@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { setTags, getTags } = require('../database');
-const axios = require('axios');
+const { httpsGet } = require('../bot-helpers')
 const SteamID = require('steamid');
 const CONSTS = require('../bot-consts');
 
@@ -14,8 +14,7 @@ module.exports = {
         .setName('list')
         .setDescription('A file with a list of Steam IDs')
         .setRequired(true)
-    )
-    .addStringOption(option => option
+    ).addStringOption(option => option
         .setName('tag')
         .setDescription('Tag to assign each listed player with (def. cheater)')
         .setRequired(false)
@@ -34,17 +33,16 @@ module.exports = {
 
         await interaction.deferReply();
 
-        let fulltext = '';
-        try {
-            fulltext = (await axios.get(idlist.url, { timeout: CONSTS.REQ_TIMEOUT })).data;
-        } catch (error) {
+        const fulltext = await httpsGet(idlist.url);
+
+        if (!fulltext?.data) {
             return await interaction.editReply({
                 content: '❌ Error: Request timed out.',
                 ephemeral: true
             });
         }
 
-        if (fulltext.length == 0) {
+        if (!fulltext.data.length) {
             return await interaction.editReply({
                 content: '❌ Error: File was empty.',
                 ephemeral: true
@@ -54,7 +52,7 @@ module.exports = {
         const tag = interaction.options.getString('tag') ?? 'cheater';
         const curdate = Math.floor(Date.now() / 1000);
 
-        for (let line of fulltext.split('\n')) {
+        for (let line of fulltext.data.split('\n')) {
             try {
                 let steamid = (new SteamID(line)).getSteamID64();
                 let curtags = getTags(steamid, interaction.guildId);

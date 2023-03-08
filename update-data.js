@@ -1,9 +1,9 @@
-const { createProfile } = require('./profile-builder.js');
 const { steam_token, address_guilds } = require('./config.json');
+const { httpsGet, resolveSteamID } = require('./bot-helpers')
+const { getProfile } = require('./profile-builder.js');
 const { getPlayers, getGuilds, getNotis, setBans, getBans, 
 		getAddrs, setAddrs, getBanwatch } = require('./database');
 
-const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 
 async function updatePlayerData(client) {
@@ -16,21 +16,15 @@ async function updatePlayerData(client) {
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
 
-			summaries.push(axios.get(CONSTS.SUMMARY_URL, { 
-				params: { 
-					key: steam_token, 
-					steamids: idlist 
-				},
-				timeout: CONSTS.REQ_TIMEOUT
-			}).catch(e => e));
+			summaries.push(httpsGet(CONSTS.SUMMARY_URL, {
+				key: steam_token, 
+				steamids: idlist
+			}));
 
-			bandata.push(axios.get(CONSTS.BAN_URL, { 
-				params: { 
-					key: steam_token, 
-					steamids: idlist 
-				},
-				timeout: CONSTS.REQ_TIMEOUT
-			}).catch(e => e));
+			bandata.push(httpsGet(CONSTS.BAN_URL, {
+				key: steam_token, 
+				steamids: idlist
+			}));
 		}
 
 		summaries = (await Promise.allSettled(summaries)).filter(x => {
@@ -73,11 +67,11 @@ async function updatePlayerData(client) {
 			await setBans(data.SteamId, bans);
 
 			for (let guildid of getGuilds(data.SteamId)) {
-				let builder = await createProfile(data.SteamId, guildid);
+				const profile = await getProfile(data.SteamId, guildid);
 				let message = {
 					content: `**${data.SteamId}** has been **${banmessages.join(', ')}**\n`,
-					embeds: await builder.getProfileEmbed(),
-					components: await builder.getProfileComponents()
+					embeds: profile.getEmbed(),
+					components: profile.getComponents()
 				};
 
 				const notis = getNotis(data.SteamId, guildid);
@@ -104,21 +98,28 @@ async function updatePlayerData(client) {
 		let addrs = getAddrs(profile.steamid);
 		const ipaddr = profile.gameserverip.split(':')[0];
 
-		if (!addrs[ipaddr]) {
-			for (let guildid of getGuilds(profile.steamid)) {
-				const notis = getNotis(profile.steamid, guildid);
+		if (addrs[ipaddr]) {
+			continue;
+		}
 
-				if (notis.log && address_guilds.includes(guildid)) {
-					let builder = await createProfile(profile.steamid, guildid);
-					let message = {
-						content: `**${profile.steamid}** has a new Address Log`,
-						embeds: await builder.getProfileEmbed(true)
-					};
-	
-					for (let userid of notis.log) {
-						updatemessages.push({ snowflake: userid, message: message, dm: true });
-					}	
-				}
+		for (const guildid of getGuilds(profile.steamid)) {
+			const notis = getNotis(profile.steamid, guildid);
+			if (!notis.log || !address_guilds.includes(guildid)) {
+				continue;
+			}
+
+			const builder = await getProfile(profile.steamid, guildid);
+			let message = {
+				content: `**${profile.steamid}** has a new Address Log`,
+				embeds: builder.getEmbed()
+			};
+
+			for (let userid of notis.log) {
+				updatemessages.push({
+					snowflake: userid,
+					message: message,
+					dm: true
+				});
 			}	
 		}
 
@@ -143,6 +144,7 @@ async function updatePlayerData(client) {
 
 			if (channel) await channel.send(update.message);
 		} catch (error) {
+			console.error(error);
 			// May be lacking perms, or user does not allow DMs
 		}
 	}

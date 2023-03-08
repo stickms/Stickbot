@@ -41,28 +41,25 @@ for (const file of eventFiles) {
 }
 
 client.on('interactionCreate', async interaction => {
-	if (!interaction.isChatInputCommand()) 
-		return;
-
-	const command = interaction.client.commands.get(interaction.commandName);
-
-	if (!command) return;
-
 	try {
+		if (!interaction.isChatInputCommand()) return;
+
+		const command = interaction.client.commands.get(interaction.commandName);
+
+		if (!command) return;
+
 		await command.execute(interaction);
 	} catch (error) {
 		console.error(error);
-		
-		try {
-			await interaction.editReply({ content: '❌ Error: Unknown Error while executing this command.' });
-		} catch (error) {
-			try {
-				await interaction.reply({ content: '❌ Error: Unknown Error while executing this command.', ephemeral: true });
-			} catch (error) {
-				// Likely cannot send a message to this channel
-			}
-		}
 	}
+});
+
+process.on('unhandledRejection', error => {
+	console.error(error);
+});
+
+process.on('uncaughtException', error => {
+	console.error(error);
 });
 
 client.login(discord_token);

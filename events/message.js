@@ -1,9 +1,14 @@
-const { createProfile } = require('../profile-builder.js');
+const { resolveSteamID } = require('../bot-helpers.js');
+const { getProfile } = require('../profile-builder.js');
 
 module.exports = {
 	name: 'messageCreate',
 	async execute(message) {
         if (message.author.bot || message.content.length > 200) {
+            return;
+        }
+
+        if (!message.guildId) {
             return;
         }
 
@@ -18,27 +23,24 @@ module.exports = {
                 return;
             }
 
-            const steamid = url.pathname.split('/')[2];
-
-            let builder = await createProfile(steamid, message.guildId);
-            let embed = await builder.getProfileEmbed();
-            if (!embed) {
+            const steamid = await resolveSteamID(url.pathname.split('/')[2]);
+            if (!steamid) {
                 return;
             }
 
-            let comps = null;
-            if (message.guildId) {
-                comps = await builder.getProfileComponents();
+            const profile = await getProfile(steamid.getSteamID64(), message.guildId);
+            if (!profile.getEmbed()) {
+                return;
             }
 
             await message.suppressEmbeds();
             await message.reply({
-                embeds: embed,
-                components: comps,
+                embeds: profile.getEmbed(),
+                components: profile.getComponents(),
                 allowedMentions: { repliedUser: false }
             });
         } catch (error) {
-            return; // Not a valid URL, or does not have the necessary permissions
+            // Not a valid URL, or does not have the necessary permissions
         }
     },
 };

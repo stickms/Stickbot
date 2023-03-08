@@ -1,8 +1,7 @@
 // List of bot constants I use regularly
 
 module.exports = {
-    EMBED_CLR: 0x34B4EB,
-    REQ_TIMEOUT: 500,
+    EMBED_CLR: 0x0398FC,
 
     SUMMARY_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/',
     FRIEND_URL: 'https://api.steampowered.com/ISteamUser/GetFriendList/v1/',

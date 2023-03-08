@@ -86,27 +86,26 @@ module.exports = {
 	),
 
 	async execute(interaction) {
-		const command = interaction.options.getSubcommand();
-
-		if (command == 'play') {
-			commandPlay(interaction);
-		} else if (command == 'join') {
-			commandJoin(interaction);
-		} else if (command == 'leave') {
-			commandLeave(interaction);
-		} else if (command == 'skip') {
-			commandSkip(interaction);
-		} else if (command == 'move') {
-			commandMove(interaction);
-		} else if (command == 'clear') {
-			commandClear(interaction);
-		} else if (command == 'loop') {
-			commandLoop(interaction);
-		} else if (command == 'nowplaying') {
-			commandNowPlaying(interaction);
-		} else if (command == 'queue') {
-			commandQueue(interaction);
-		}	
+		switch (interaction.options.getSubcommand()) {
+			case 'play':
+				return commandPlay(interaction);
+			case 'join':
+				return commandJoin(interaction);
+			case 'leave':
+				return commandLeave(interaction);
+			case 'skip':
+				return commandSkip(interaction);
+			case 'move':
+				return commandMove(interaction);
+			case 'clear':
+				return commandClear(interaction);
+			case 'loop':
+				return commandLoop(interaction);
+			case 'nowplaying':
+				return commandNowPlaying(interaction);
+			case 'queue':
+				return commandQueue(interaction);
+		}
 	}
 };
 
@@ -333,7 +332,7 @@ async function commandQueue(interaction) {
 
 	let infotasks = [];
 	for (let i = (curpage - 1) * 10; i < Math.min(curpage * 10, queue.length); i++) {
-		infotasks.push(trackData(queue[i]).catch(e => e));
+		infotasks.push(trackData(queue[i]).catch(() => null));
 	}
 
 	const infos = (await Promise.allSettled(infotasks)).map(x => {
@@ -384,7 +383,7 @@ async function resolveQuery(query) {
 			let promises = [];
 			let data = [];
 			for (const track of await spot.all_tracks()) {
-				promises.push(play.search(`${track.artists[0].name} ${track.name}`, { limit: 1 }).catch(e => e));
+				promises.push(play.search(`${track.artists[0].name} ${track.name}`, { limit: 1 }).catch(() => null));
 			}
 
 			await Promise.allSettled(promises).then((result) => {

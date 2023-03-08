@@ -1,325 +1,330 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ButtonStyle } = require('discord.js')
 const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
-const { resolveSteamID, getBanData } = require('./bot-helpers.js');
+const { httpsGet, resolveSteamID, getBanData } = require('./bot-helpers.js');
 const { getTags, getAddrs } = require('./database');
 
-const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 const HTMLParser = require('node-html-parser');
+const SteamID = require('steamid');
 
-class ProfileBuilder {
-    static async initialize(steamid, guildid) {
-        let pb = new ProfileBuilder();
-        pb.steamid = await resolveSteamID(steamid);
-        pb.guildid = guildid;
-        pb.cheatercount = await pb.getCheaterFriendCount();
-        pb.srcbansfile = null;
-        return pb;
+class SteamProfile {
+    async init(steamid, guildid, moreinfo=false, known_sourcebans=null) {
+        this.steamid = steamid;
+        this.guildid = guildid;
+
+        this.embeds = null;
+        this.components = null;
+        this.banfile = null;
+
+        await this.countCheaterFriends();
+        await this.generateEmbed(moreinfo, known_sourcebans);
+        await this.generateComponents();
     }
 
-    async getProfileEmbed(moreinfo = false, sourcebans = null) {
-        if (this.steamid == null) {
-            return null;
+    getEmbed() {
+        return this.embeds;
+    }
+
+    getComponents() {
+        return this.components;
+    }
+
+    getAttachments() {
+        return this.banfile;
+    }
+
+    async generateEmbed(moreinfo = false, known_sourcebans = null) {
+        const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
+            key: steam_token,
+            steamids: this.steamid
+        });
+
+        if (!summary_response?.data?.response?.players?.[0]) {
+            return;
         }
 
-        const id64 = this.steamid.getSteamID64();
-        let data = {};
+        this.summary = summary_response.data.response.players[0];
 
-        try {
-            let response = await axios.get(CONSTS.SUMMARY_URL, { params: { key: steam_token, steamids: id64 } });
-            data = response.data.response.players[0];
-        } catch (error) {
-            return null;
-        }
-    
-        let idlist = `${id64}\n` +
-                     `${this.steamid.getSteam3RenderedID()}\n` + 
-                     `${this.steamid.getSteam2RenderedID(true)}\n`;
-    
-        if(data.profileurl.includes('id/')) {
-            idlist += data.profileurl.split('/')[4];
-        }
-    
-        const quicklinks =  `[SteamRep](https://steamrep.com/profiles/${id64}/)\n` + 
-                            `[SteamID.uk](https://steamid.uk/profile/${id64}/)\n` +
-                            `[Backpack.tf](https://backpack.tf/profiles/${id64}/)\n` +
-                            `[SteamDB](https://steamdb.info/calculator/${id64}/)`;
-        
-        const alertlist = await this.getAlertList(data.timecreated);
-    
+        const idlist = this.getSteamIDList();
+        const quicklinks = this.getQuicklinks();
+        const alertlist = await this.getAlertList();
+
         const embed = new EmbedBuilder()
             .setColor(CONSTS.EMBED_CLR)
-            .setThumbnail(data.avatarfull)
-            .setAuthor({ 
-                name: data.personaname, 
-                iconURL: CONSTS.STEAM_ICON, 
-                url: `${CONSTS.PROFILE_URL}${id64}`
+            .setThumbnail(this.summary.avatarfull)
+            .setAuthor({
+                name: this.summary.personaname,
+                iconURL: CONSTS.STEAM_ICON,
+                url: CONSTS.PROFILE_URL + this.steamid
             }).addFields(
                 { name: 'Steam IDs', value: idlist, inline: true },
-                { name: 'Alerts', value: alertlist, inline: true},
-                { name: 'Quick Links', value: quicklinks, inline: true}
+                { name: 'Alerts', value: alertlist, inline: true },
+                { name: 'Quick Links', value: quicklinks, inline: true }
             );
-
-        if (data.gameextrainfo) {
-            if (data.gameserverip) {
-                embed.addFields({ 
-                    name: 'Now Playing', 
-                    value: `**${data.gameextrainfo}** on \`${data.gameserverip}\``
-                });
-            } else {
-                embed.addFields({ 
-                    name: 'Now Playing', 
-                    value: `**${data.gameextrainfo}**`
-                });
-            }
-        }
-    
-        if (moreinfo == true) {    
-            const tagdata = getTags(id64, this.guildid);
-            const taglist = Object.entries(tagdata).map(([k, v]) => { 
-                return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
+        
+        if (this.summary.gameextrainfo) {
+            const gameip = this.summary.gameserverip;
+            const gameinfo = `**${data.gameextrainfo}**` +
+                gameip ? ` on \`${gameip}\`` : '';
+            
+            embed.addFields({
+                name: 'Now Playing',
+                value: gameinfo
             });
-
-            const addrdata = getAddrs(id64);
-            const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
-                .sort(function (a, b) { return b[1].date - a[1].date; })
-                .map(([k, v]) => { 
-                return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
-            });
-    
-            if (taglist?.length) {
-                embed.addFields({ name: 'Added Tags', value: taglist.join('\n') });
-            } if (iplist?.length && address_guilds.includes(this.guildid)) {
-                embed.addFields({ name: 'Logged IPs', value: iplist.join('\n') });
-            }
-
-            if (sourcebans == null) {
-                sourcebans = await this.getSourceBans();
-
-                let requireupload = false;
-                let banlist = '';
-                let bantext = '';
-
-                for (let i = 0; i < sourcebans.length; i++) {
-                    let ban = sourcebans[i];
-
-                    let text = `${ban.url.split('/')[2]} - ${ban.reason}`;
-                    bantext += text + '\n';
-
-                    text = `[${text}](${ban.url})\n`;
-
-                    if ((banlist + text).length > 950) {
-                        requireupload = true;
-                    } else {
-                        banlist += text;
-                    }
-                }
-
-                if (!banlist) {
-                    banlist = '✅ None';
-                } else if (requireupload) {
-                    this.srcbansfile = { attachment: Buffer.from(bantext), name: 'bans.txt' };
-                    banlist += `\`Check Attachment for full list\``;
-                }
-
-                embed.addFields({ name: 'Sourcebans', value: banlist }); 
-            } else {
-                embed.addFields({ name: 'Sourcebans', value: sourcebans }); 
-            }
         }
-    
-        return [ embed ];
+
+        if (moreinfo) {
+            const sourcebans = known_sourcebans ?? await this.getSourceBanData();
+            embed.addFields({ name: 'Sourcebans', value: sourcebans });
+        }
+
+        this.embeds = [ embed ];
     }
-    
-    async getProfileComponents() {
-        if (this.steamid == null) {
-            return null;
-        }
 
-        const id64 = this.steamid.getSteamID64();
-    
-        var selectmenu = new StringSelectMenuBuilder()
-                            .setCustomId(`modifytags:${id64}`)
+    async generateComponents() {
+        const tagdata = getTags(this.steamid, this.guildid);
+        
+        const selectmenu = new StringSelectMenuBuilder()
+                            .setCustomId(`modifytags:${this.steamid}`)
                             .setPlaceholder('Modify User Tags')
                             .setMaxValues(CONSTS.TAGS.length);
     
-        let taglist = getTags(id64, this.guildid);
-        for (let tag of CONSTS.TAGS) {
+        for (const tag of CONSTS.TAGS) {
+            const op = tagdata[tag.value] ? 'Remove ' : 'Add ';
             selectmenu.addOptions({
-                label: `${taglist[tag.value] ? 'Remove' : 'Add'} ${tag.name}`, 
+                label: op + tag.name, 
                 value: tag.value
             });
         }
 
-        let selectrow = new ActionRowBuilder().addComponents(selectmenu);
+        const selectrow = new ActionRowBuilder().addComponents(selectmenu);
         
-        let buttonrow = new ActionRowBuilder().addComponents([
+        const buttonrow = new ActionRowBuilder().addComponents([
             new ButtonBuilder()
-                .setCustomId(`moreinfo:${id64}`)
+                .setCustomId(`moreinfo:${this.steamid}`)
                 .setLabel('More Info')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId(`notifybutton:${id64}`)
+                .setCustomId(`notifybutton:${this.steamid}`)
                 .setLabel('Notifications')
                 .setStyle(ButtonStyle.Primary)
             ]);
 
-        if (this.cheatercount > 0) {
+        if (this.cheaterfriends > 0) {
             buttonrow.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`friendinfo:${id64}`)
+                    .setCustomId(`friendinfo:${this.steamid}`)
                     .setLabel('List Friends')
                     .setStyle(ButtonStyle.Primary)
             );
         }
 
-        return [ selectrow, buttonrow ];
-    }    
-
-    getSourceBansFile() {
-        return this.srcbansfile ? [ this.srcbansfile ] : null;
+        this.components = [ selectrow, buttonrow ];
     }
 
-    async getAlertList(timecreated = null) {
-        const id64 = this.steamid.getSteamID64();
-        const sr_tags = await this.getSteamRepData();
-        let alertlist = '';
+    getSteamIDList() {
+        const resolved = new SteamID(this.steamid);
 
-        if (sr_tags.includes('VALVE ADMIN')) {
-            alertlist += '☑️ Valve Employee\n';
-        } if (sr_tags.includes('SR ADMIN')) {
-            alertlist += '☑️ SteamRep Admin\n';
-        } if (sr_tags.some(x => !x.startsWith('VALVE') && !x.startsWith('SR') && x.includes('ADMIN'))) {
-            alertlist += '☑️ Community Admin\n';
+        let idlist = this.steamid + '\n' + 
+            resolved.getSteam3RenderedID() + '\n' + 
+            resolved.getSteam2RenderedID(true);
+
+        if (this.summary.profileurl?.includes('/id/')) {
+            idlist += '\n' + this.summary.profileurl.split('/')[4];
         }
 
-        let bandata = await getBanData(id64);
+        return idlist;
+    }
+
+    getQuicklinks() {
+        const id = this.steamid;
+        return `[SteamRep](https://steamrep.com/profiles/${id}/)\n` + 
+        `[SteamID.uk](https://steamid.uk/profile/${id}/)\n` +
+        `[Backpack.tf](https://backpack.tf/profiles/${id}/)\n` +
+        `[SteamDB](https://steamdb.info/calculator/${id}/)`;
+    }
+
+    async getAlertList() {
+        const tags = getTags(this.steamid, this.guildid);
+        const ipdata = getAddrs(this.steamid);
+        const bandata = await getBanData(this.steamid);
+        const srdata = await this.getSteamRepData();
+        
+        let alertlist = [];
+        
+        if (srdata.includes('VALVE ADMIN')) {
+            alertlist.push('☑️ Valve Employee');
+        } if (srdata.includes('SR ADMIN')) {
+            alertlist.push('☑️ SR Admin');
+        } if (srdata.some(x => !x.startsWith('VALVE') && 
+            !x.startsWith('SR') && x.includes('ADMIN'))) {
+            alertlist.push('☑️ Community Admin');
+        }
+
         if (Object.keys(bandata).length == 0) {
-            alertlist += '❓ Unknown Ban Info\n';
-        }
+            alertlist.push('❓ Unknown Ban Info');
+        } else {
+            let pluralize = (num, label) => {
+                return `❌ ${num} ${label}${num == 1 ? ''  : 's'}`;
+            };
 
-        if (bandata.vacbans > 0) {
-            alertlist += `❌ ${bandata.vacbans} VAC Ban${(bandata.vacbans == 1 ? '' : 's')}\n`;
-        } if (bandata.gamebans > 0) {
-            alertlist += `❌ ${bandata.gamebans} Game Ban${(bandata.gamebans == 1 ? '' : 's')}\n`;
-        } if (rust_token) {
-            try {
-                let rustdata = await axios.get(CONSTS.RUST_URL, { 
-                    params: { apikey: rust_token, steamid64: id64 },
-                    headers: { 'User-Agent': 'node-js-app' },
-                    timeout: CONSTS.REQ_TIMEOUT
-                }).catch(e => e);
-
-                if (rustdata?.data?.response[0]?.url) {
-                    alertlist += '❌ Rust Ban\n';
-                }
-            } catch (error) {
-                // ignore
-            }
-        } 
-        
-        if (bandata.communityban) {
-            alertlist += '❌ Community Ban\n';
-        } if (bandata.tradeban) {
-            alertlist += '❌ Trade Ban\n';
-        } if (sr_tags.includes('SR SCAMMER')) {
-            alertlist += '❌ SteamRep Scammer\n';
-        }
-        
-        const tags = getTags(id64, this.guildid);
-
-        for (let i = 0; i < CONSTS.TAGS.length - 1; i++) {
-            if (tags[CONSTS.TAGS[i].value]) {
-                alertlist += `⚠️ ${CONSTS.TAGS[i].name}\n`;
+            if (bandata.vacbans > 0) {
+                alertlist.push(pluralize(bandata.vacbans, 'VAC Ban'));
+            } if (bandata.gamebans > 0) {
+                alertlist.push(pluralize(bandata.gamebans, 'Game Ban'));
+            } if (bandata.communityban) {
+                alertlist.push('❌ Community Ban');
+            } if (bandata.tradeban) {
+                alertlist.push('❌ Trade Ban');
             }
         }
 
-        if (this.cheatercount > 0) {
-            alertlist += `⚠️ Friends with ${this.cheatercount} cheater${this.cheatercount == 1 ? '' : 's'}\n`;
+        if (rust_token) {
+            const rustdata = await httpsGet(CONSTS.RUST_URL, {
+                apikey: rust_token,
+                steamid64: this.steamid
+            });
+
+            if (rustdata?.data?.response?.[0]?.url) {
+                alertlist.push('❌ Rust Ban');
+            }
+        }
+
+        if (srdata.includes('SR SCAMMER')) {
+            alertlist.push('❌ SR Scammer');
+        }
+
+        for (const tag of CONSTS.TAGS) {
+            if (tags[tag.value] && tag.value != 'banwatch') {
+                alertlist.push(`⚠️ ${tag.name}`);
+            }
+        }
+
+        if (this.cheaterfriends > 0) {
+            const plural = $`cheater${this.cheaterfriends == 1 ? '' : 's'}`;
+            alertlist.push(`⚠️ Friends with ${this.cheaterfriends}${plural}`);
         }
 
         // Place Ban Watch/IP Logs Last
         if (tags['banwatch']) {
-            alertlist += '\u2139\uFE0F Ban Watch\n';
-        } if (Object.keys(getAddrs(id64)).length && address_guilds.includes(this.guildid)) {
-            alertlist += '\u2139\uFE0F IP Logged\n';
-        }
-    
-        if (timecreated != null) {
-            let date = new Date(timecreated * 1000);
-            if (date.getFullYear() <= 2006) {
-                alertlist += `\u2139\uFE0F Made in ${date.getFullYear()}\n`;
+            alertlist.push('\u2139\uFE0F Ban Watch');
+        } if (Object.keys(ipdata).length) {
+            if (address_guilds.includes(this.guildid)) {
+                alertlist.push('\u2139\uFE0F IP Logged');
             }
         }
-    
-        return alertlist.length ? alertlist : '✅ None';
+
+        const timecreated = this.summary.timecreated;
+        if (timecreated) {
+            const year = new Date(timecreated * 1000).getFullYear();
+            if (year <= 2006) {
+                alertlist.push(`\u2139\uFE0F Made in ${year}`);
+            }
+        }
+
+        return alertlist.length ? alertlist.join('\n') : '✅ None';
     }
 
     async getSteamRepData() {
-        const id64 = this.steamid.getSteamID64();
-
         try {
-            const response = await axios.get(CONSTS.STEAMREP_URL + id64, { 
-                params: { json: 1, extended: 1 }, 
-                timeout: CONSTS.REQ_TIMEOUT
-            }).catch(e => e);
+            const url = CONSTS.STEAMREP_URL + this.steamid;
+            const response = await httpsGet(url, {
+                json: 1,
+                extended: 1
+            });
 
-            if (!response?.data?.steamrep) {
+            if (!response?.data?.steamrep?.reputation?.full) {
                 return [];
             }
 
             return response.data.steamrep.reputation.full.split(',');
         } catch (error) {
+            console.error(error);
             return [];
         }
     }
 
-    async getCheaterFriendCount() {
-        let frienddata = {};
-        
+    async countCheaterFriends() {
         try {
-            const response = await axios.get(CONSTS.FRIEND_URL, { 
-                params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
-                timeout: CONSTS.REQ_TIMEOUT
-            }).catch(e => e);
+            const response = await httpsGet(CONSTS.FRIEND_URL, {
+                key: steam_token,
+                steamid: this.steamid
+            });
 
-            frienddata = response.data;
-        } catch (error) {
-            return 0;
-        }
-    
-        let cheatercount = 0;
-    
-        if (frienddata?.friendslist?.friends) {
-            for (const val of Object.values(frienddata.friendslist.friends)) {
+            if (!response?.data?.friendslist?.friends) {
+                return;
+            }
+
+            const frienddata = response.data.friendslist.friends;
+
+            for (const val of Object.values(frienddata)) {
                 const tags = getTags(val.steamid, this.guildid);
-                if (tags['cheater']) cheatercount++;
+                if (tags['cheater']) this.cheaterfriends++;
             } 
+        } catch (error) {
+            console.error(error);
+            this.cheaterfriends = 0;
         }
-    
-        return cheatercount;
-    }    
+    }
+
+    async getSourceBanData() {
+        const sourcebans = await this.getSourceBans();
+
+        let requireupload = false;
+        let shorttext = '';
+        let fulltext = '';
+
+        for (const ban of sourcebans) {
+            const label = `${ban.url.split('/')[2]} - ${ban.reason}`;            
+            const buffer = `[${label}](${ban.url})\n`;
+
+            fulltext += label + '\n';
+
+            if ((shorttext + buffer).length > 950) {
+                requireupload = true;
+            } else {
+                shorttext += buffer;
+            }
+        }
+
+        if (requireupload) {
+            this.banfile = [{
+                attachment: Buffer.from(fulltext),
+                name: 'bans.txt'
+            }];
+
+            shorttext += `\`Check Attachment for full list\``;
+        } else if (!shorttext) {
+            shorttext = '✅ None';
+        }
+
+        return shorttext;
+    }
 
     async getSourceBans() {
         let sourcebans = [];
         let tasks = [];
+
+        const converted = new SteamID(this.steamid);
     
         for (let url of Object.keys(sourceban_urls)) {
-            if (sourceban_urls[url] == 3) {
-                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam3RenderedID();
-            } else if (sourceban_urls[url] == 2.1) {
-                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam2RenderedID(true);
-            } else {
-                url += CONSTS.SRCBAN_EXT + this.steamid.getSteam2RenderedID(false);
-            }
+            const idfmt = sourceban_urls[url];
+            url += CONSTS.SRCBAN_EXT;
             
-            tasks.push(axios.get(url, { 
-                timeout: 3000,              // Sourceban Websites are crappy
-            }).catch(e => e));
+            if (idfmt == 3) {
+                url += converted.getSteam3RenderedID();
+            } else if (idfmt == 2.1) {
+                url += converted.getSteam2RenderedID(true);
+            } else {
+                url += converted.getSteam2RenderedID(false);
+            }
+
+            // Extended timeout because some bans sites are slow
+            tasks.push(httpsGet(url, {}, 3000));
         }
     
         const results = await Promise.allSettled(tasks);
-        if (!results || results.length == 0) {
+        if (!results?.length) {
             return [];
         }
     
@@ -332,36 +337,45 @@ class ProfileBuilder {
                 continue;
             }
 
-            try {
-                let htmldata = HTMLParser.parse(result.value.data);
-                let tables = htmldata.getElementsByTagName('table');
-        
-                for (const table of tables) {
-                    var tds = table.getElementsByTagName('td');
-                    if (tds.length == 0 || !tds[0].innerText.includes('Ban Details')) {
-                        continue;
-                    }
-        
-                    var trs = table.getElementsByTagName('tr');
-                    for (const row of trs) {
-                        var nodes = row.getElementsByTagName('td');
-        
-                        if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
-                            sourcebans.push({ url: result.value.config.url, reason: nodes[1].innerText });
-                        }
+            let htmldata = HTMLParser.parse(result.value.data);
+            if (!htmldata) {
+                continue;
+            }
+
+            let tables = htmldata.getElementsByTagName('table');
+    
+            for (const table of tables) {
+                var tds = table.getElementsByTagName('td');
+                if (!tds?.length) {
+                    continue;
+                }
+
+                if (!tds[0].innerText.includes('Ban Details')) {
+                    continue;
+                }
+    
+                var trs = table.getElementsByTagName('tr');
+                for (const row of trs) {
+                    var nodes = row.getElementsByTagName('td');
+    
+                    if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
+                        sourcebans.push({
+                            url: result.value.config.url,
+                            reason: nodes[1].innerText
+                        });
                     }
                 }
-            } catch (error) {
-                continue;
             }
         }
     
         return sourcebans;
-    }    
+    }
 }
 
 module.exports = { 
-    async createProfile(steamid, guildid) {
-        return await ProfileBuilder.initialize(steamid, guildid);
+    async getProfile(steamid, guildid, moreinfo=false, known_sourcebans=null) {
+        const profile = new SteamProfile();
+        await profile.init(steamid, guildid, moreinfo, known_sourcebans);
+        return profile;
     } 
 };

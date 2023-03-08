@@ -1,136 +1,128 @@
 const { steam_token, address_guilds } = require('../config.json');
-const { createProfile } = require('../profile-builder.js');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { setTags, getTags, setNotis, getNotis } = require('../database');
-
-const axios = require('axios');
+const { httpsGet } = require('../bot-helpers');
+const { getProfile } = require('../profile-builder.js');
 const CONSTS = require('../bot-consts.js');
 
 module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
 		const customid = interaction.customId;
+		if (customid == null) {
+			return;
+		}
 
 		try {
-			if (interaction.isButton()) {
-				if (customid.startsWith('moreinfo')) {
-					await handleMoreInfo(interaction);
-				} else if (customid.startsWith('friendinfo')) {
-					await handleListFriends(interaction);
-				} else if (customid.startsWith('notifybutton')) {
-					await handleNotifyButton(interaction);
-				}
-			} else if (interaction.isStringSelectMenu()) {
-				if (customid.startsWith('modifytags')) {
-					await handleModifyTags(interaction);
-				} else if (customid.startsWith('notifymenu')) {
-					await handleNotifyMenu(interaction);
-				}
-			} 
-		} catch (error) {
-			try {
-				await interaction.editReply({ 
-					content: '❌ Error: Unknown Error while executing this command.'
-				});
-			} catch (error) {
-				try {
-					await interaction.reply({ 
-						content: '❌ Error: Unknown Error while executing this command.',
-						ephemeral: true
-					});
-				} catch (error) {
-					// Likely cannot send a message to this channel
-				}
+			if (customid.startsWith('moreinfo')) {
+				handleMoreInfo(interaction);
+			} else if (customid.startsWith('friendinfo')) {
+				handleListFriends(interaction);
+			} else if (customid.startsWith('notifybutton')) {
+				handleNotifyButton(interaction);
+			} else if (customid.startsWith('modifytags')) {
+				handleModifyTags(interaction);
+			} else if (customid.startsWith('notifymenu')) {
+				handleNotifyMenu(interaction);
 			}
+		} catch (error) {
+			console.error(error);
+			// Likely cannot send message to this channel
 		}
 	},
 };
 
 async function handleMoreInfo(interaction) {
 	let steamid = interaction.customId.split(':')[1];
+	const oldcontent = interaction.message.content;
 
-	if (interaction.message.content?.startsWith('Fetching')) {
+	if (oldcontent.startsWith('Fetching')) {
 		return await interaction.reply({ 
 			content: '❌ Error: Already fetching more info.', 
 			ephemeral: true 
 		});
 	}
 
-	const oldcontent = interaction.message.content;
-	await interaction.update({ content: 'Fetching Source Bans...' });
+	await interaction.update({ 
+		content: 'Fetching additional profile info...'
+	});
 
-	let builder = await createProfile(steamid, interaction.guildId);
-	let embed = await builder.getProfileEmbed(true);
-	let comps = await builder.getProfileComponents();
-	let file = builder.getSourceBansFile(); 
-
-	await interaction.editReply({ content: oldcontent, embeds: embed, components: comps, files: file });
+	const profile = await getProfile(steamid, interaction.guildId, true);
+	await interaction.editReply({
+		content: oldcontent,
+		embeds: profile.getEmbed(),
+		components: profile.getComponents(),
+		files: profile.getAttachments()
+	});
 }
 
-async function handleListFriends(interaction) {
-	await interaction.deferReply();
-	
+async function handleListFriends(interaction) {	
 	let steamid = interaction.customId.split(':')[1];
-	let friends = {};
 
-	try {
-		friends = (await axios.get(CONSTS.FRIEND_URL, { 
-			params: { key: steam_token, steamid: steamid }, 
-			timeout: CONSTS.REQ_TIMEOUT,
-			validateStatus: () => true 
-		})).data.friendslist.friends;
-	} catch (error) {
-		return await interaction.editReply({ content: '❌ Error grabbing friends.' });
+	await interaction.deferReply();
+
+	let friends = await httpsGet(CONSTS.FRIEND_URL, {
+		key: steam_token,
+		steamid: steamid
+	});
+
+	if (!friends?.data?.friendslist?.friends) {
+		return await interaction.editReply({
+			content: '❌ Error grabbing friends.'
+		});
 	}
 
 	let personadata = []; 
 
-	friends = friends.filter(x => { 
+	friends = friends.data.friendslist.friends.filter(x => { 
 		return getTags(x.steamid, interaction.guildId)['cheater'];
 	});
 
 	for (let i = 0; i < friends.length; i += 100) {
 		try {
-			let chunk = friends.slice(i, i + 100);
-			let chunkdata = await axios.get(CONSTS.SUMMARY_URL, { 
-				params: { 
-					key: steam_token, 
-					steamids: chunk.map(val => val.steamid).join(',') 
-				}, 
-				timeout: CONSTS.REQ_TIMEOUT,
-			}).catch(e => e);
+			const chunk = friends.slice(i, i + 100);
+			const chunkdata = await httpsGet(CONSTS.SUMMARY_URL, {
+				key: steam_token, 
+				steamids: chunk.map(val => val.steamid).join(',') 
+			});
 
 			if (chunkdata?.data?.response?.players) {
 				personadata.push(...chunkdata.data.response.players);	
 			}
 		} catch (error) {
-			return await interaction.editReply({ content: '❌ Error checking friend data.' });
+			// Error with this API request
 		}
+	}
+
+	if (personadata.length == 0) {
+		return await interaction.editReply({
+			content: '❌ Error checking friend data.'
+		});
 	}
 
 	personadata.sort((a, b) => { return a.steamid > b.steamid ? 1 : -1; });
 
-	let friendslist = '';
-	let friendstext = '';
+	let shorttext = '';
+	let fulltext = '';
 	let requireupload = false;
 	let file = null;
 
 	for (let data of personadata) {
-		let text = `${data.steamid} - ${data.personaname}`;
-		friendstext += text + '\n';
+		const label = `${data.steamid} - ${data.personaname}`;
+		const buffer = `[${label}](${CONSTS.PROFILE_URL}${data.steamid}/)\n`
+		
+		fulltext += label + '\n';
 
-		text = `[\`${data.steamid}\`](${CONSTS.PROFILE_URL}${data.steamid}/) - ${data.personaname}\n`;
-
-		if ((friendslist + text).length > 950) {
+		if ((shorttext + buffer).length > 950) {
 			requireupload = true;
 		} else {
-			friendslist += text;
+			shorttext += buffer;
 		}
 	} 
 
 	if (requireupload) {
-        file = [ { attachment: Buffer.from(friendstext), name: 'friends.txt' } ];
-		friendslist += `\`Check Attachment for full list\``;
+        file = [ { attachment: Buffer.from(fulltext), name: 'friends.txt' } ];
+		shorttext += '\`Check Attachment for full list\`';
 	}
 
 	let original = interaction.message.embeds[0];
@@ -141,14 +133,14 @@ async function handleListFriends(interaction) {
 		.setThumbnail(original.thumbnail.url)
 		.addFields({ 
 			name: `${original.author.name}\'s Cheater Friends`, 
-			value: friendslist 
+			value: shorttext 
 		});
 
 	await interaction.editReply({ content: null, embeds: [ embed ], files: file });
 }
 
 async function handleModifyTags(interaction) {
-	let steamid = interaction.customId.split(':')[1];
+	const steamid = interaction.customId.split(':')[1];
 	let usertags = getTags(steamid, interaction.guildId);
 
 	for (let tag of interaction.values) {
@@ -164,21 +156,21 @@ async function handleModifyTags(interaction) {
 
 	await setTags(steamid, interaction.guildId, usertags);
 
-	let original = interaction.message.embeds[0];
-	let sourcebans = original.fields.filter(x => x.name == 'Sourcebans');
+	const original = interaction.message.embeds[0];
+	const banfield = original.fields.filter(x => x.name == 'Sourcebans');
+	const sourcebans = banfield?.[0]?.value;
 
-	let builder = await createProfile(steamid, interaction.guildId);
-	let comps = await builder.getProfileComponents();
-	let embed = null;
+	const profile = await getProfile(steamid, interaction.guildId, !!sourcebans, sourcebans);
+	await interaction.update({
+		embeds: profile.getEmbed(),
+		components: profile.getComponents(),
+		files: profile.getAttachments()
+	});
 
-	if (sourcebans[0]) {
-		embed = await builder.getProfileEmbed(true, sourcebans[0].value);
-	} else {
-		 embed = await builder.getProfileEmbed();
-	}
-
-	await interaction.update({ embeds: embed, components: comps });
-	await interaction.followUp({ content: `✅ Modified tags for **${steamid}**`, ephemeral: true });
+	await interaction.followUp({
+		content: `✅ Modified tags for **${steamid}**`,
+		ephemeral: true
+	});
 }
 
 async function handleNotifyButton(interaction) {
@@ -191,7 +183,7 @@ async function handleNotifyButton(interaction) {
 		.setMaxValues(CONSTS.NOTIFICATIONS.length);
 
 	for (let noti of CONSTS.NOTIFICATIONS) {
-		if (noti.value == 'log' && !address_guilds.includes('963546826861080636')) {
+		if (noti.value == 'log' && !address_guilds.includes(interaction.guildId)) {
 			noti.name = 'Unimplemented';
 		}
 
@@ -225,5 +217,8 @@ async function handleNotifyMenu(interaction) {
 	}
 
 	await setNotis(steamid, interaction.guildId, usernotis);
-	await interaction.update({ content: `✅ Modified notification settings for **${steamid}**`, components: [] });
+	await interaction.update({
+		content: `✅ Modified notification settings for **${steamid}**`,
+		components: []
+	});
 }
