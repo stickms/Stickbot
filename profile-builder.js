@@ -208,7 +208,7 @@ class ProfileBuilder {
                     params: { apikey: rust_token, steamid64: id64 },
                     headers: { 'User-Agent': 'node-js-app' },
                     timeout: CONSTS.REQ_TIMEOUT
-                });
+                }).catch(e => e);
 
                 if (rustdata?.data?.response[0]?.url) {
                     alertlist += '❌ Rust Ban\n';
@@ -262,7 +262,7 @@ class ProfileBuilder {
             const response = await axios.get(CONSTS.STEAMREP_URL + id64, { 
                 params: { json: 1, extended: 1 }, 
                 timeout: CONSTS.REQ_TIMEOUT
-            });
+            }).catch(e => e);
 
             if (!response?.data?.steamrep) {
                 return [];
@@ -281,7 +281,7 @@ class ProfileBuilder {
             const response = await axios.get(CONSTS.FRIEND_URL, { 
                 params: { key: steam_token, steamid: this.steamid.getSteamID64() }, 
                 timeout: CONSTS.REQ_TIMEOUT
-            });
+            }).catch(e => e);
 
             frienddata = response.data;
         } catch (error) {

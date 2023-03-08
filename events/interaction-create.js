@@ -98,10 +98,11 @@ async function handleListFriends(interaction) {
 					steamids: chunk.map(val => val.steamid).join(',') 
 				}, 
 				timeout: CONSTS.REQ_TIMEOUT,
-				validateStatus: () => true 
-			});
+			}).catch(e => e);
 
-			personadata.push(...chunkdata.data.response.players);	
+			if (chunkdata?.data?.response?.players) {
+				personadata.push(...chunkdata.data.response.players);	
+			}
 		} catch (error) {
 			return await interaction.editReply({ content: '❌ Error checking friend data.' });
 		}

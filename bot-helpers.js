@@ -17,7 +17,7 @@ async function resolveSteamID(steamid) {
         let response = await axios.get(CONSTS.VANITY_URL, { 
             params: { key: steam_token, vanityurl: steamid }, 
             timeout: CONSTS.REQ_TIMEOUT
-        });
+        }).catch(e => e);
 
         let data = response.data.response;
 
@@ -43,7 +43,7 @@ async function getBanData(steamid) {
         let bandata = await axios.get(CONSTS.BAN_URL, { 
             params: { key: steam_token, steamids: steamid },
             timeout: CONSTS.REQ_TIMEOUT
-        });
+        }).catch(e => e);
 
         if (!bandata?.data?.players[0]) {
             return {};
