@@ -19,10 +19,9 @@ module.exports = {
             { name: 'LMAOBOX', value: 'lbox' },
             { name: 'Cathook', value: 'cat' }
         )
-    )
-    .addStringOption(
+    ).addStringOption(
         option => option.setName('tag')
-        .setDescription('Export this tag only (def. \"Cheater\")')
+        .setDescription('Export this tag only (default: \"cheater\")')
         .setRequired(false)
         .addChoices(...CONSTS.TAGS)
     ),
@@ -59,13 +58,13 @@ module.exports = {
             });
         }
 
-        const filename = (fmt == 'cat' ? 'playerlist.cfg' : 'playerlist.txt');
+        const filename = 'playerlist' + (fmt == 'cat' ? '.cfg' : '.txt');
         const file = { attachment: Buffer.from(result), name: filename };
-        const message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
+        let message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
 
         if (fmt == 'lbox') {
-            message +=  "\u2139\uFE0F Paste the export after \"c1 = \" "  + 
-                        "under the [pl] section of your config in `%localappdata%`\n";
+            message +=  "\u2139\uFE0F Paste the export after \`c1 = \` ";
+            message += "under the [pl] section of your config in \`%localappdata%\`\n";
         }
 
         await interaction.reply({ content: message, files: [ file ] });

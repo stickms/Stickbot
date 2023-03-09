@@ -12,10 +12,6 @@ class SteamProfile {
         this.steamid = steamid;
         this.guildid = guildid;
 
-        this.embeds = null;
-        this.components = null;
-        this.banfile = null;
-
         await this.countCheaterFriends();
         await this.generateEmbed(moreinfo, known_sourcebans);
         await this.generateComponents();

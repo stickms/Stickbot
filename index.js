@@ -54,12 +54,4 @@ client.on('interactionCreate', async interaction => {
 	}
 });
 
-process.on('unhandledRejection', error => {
-	console.error(error);
-});
-
-process.on('uncaughtException', error => {
-	console.error(error);
-});
-
 client.login(discord_token);

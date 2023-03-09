@@ -12,13 +12,8 @@ async function httpsGet(url, params={}, timeout=1000) {
     try {
         const response = await axios.get(url, { 
             params: params, 
-            timeout: timeout,
-            validateStatus: () => true
+            timeout: timeout
         });
-
-        if (!response || response.status < 200 || response.status >= 300) {
-            return null;
-        }
 
         return response;
     } catch (error) {

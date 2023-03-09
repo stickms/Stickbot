@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, SlashCommandSubcommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
 const { audiobot } = require('../audio-bot');
 const CONSTS = require('../bot-consts');

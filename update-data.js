@@ -50,48 +50,64 @@ async function updatePlayerData(client) {
 		let banmessages = [];
 
 		if (data.NumberOfVACBans != bans.vacbans) {
-			banmessages.push((data.NumberOfVACBans > bans.vacbans ? '' : 'Un-') + 'VAC Banned');
+			const prefix = data.NumberOfVACBans > bans.vacbans ? '' : 'Un-';
+			banmessages.push(prefix + 'VAC Banned');
 			bans.vacbans = data.NumberOfVACBans;
 		} if (data.NumberOfGameBans != bans.gamebans) {
-			banmessages.push((data.NumberOfGameBans > bans.gamebans ? '' : 'Un-') + 'Game Banned');
+			const prefix = data.NumberOfGameBans > bans.gamebans ? '' : 'Un-';
+			banmessages.push(prefix + 'Game Banned');
 			bans.gamebans = data.NumberOfGameBans;
 		} if (data.CommunityBanned != bans.communityban) {
-			banmessages.push((data.CommunityBanned ? '' : 'Un-') + 'Community Banned');
+			const prefix = data.CommunityBanned ? '' : 'Un-';
+			banmessages.push(prefix + 'Community Banned');
 			bans.communityban = data.CommunityBanned;
 		} if ((data.EconomyBan == 'banned') != bans.tradeban) {
-			banmessages.push(((data.EconomyBan == 'banned') ? '' : 'Un-') + 'Trade Banned');
+			const prefix = (data.EconomyBan == 'banned') ? '' : 'Un-';
+			banmessages.push(prefix + 'Trade Banned');
 			bans.tradeban = (data.EconomyBan == 'banned');
 		}
 
-		if (banmessages.length) {
-			await setBans(data.SteamId, bans);
+		if (!banmessages.length) {
+			continue;
+		}
 
-			for (let guildid of getGuilds(data.SteamId)) {
-				const profile = await getProfile(data.SteamId, guildid);
-				let message = {
-					content: `**${data.SteamId}** has been **${banmessages.join(', ')}**\n`,
-					embeds: profile.getEmbed(),
-					components: profile.getComponents()
-				};
+		await setBans(data.SteamId, bans);
+		banmessages = banmessages.join(', ');
 
-				const notis = getNotis(data.SteamId, guildid);
+		for (let guildid of getGuilds(data.SteamId)) {
+			const channel = getBanwatch(guildid);
+			if (!channel) {
+				continue;
+			}
 
-				if (notis.ban) {
-					for (let userid of notis.ban) {
-						message.content += `<@${userid}> `;
-					}
-				}
+			const profile = await getProfile(data.SteamId, guildid);
+			let message = {
+				content: `**${data.SteamId}** has been **${banmessages}**\n`,
+				embeds: profile.getEmbed(),
+				components: profile.getComponents()
+			};
 
-				const channel = getBanwatch(guildid);
-				if (channel) {
-					updatemessages.push({ snowflake: channel, message: message });
+			const notis = getNotis(data.SteamId, guildid);
+
+			if (notis.ban) {
+				for (const userid of notis.ban) {
+					message.content += `<@${userid}> `;
 				}
 			}
+
+			updatemessages.push({
+				snowflake: channel,
+				message: message
+			});
 		}
-	}
+	}	
 
 	for (let profile of summaries) {
-		if (!profile['gameserverip'] || profile.gameserverip.split(':')[1] != '0') {
+		if (!profile['gameserverip']) {
+			continue;
+		}
+
+		if (profile.gameserverip.split(':')[1] != '0') {
 			continue;
 		}
 
@@ -139,8 +155,8 @@ async function updatePlayerData(client) {
 
 	for (let update of updatemessages) {
 		try {
-			let channel = update.dm ? await client.users.fetch(update.snowflake, { force: true }) : 
-				await client.channels.fetch(update.snowflake);
+			const channel = !update.dm ? await client.channels.fetch(update.snowflake)
+				: await client.users.fetch(update.snowflake, { force: true }); 
 
 			if (channel) await channel.send(update.message);
 		} catch (error) {

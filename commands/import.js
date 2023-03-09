@@ -16,7 +16,7 @@ module.exports = {
         .setRequired(true)
     ).addStringOption(option => option
         .setName('tag')
-        .setDescription('Tag to assign each listed player with (def. cheater)')
+        .setDescription('Tag to assign each profile with (default: cheater)')
         .setRequired(false)
         .addChoices(...CONSTS.TAGS)
     ),
