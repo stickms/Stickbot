@@ -9,25 +9,21 @@ module.exports = {
 	name: 'interactionCreate',
 	async execute(interaction) {
 		const customid = interaction.customId;
-		if (customid == null) {
+		if (!customid?.includes(':')) {
 			return;
 		}
 
-		try {
-			if (customid.startsWith('moreinfo')) {
-				handleMoreInfo(interaction);
-			} else if (customid.startsWith('friendinfo')) {
-				handleListFriends(interaction);
-			} else if (customid.startsWith('notifybutton')) {
-				handleNotifyButton(interaction);
-			} else if (customid.startsWith('modifytags')) {
-				handleModifyTags(interaction);
-			} else if (customid.startsWith('notifymenu')) {
-				handleNotifyMenu(interaction);
-			}
-		} catch (error) {
-			console.error(error);
-			// Likely cannot send message to this channel
+		switch (customid.split(':')[0]) {
+			case 'moreinfo':
+				return handleMoreInfo(interaction);
+			case 'friendinfo':
+				return handleListFriends(interaction);
+			case 'notifybutton':
+				return handleNotifyButton(interaction);
+			case 'modifytags':
+				return handleModifyTags(interaction);
+			case 'notifymenu':
+				return handleNotifyMenu(interaction);
 		}
 	},
 };
@@ -189,7 +185,7 @@ async function handleNotifyButton(interaction) {
 
 		let hasnoti = usernotis[noti.value]?.includes(interaction.user.id);
 		selectmenu.addOptions({
-			label: `${hasnoti ? 'Don\'t notify on:' : 'Notify on:'} ${noti.name}`, 
+			label: `${hasnoti ? 'Don\'t notify on:' : 'Notify on:'} ${noti.name}`,
 			value: noti.value
 		});
 	}

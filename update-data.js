@@ -1,5 +1,5 @@
 const { steam_token, address_guilds } = require('./config.json');
-const { httpsGet, resolveSteamID } = require('./bot-helpers')
+const { httpsGet } = require('./bot-helpers')
 const { getProfile } = require('./profile-builder.js');
 const { getPlayers, getGuilds, getNotis, setBans, getBans, 
 		getAddrs, setAddrs, getBanwatch } = require('./database');
@@ -136,7 +136,7 @@ async function updatePlayerData(client) {
 					message: message,
 					dm: true
 				});
-			}	
+			}
 		}
 
 		addrs[ipaddr] = {

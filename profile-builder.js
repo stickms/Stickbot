@@ -1,4 +1,5 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, ButtonStyle } = require('discord.js')
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
+        StringSelectMenuBuilder, ButtonStyle } = require('discord.js');
 const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
 const { httpsGet, resolveSteamID, getBanData } = require('./bot-helpers.js');
 const { getTags, getAddrs } = require('./database');
@@ -60,7 +61,7 @@ class SteamProfile {
         
         if (this.summary.gameextrainfo) {
             const gameip = this.summary.gameserverip;
-            const gameinfo = `**${data.gameextrainfo}**` +
+            const gameinfo = `**${this.summary.gameextrainfo}**` +
                 gameip ? ` on \`${gameip}\`` : '';
             
             embed.addFields({
