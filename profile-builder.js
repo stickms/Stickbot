@@ -1,8 +1,8 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } = require('discord.js');
 const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
-const { httpsGet, resolveSteamID, getBanData } = require('./bot-helpers.js');
-const { getTags, getAddrs } = require('./database');
+const { httpsGet, getBanData } = require('./bot-helpers.js');
+const { getTags, getNames, getAddrs } = require('./database');
 
 const CONSTS = require('./bot-consts.js');
 const HTMLParser = require('node-html-parser');
@@ -71,6 +71,33 @@ class SteamProfile {
         }
 
         if (moreinfo) {
+            const tagdata = getTags(this.steamid, this.guildid);
+            const taglist = Object.entries(tagdata).map(([k, v]) => { 
+                return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
+            });
+
+            const namedata = getNames(this.steamid, this.guildid);
+            const namelist = Object.entries(namedata).map(([k, v]) => [k, v])
+                .sort(function (a, b) { return b[1].date - a[1].date; })
+                .map(([k, v]) => { 
+                return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
+            });
+
+            const addrdata = getAddrs(this.steamid);
+            const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
+                .sort(function (a, b) { return b[1].date - a[1].date; })
+                .map(([k, v]) => { 
+                return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
+            });
+    
+            if (taglist?.length) {
+                embed.addFields({ name: 'Added Tags', value: taglist.join('\n') });
+            } if (namelist?.length) {
+                embed.addFields({ name: 'Name History', value: namelist.join('\n') });
+            }if (iplist?.length && address_guilds.includes(this.guildid)) {
+                embed.addFields({ name: 'Logged IPs', value: iplist.join('\n') });
+            }
+
             const sourcebans = known_sourcebans ?? await this.getSourceBanData();
             embed.addFields({ name: 'Sourcebans', value: sourcebans });
         }

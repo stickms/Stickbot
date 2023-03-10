@@ -24,6 +24,7 @@ module.exports = {
 
     NOTIFICATIONS: [
         { name: 'Ban', value: 'ban' },
-        { name: 'Address Log', value: 'log' }
+        { name: 'Address Log', value: 'log' },
+        { name: 'Name Change', value: 'name' }
     ],
 };

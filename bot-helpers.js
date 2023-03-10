@@ -5,7 +5,8 @@ const { steam_token } = require('./config.json');
 
 module.exports = { 
     httpsGet, resolveSteamID,
-    getBanData, formatWelcomeMessage
+    getBanData, getPersonaDict,
+    formatWelcomeMessage
 };
 
 async function httpsGet(url, params={}, timeout=1000) {
@@ -67,6 +68,32 @@ async function getBanData(steamid) {
             gamebans: bandata.NumberOfGameBans,
             communityban: bandata.CommunityBanned,
             tradeban: bandata.EconomyBan == 'banned'
+        };
+    } catch (error) {
+        return {};
+    }
+}
+
+async function getPersonaDict(steamid) {
+    if (typeof steamid === typeof SteamID) {
+        steamid = steamid.getSteamID64();
+    }
+
+    try {
+        const response = await httpsGet(CONSTS.SUMMARY_URL, {
+            key: steam_token,
+            steamids: steamid
+        });
+
+        if (!response?.data?.response?.players?.[0]) {
+            return {};
+        }
+
+        const summary = response.data.response.players[0];
+        const persona = JSON.stringify(summary.personaname);
+
+        return {
+            [persona]: Math.floor(Date.now() / 1000)
         };
     } catch (error) {
         return {};

@@ -180,7 +180,7 @@ async function handleNotifyButton(interaction) {
 
 	for (let noti of CONSTS.NOTIFICATIONS) {
 		if (noti.value == 'log' && !address_guilds.includes(interaction.guildId)) {
-			noti.name = 'Unimplemented';
+			continue;
 		}
 
 		let hasnoti = usernotis[noti.value]?.includes(interaction.user.id);
