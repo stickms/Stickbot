@@ -147,13 +147,13 @@ async function commandPlay(interaction) {
 	const query = interaction.options.getString('query');
 	let data = await resolveQuery(query);
 
+	if (!data.url) {
+		return await interaction.editReply('❌ Error: Could not find that track.');
+	}
+
 	if (interaction.options.getBoolean('shuffle')) {
 		// Technically not a truly random sort
 		data.tracks.sort(() => Math.random() - 0.5);
-	}
-
-	if (!data.url) {
-		return await interaction.editReply('❌ Error: Could not find that track.');
 	}
 
 	for (const track of data.tracks) {
@@ -443,7 +443,7 @@ async function resolveQuery(query) {
 	const search = await play.search(query, { limit: 1 });
 	return {
 		url: search[0]?.url,
-		tracks: search[0]?.url ? [ search[0]?.url ] : {}
+		tracks: search[0]?.url ? [ search[0]?.url ] : []
 	};
 }
 
@@ -597,7 +597,7 @@ async function trackData(url) {
 			];
 
 			if (!playlist.channel.name) { // Likely a YouTube 'Mix' which has everything else null
-				fields = [fields[0]];
+				fields = [ fields[0] ];
 			}
 		}
 	}

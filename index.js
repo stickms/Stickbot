@@ -41,17 +41,24 @@ for (const file of eventFiles) {
 }
 
 client.on('interactionCreate', async interaction => {
-	try {
-		if (!interaction.isChatInputCommand()) return;
-
-		const command = interaction.client.commands.get(interaction.commandName);
-
-		if (!command) return;
-
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
+	if (!interaction.isChatInputCommand()) {
+		return;
 	}
+
+	const command = interaction.client.commands.get(interaction.commandName);
+	if (!command) {
+		return;
+	}
+	
+	await command.execute(interaction).catch(console.error);
+});
+
+process.on('unhandledRejection', error => {
+	console.error(error);
+});
+
+process.on('uncaughtException', error => {
+	console.error(error);
 });
 
 client.login(discord_token);

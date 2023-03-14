@@ -27,7 +27,7 @@ module.exports = {
         setBanwatch(interaction.guildId, channel.id);
 
         await interaction.reply({ 
-            content: `\u2139\uFE0F Ban Watch logs will now be posted in <#${channel.id}>`,
+            content: `\u2139\uFE0F Ban Watch logs will now be posted in <#${channel.id}>`
         });
 	},
 };

@@ -121,7 +121,7 @@ async function setBans(steamid, bans) {
     saveDB();
 }
 
-function setWelcome(guildid, channel = null, join = null, leave = null) {
+function setWelcome(guildid, channel=null, join=null, leave=null) {
     if(!db.servers[guildid]) {
         db.servers[guildid] = {};
     }

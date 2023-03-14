@@ -6,5 +6,8 @@ module.exports = {
 	execute(client) {
 		console.log(`Ready! Logged in as ${client.user.tag}`);
 		setInterval(updatePlayerData, 300_000, client); // Every 5 minutes
+		client.user.setPresence({
+			activities: [ { name: 'Slash Commands!', type: 2 } ]
+		});
 	},
 };

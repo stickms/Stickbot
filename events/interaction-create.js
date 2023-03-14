@@ -15,15 +15,15 @@ module.exports = {
 
 		switch (customid.split(':')[0]) {
 			case 'moreinfo':
-				return handleMoreInfo(interaction);
+				return handleMoreInfo(interaction).catch(console.error);
 			case 'friendinfo':
-				return handleListFriends(interaction);
+				return handleListFriends(interaction).catch(console.error);
 			case 'notifybutton':
-				return handleNotifyButton(interaction);
+				return handleNotifyButton(interaction).catch(console.error);
 			case 'modifytags':
-				return handleModifyTags(interaction);
+				return handleModifyTags(interaction).catch(console.error);
 			case 'notifymenu':
-				return handleNotifyMenu(interaction);
+				return handleNotifyMenu(interaction).catch(console.error);
 		}
 	},
 };
@@ -180,7 +180,7 @@ async function handleNotifyButton(interaction) {
 
 	for (let noti of CONSTS.NOTIFICATIONS) {
 		if (noti.value == 'log' && !address_guilds.includes(interaction.guildId)) {
-			continue;
+			noti.name = 'Unimplemented';
 		}
 
 		let hasnoti = usernotis[noti.value]?.includes(interaction.user.id);

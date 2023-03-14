@@ -78,7 +78,7 @@ class SteamProfile {
 
             const namedata = getNames(this.steamid, this.guildid);
             const namelist = Object.entries(namedata).map(([k, v]) => [k, v])
-                .sort(function (a, b) { return b[1].date - a[1].date; })
+                .sort(function (a, b) { return b[1] - a[1]; })
                 .map(([k, v]) => { 
                 return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
             });
@@ -91,11 +91,22 @@ class SteamProfile {
             });
     
             if (taglist?.length) {
-                embed.addFields({ name: 'Added Tags', value: taglist.join('\n') });
+                embed.addFields({
+                    name: 'Added Tags',
+                    value: taglist.join('\n'),
+                    inline: true
+                });
             } if (namelist?.length) {
-                embed.addFields({ name: 'Name History', value: namelist.join('\n') });
+                embed.addFields({
+                    name: 'Name History',
+                    value: namelist.join('\n'),
+                    inline: true
+                });
             }if (iplist?.length && address_guilds.includes(this.guildid)) {
-                embed.addFields({ name: 'Logged IPs', value: iplist.join('\n') });
+                embed.addFields({
+                    name: 'Logged IPs',
+                    value: iplist.join('\n')
+                });
             }
 
             const sourcebans = known_sourcebans ?? await this.getSourceBanData();
