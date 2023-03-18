@@ -62,7 +62,7 @@ async function handleListFriends(interaction) {
 		steamid: steamid
 	});
 
-	if (!friends?.data?.friendslist?.friends) {
+	if (!friends?.friendslist?.friends) {
 		return await interaction.editReply({
 			content: '❌ Error grabbing friends.'
 		});
@@ -70,7 +70,7 @@ async function handleListFriends(interaction) {
 
 	let personadata = []; 
 
-	friends = friends.data.friendslist.friends.filter(x => { 
+	friends = friends.friendslist.friends.filter(x => { 
 		return getTags(x.steamid, interaction.guildId)['cheater'];
 	});
 
@@ -82,8 +82,8 @@ async function handleListFriends(interaction) {
 				steamids: chunk.map(val => val.steamid).join(',') 
 			});
 
-			if (chunkdata?.data?.response?.players) {
-				personadata.push(...chunkdata.data.response.players);	
+			if (chunkdata?.response?.players) {
+				personadata.push(...chunkdata.response.players);	
 			}
 		} catch (error) {
 			// Error with this API request

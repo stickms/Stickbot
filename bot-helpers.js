@@ -16,7 +16,11 @@ async function httpsGet(url, params={}, timeout=1000) {
             timeout: timeout
         });
 
-        return response;
+        if (!response?.data) {
+            return null;
+        } 
+
+        return response.data;
     } catch (error) {
         return null;
     }
@@ -34,8 +38,8 @@ async function resolveSteamID(steamid) {
             vanityurl: steamid
         });
 
-        if (response?.data?.response?.steamid) {
-            return new SteamID(response.data.response.steamid);
+        if (response?.response?.steamid) {
+            return new SteamID(response.response.steamid);
         }    
         else {
             // Check if it's a regular steamid format
@@ -57,11 +61,11 @@ async function getBanData(steamid) {
             steamids: steamid
         });
 
-        if (!bandata?.data?.players?.[0]) {
+        if (!bandata?.players?.[0]) {
             return {};
         }
 
-        bandata = bandata.data.players[0];
+        bandata = bandata.players[0];
 
         return {
             vacbans: bandata.NumberOfVACBans,
@@ -85,11 +89,11 @@ async function getPersonaDict(steamid) {
             steamids: steamid
         });
 
-        if (!response?.data?.response?.players?.[0]) {
+        if (!response?.response?.players?.[0]) {
             return {};
         }
 
-        const summary = response.data.response.players[0];
+        const summary = response.response.players[0];
         const persona = JSON.stringify(summary.personaname);
 
         return {

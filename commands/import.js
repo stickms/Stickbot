@@ -35,16 +35,10 @@ module.exports = {
 
         const fulltext = await httpsGet(idlist.url);
 
-        if (!fulltext?.data) {
+        if (!fulltext?.length) {
+            const error = fulltext ? 'File was empty' : 'Request timed out';
             return await interaction.editReply({
-                content: '❌ Error: Request timed out.',
-                ephemeral: true
-            });
-        }
-
-        if (!fulltext.data.length) {
-            return await interaction.editReply({
-                content: '❌ Error: File was empty.',
+                content: `❌ Error: ${error}.`,
                 ephemeral: true
             });
         }
@@ -52,7 +46,7 @@ module.exports = {
         const tag = interaction.options.getString('tag') ?? 'cheater';
         const curdate = Math.floor(Date.now() / 1000);
 
-        for (let line of fulltext.data.split('\n')) {
+        for (const line of fulltext.split('\n')) {
             try {
                 let steamid = (new SteamID(line)).getSteamID64();
                 let curtags = getTags(steamid, interaction.guildId);

@@ -62,12 +62,12 @@ async function getSummaries() {
 		}
 
 		profiles = (await Promise.allSettled(profiles)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.data?.response?.players;
-		}).map(x => x.value.data.response.players).flat();
+			return x.status == 'fulfilled' && x.value?.response?.players;
+		}).map(x => x.value.response.players).flat();
 
 		bandata = (await Promise.allSettled(bandata)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.data?.players;
-		}).map(x => x.value.data.players).flat();
+			return x.status == 'fulfilled' && x.value?.players;
+		}).map(x => x.value.players).flat();
 
 		return [ profiles, bandata ];
 	} catch (error) {

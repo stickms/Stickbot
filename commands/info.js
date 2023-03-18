@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getPlayers } = require('../database');
+const CONSTS = require('../bot-consts');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -20,9 +21,10 @@ module.exports = {
         const uptime = Math.floor(interaction.client.uptime / (86_400_000));
 
 		const embed = new EmbedBuilder()
+            .setColor(CONSTS.EMBED_CLR)
             .setAuthor({
                 name: client.user.tag,
-                iconURL: 'https://i.imgur.com/5QESPfY.png'
+                iconURL: CONSTS.INFO_ICON
             }).setThumbnail(client.user.displayAvatarURL({ size: 512 }))
             .addFields([
                 {

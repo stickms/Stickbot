@@ -1,7 +1,7 @@
 // List of bot constants I use regularly
 
 module.exports = {
-    EMBED_CLR: 0x0398FC,
+    EMBED_CLR: 0x3297A8,
 
     SUMMARY_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/',
     FRIEND_URL: 'https://api.steampowered.com/ISteamUser/GetFriendList/v1/',
@@ -14,6 +14,7 @@ module.exports = {
     PROFILE_URL: 'https://steamcommunity.com/profiles/',
     STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
     MUSIC_ICON: 'https://i.imgur.com/T3BQLEd.png',
+    INFO_ICON: 'https://i.imgur.com/5QESPfY.png',
 
     TAGS: [
         { name: 'Cheater', value: 'cheater' },

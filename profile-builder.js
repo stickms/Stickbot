@@ -36,11 +36,11 @@ class SteamProfile {
             steamids: this.steamid
         });
 
-        if (!summary_response?.data?.response?.players?.[0]) {
+        if (!summary_response?.response?.players?.[0]) {
             return;
         }
 
-        this.summary = summary_response.data.response.players[0];
+        this.summary = summary_response.response.players[0];
 
         const idlist = this.getSteamIDList();
         const quicklinks = this.getQuicklinks();
@@ -93,14 +93,12 @@ class SteamProfile {
             if (taglist?.length) {
                 embed.addFields({
                     name: 'Added Tags',
-                    value: taglist.join('\n'),
-                    inline: true
+                    value: taglist.join('\n')
                 });
             } if (namelist?.length) {
                 embed.addFields({
                     name: 'Name History',
-                    value: namelist.join('\n'),
-                    inline: true
+                    value: namelist.join('\n')
                 });
             }if (iplist?.length && address_guilds.includes(this.guildid)) {
                 embed.addFields({
@@ -220,7 +218,7 @@ class SteamProfile {
                 steamid64: this.steamid
             });
 
-            if (rustdata?.data?.response?.[0]?.url) {
+            if (rustdata?.response?.[0]?.url) {
                 alertlist.push('❌ Rust Ban');
             }
         }
@@ -268,11 +266,11 @@ class SteamProfile {
                 extended: 1
             });
 
-            if (!response?.data?.steamrep?.reputation?.full) {
+            if (!response?.steamrep?.reputation?.full) {
                 return [];
             }
 
-            return response.data.steamrep.reputation.full.split(',');
+            return response.steamrep.reputation.full.split(',');
         } catch (error) {
             console.error(error);
             return [];
@@ -286,11 +284,11 @@ class SteamProfile {
                 steamid: this.steamid
             });
 
-            if (!response?.data?.friendslist?.friends) {
+            if (!response?.friendslist?.friends) {
                 return;
             }
 
-            const frienddata = response.data.friendslist.friends;
+            const frienddata = response.friendslist.friends;
 
             for (const val of Object.values(frienddata)) {
                 const tags = getTags(val.steamid, this.guildid);
@@ -364,15 +362,11 @@ class SteamProfile {
         }
     
         for (const result of results) {
-            if (result?.status != 'fulfilled') {
+            if (result?.status != 'fulfilled' || !result?.value) {
                 continue;
             }
 
-            if (!result?.value?.data) {
-                continue;
-            }
-
-            let htmldata = HTMLParser.parse(result.value.data);
+            let htmldata = HTMLParser.parse(result.value);
             if (!htmldata) {
                 continue;
             }
