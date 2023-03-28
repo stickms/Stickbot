@@ -48,7 +48,11 @@ module.exports = {
 
         for (const line of fulltext.split('\n')) {
             try {
-                let steamid = (new SteamID(line)).getSteamID64();
+                const steamid = (new SteamID(line)).getSteamID64();
+                if (!steamid) {
+                    continue;
+                }
+
                 let curtags = getTags(steamid, interaction.guildId);
 
                 if (!curtags[tag]) {

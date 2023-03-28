@@ -60,13 +60,12 @@ class SteamProfile {
             );
         
         if (this.summary.gameextrainfo) {
+            const gameinfo = `**${this.summary.gameextrainfo}**`;
             const gameip = this.summary.gameserverip;
-            const gameinfo = `**${this.summary.gameextrainfo}**` +
-                gameip ? ` on \`${gameip}\`` : '';
-            
+
             embed.addFields({
                 name: 'Now Playing',
-                value: gameinfo
+                value: gameinfo + (gameip ? ` on \`${gameip}\`` : '')
             });
         }
 
@@ -234,8 +233,8 @@ class SteamProfile {
         }
 
         if (this.cheaterfriends > 0) {
-            const plural = $`cheater${this.cheaterfriends == 1 ? '' : 's'}`;
-            alertlist.push(`⚠️ Friends with ${this.cheaterfriends}${plural}`);
+            const plural = `cheater${this.cheaterfriends == 1 ? '' : 's'}`;
+            alertlist.push(`⚠️ Friends with ${this.cheaterfriends} ${plural}`);
         }
 
         // Place Ban Watch/IP Logs Last
@@ -289,6 +288,7 @@ class SteamProfile {
             }
 
             const frienddata = response.friendslist.friends;
+            this.cheaterfriends = 0;
 
             for (const val of Object.values(frienddata)) {
                 const tags = getTags(val.steamid, this.guildid);
@@ -326,7 +326,7 @@ class SteamProfile {
                 name: 'bans.txt'
             }];
 
-            shorttext += `\`Check Attachment for full list\``;
+            shorttext += '\`Check Attachment for full list\`';
         } else if (!shorttext) {
             shorttext = '✅ None';
         }
@@ -353,7 +353,8 @@ class SteamProfile {
             }
 
             // Extended timeout because some bans sites are slow
-            tasks.push(httpsGet(url, {}, 3000));
+            // Also, we want full response just so that we can grab IP
+            tasks.push(httpsGet(url, {}, 3000, true));
         }
     
         const results = await Promise.allSettled(tasks);
@@ -362,11 +363,11 @@ class SteamProfile {
         }
     
         for (const result of results) {
-            if (result?.status != 'fulfilled' || !result?.value) {
+            if (result?.status != 'fulfilled' || !result?.value?.data) {
                 continue;
             }
 
-            let htmldata = HTMLParser.parse(result.value);
+            let htmldata = HTMLParser.parse(result.value.data);
             if (!htmldata) {
                 continue;
             }

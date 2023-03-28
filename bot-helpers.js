@@ -9,7 +9,7 @@ module.exports = {
     formatWelcomeMessage
 };
 
-async function httpsGet(url, params={}, timeout=1000) {
+async function httpsGet(url, params={}, timeout=1000, full=false) {
     try {
         const response = await axios.get(url, { 
             params: params, 
@@ -20,7 +20,7 @@ async function httpsGet(url, params={}, timeout=1000) {
             return null;
         } 
 
-        return response.data;
+        return full ? response : response.data;
     } catch (error) {
         return null;
     }
