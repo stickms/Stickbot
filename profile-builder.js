@@ -33,8 +33,7 @@ class SteamProfile {
     async generateEmbed(moreinfo = false, known_sourcebans = null) {
         const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
             key: steam_token,
-            steamids: this.steamid,
-            guildid: this.guildid
+            steamids: this.steamid
         });
 
         if (!summary_response?.response?.players?.[0]) {
@@ -281,8 +280,7 @@ class SteamProfile {
         try {
             const response = await httpsGet(CONSTS.FRIEND_URL, {
                 key: steam_token,
-                steamid: this.steamid,
-                guildid: this.guildid
+                steamid: this.steamid
             });
 
             if (!response?.friendslist?.friends) {
