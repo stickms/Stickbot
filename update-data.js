@@ -52,12 +52,14 @@ async function getSummaries() {
 
 			profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
 				key: steam_token, 
-				steamids: idlist
+				steamids: idlist,
+				guildid: 'banwatch'
 			}));
 
 			bandata.push(httpsGet(CONSTS.BAN_URL, {
 				key: steam_token, 
-				steamids: idlist
+				steamids: idlist,
+				guildid: 'banwatch'
 			}));
 		}
 

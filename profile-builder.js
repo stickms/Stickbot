@@ -33,7 +33,8 @@ class SteamProfile {
     async generateEmbed(moreinfo = false, known_sourcebans = null) {
         const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
             key: steam_token,
-            steamids: this.steamid
+            steamids: this.steamid,
+            guildid: this.guildid
         });
 
         if (!summary_response?.response?.players?.[0]) {
@@ -280,7 +281,8 @@ class SteamProfile {
         try {
             const response = await httpsGet(CONSTS.FRIEND_URL, {
                 key: steam_token,
-                steamid: this.steamid
+                steamid: this.steamid,
+                guildid: this.guildid
             });
 
             if (!response?.friendslist?.friends) {
@@ -346,10 +348,9 @@ class SteamProfile {
             
             if (idfmt == 3) {
                 url += converted.getSteam3RenderedID();
-            } else if (idfmt == 2.1) {
-                url += converted.getSteam2RenderedID(true);
             } else {
-                url += converted.getSteam2RenderedID(false);
+                const id2 = converted.getSteam2RenderedID();
+                url += id2.substring(id2.indexOf(':') + 1);
             }
 
             // Extended timeout because some bans sites are slow
@@ -380,7 +381,7 @@ class SteamProfile {
                     continue;
                 }
 
-                if (!tds[0].innerText.includes('Ban Details')) {
+                if (!tds[0].innerText.toLowerCase().includes('ban details')) {
                     continue;
                 }
     
@@ -388,7 +389,7 @@ class SteamProfile {
                 for (const row of trs) {
                     var nodes = row.getElementsByTagName('td');
     
-                    if (nodes.length > 1 && nodes[0].innerText == 'Reason') {
+                    if (nodes.length > 1 && nodes[0].innerText.toLowerCase() == 'reason') {
                         sourcebans.push({
                             url: result.value.config.url,
                             reason: nodes[1].innerText

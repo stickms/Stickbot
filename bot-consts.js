@@ -10,7 +10,7 @@ module.exports = {
     STEAMREP_URL: 'https://steamrep.com/api/beta3/reputation/',
     RUST_URL: 'https://rustbanned.com/api/eac_ban_check_v2.php',
 
-    SRCBAN_EXT: 'index.php?p=banlist&advType=steamid&advSearch=',
+    SRCBAN_EXT: 'index.php?p=banlist&advType=steam&advSearch=',
     PROFILE_URL: 'https://steamcommunity.com/profiles/',
     STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
     MUSIC_ICON: 'https://i.imgur.com/T3BQLEd.png',

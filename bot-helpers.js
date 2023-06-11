@@ -4,13 +4,30 @@ const SteamID = require('steamid');
 const { steam_token } = require('./config.json');
 
 module.exports = { 
-    httpsGet, resolveSteamID,
-    getBanData, getPersonaDict,
-    formatWelcomeMessage
+    httpsGet, httpsHead, resolveSteamID,
+    getBanData, getPersonaDict, formatWelcomeMessage,
+    getAPICalls
 };
+
+let apicalls = {};
+
+function getAPICalls() {
+    return apicalls;
+}
 
 async function httpsGet(url, params={}, timeout=1000, full=false) {
     try {
+        if (url.startsWith(CONSTS.BAN_URL) || url.startsWith(CONSTS.FRIEND_URL) || 
+        url.startsWith(CONSTS.PROFILE_URL) || url.startsWith(CONSTS.SUMMARY_URL)) {
+            if (params.guildid) {
+                if (apicalls[params.guildid]) {
+                    apicalls[params.guildid]++;
+                } else {
+                    apicalls[params.guildid] = 1;
+                }
+            }
+        }
+
         const response = await axios.get(url, { 
             params: params, 
             timeout: timeout
@@ -18,9 +35,26 @@ async function httpsGet(url, params={}, timeout=1000, full=false) {
 
         if (!response?.data) {
             return null;
-        } 
+        }
 
         return full ? response : response.data;
+    } catch (error) {
+        return null;
+    }
+}
+
+async function httpsHead(url, params={}, timeout=1000) {
+    try {
+        const response = await axios.head(url, { 
+            params: params, 
+            timeout: timeout
+        });
+
+        if (!response) {
+            return null;
+        } 
+
+        return response;
     } catch (error) {
         return null;
     }
@@ -35,7 +69,8 @@ async function resolveSteamID(steamid) {
         // Try to check if this is a Vanity URL first
         const response = await httpsGet(CONSTS.VANITY_URL, {
             key: steam_token,
-            vanityurl: steamid
+            vanityurl: steamid,
+            guildid: 'resolve'
         });
 
         if (response?.response?.steamid) {
@@ -58,7 +93,8 @@ async function getBanData(steamid) {
     try {
         let bandata = await httpsGet(CONSTS.BAN_URL, {
             key: steam_token,
-            steamids: steamid
+            steamids: steamid,
+            guildid: 'bandata'
         });
 
         if (!bandata?.players?.[0]) {
@@ -86,7 +122,8 @@ async function getPersonaDict(steamid) {
     try {
         const response = await httpsGet(CONSTS.SUMMARY_URL, {
             key: steam_token,
-            steamids: steamid
+            steamids: steamid,
+            guildid: 'personadict'
         });
 
         if (!response?.response?.players?.[0]) {

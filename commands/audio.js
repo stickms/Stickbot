@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
 const { audiobot } = require('../audio-bot');
+const { httpsHead } = require('../bot-helpers');
 const CONSTS = require('../bot-consts');
 const play = require('play-dl');
 
@@ -439,12 +440,27 @@ async function resolveQuery(query) {
 		}
 	}
 
-	// Otherwise, return a YouTube search query for it
-	const search = await play.search(query, { limit: 1 });
-	return {
-		url: search[0]?.url,
-		tracks: search[0]?.url ? [ search[0]?.url ] : []
-	};
+	// If it is a URL, consider it a file
+	// try {
+	// 	const result = await httpsHead(query, {}, 500, true);
+	// 	if (!result?.headers) {
+	// 		throw new Error();
+	// 	}
+
+	// 	console.log(result.headers?.['content-type']);
+
+	// 	return {
+	// 		url: null,
+	// 		tracks: [ null ]
+	// 	}
+	// } catch {
+		// Otherwise, return a YouTube search query for it
+		const search = await play.search(query, { limit: 1 });
+		return {
+			url: search[0]?.url,
+			tracks: search[0]?.url ? [ search[0]?.url ] : []
+	 	};
+	// }
 }
 
 function toDuration(str) {

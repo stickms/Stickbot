@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getPlayers } = require('../database');
+const { getAPICalls } = require('../bot-helpers');
 const CONSTS = require('../bot-consts');
 
 module.exports = {
@@ -51,9 +52,15 @@ module.exports = {
                     name: 'Uptime',
                     value: uptime.toLocaleString() + ' days',
                     inline: true
+                }, {
+                    name: 'Steam API Calls',
+                    value: Object.values(getAPICalls()).reduce((a, b) => a + b, 0).toLocaleString() + ' calls',
+                    inline: true
                 }
             ]);
         
+        console.log(getAPICalls());
+
         await interaction.reply({ embeds: [ embed ] });
 	},
 };
