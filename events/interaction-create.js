@@ -59,8 +59,7 @@ async function handleListFriends(interaction) {
 
 	let friends = await httpsGet(CONSTS.FRIEND_URL, {
 		key: steam_token,
-		steamid: steamid,
-		guildid: interaction.guildId
+		steamid: steamid
 	});
 
 	if (!friends?.friendslist?.friends) {
@@ -80,8 +79,7 @@ async function handleListFriends(interaction) {
 			const chunk = friends.slice(i, i + 100);
 			const chunkdata = await httpsGet(CONSTS.SUMMARY_URL, {
 				key: steam_token, 
-				steamids: chunk.map(val => val.steamid).join(','),
-				guildid: interaction.guildId
+				steamids: chunk.map(val => val.steamid).join(',')
 			});
 
 			if (chunkdata?.response?.players) {

@@ -47,29 +47,24 @@ async function getSummaries() {
 
 		const players = Object.keys(getPlayers());
 
+		// Using Promise.allSettled to run these API calls at the same time
+		// Seemed to start triggering the API to return 429 errors
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
 
-			profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
+			profiles.push(await httpsGet(CONSTS.SUMMARY_URL, {
 				key: steam_token, 
-				steamids: idlist,
-				guildid: 'banwatch'
+				steamids: idlist
 			}));
 
-			bandata.push(httpsGet(CONSTS.BAN_URL, {
+			bandata.push(await httpsGet(CONSTS.BAN_URL, {
 				key: steam_token, 
-				steamids: idlist,
-				guildid: 'banwatch'
+				steamids: idlist
 			}));
 		}
 
-		profiles = (await Promise.allSettled(profiles)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.response?.players;
-		}).map(x => x.value.response.players).flat();
-
-		bandata = (await Promise.allSettled(bandata)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.players;
-		}).map(x => x.value.players).flat();
+		profiles = profiles.filter(x => x?.players).map(x => x.players).flat();
+		bandata = bandata.filter(x => x?.players).map(x => x.players).flat();
 
 		return [ profiles, bandata ];
 	} catch (error) {

@@ -9,7 +9,7 @@ module.exports = {
     getAPICalls
 };
 
-let apicalls = {};
+let apicalls = 0;
 
 function getAPICalls() {
     return apicalls;
@@ -18,14 +18,8 @@ function getAPICalls() {
 async function httpsGet(url, params={}, timeout=1000, full=false) {
     try {
         if (url.startsWith(CONSTS.BAN_URL) || url.startsWith(CONSTS.FRIEND_URL) || 
-        url.startsWith(CONSTS.PROFILE_URL) || url.startsWith(CONSTS.SUMMARY_URL)) {
-            if (params.guildid) {
-                if (apicalls[params.guildid]) {
-                    apicalls[params.guildid]++;
-                } else {
-                    apicalls[params.guildid] = 1;
-                }
-            }
+            url.startsWith(CONSTS.PROFILE_URL) || url.startsWith(CONSTS.SUMMARY_URL)) {
+            apicalls++;
         }
 
         const response = await axios.get(url, { 
@@ -69,8 +63,7 @@ async function resolveSteamID(steamid) {
         // Try to check if this is a Vanity URL first
         const response = await httpsGet(CONSTS.VANITY_URL, {
             key: steam_token,
-            vanityurl: steamid,
-            guildid: 'resolve'
+            vanityurl: steamid
         });
 
         if (response?.response?.steamid) {
@@ -93,8 +86,7 @@ async function getBanData(steamid) {
     try {
         let bandata = await httpsGet(CONSTS.BAN_URL, {
             key: steam_token,
-            steamids: steamid,
-            guildid: 'bandata'
+            steamids: steamid
         });
 
         if (!bandata?.players?.[0]) {
@@ -122,8 +114,7 @@ async function getPersonaDict(steamid) {
     try {
         const response = await httpsGet(CONSTS.SUMMARY_URL, {
             key: steam_token,
-            steamids: steamid,
-            guildid: 'personadict'
+            steamids: steamid
         });
 
         if (!response?.response?.players?.[0]) {

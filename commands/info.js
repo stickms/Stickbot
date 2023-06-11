@@ -54,13 +54,11 @@ module.exports = {
                     inline: true
                 }, {
                     name: 'Steam API Calls',
-                    value: Object.values(getAPICalls()).reduce((a, b) => a + b, 0).toLocaleString() + ' calls',
+                    value: getAPICalls().toLocaleString() + ' calls',
                     inline: true
                 }
             ]);
         
-        console.log(getAPICalls());
-
         await interaction.reply({ embeds: [ embed ] });
 	},
 };
