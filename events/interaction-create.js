@@ -1,7 +1,7 @@
-const { steam_token, address_guilds } = require('../config.json');
+const { address_guilds } = require('../config.json');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { setTags, getTags, setNotis, getNotis } = require('../database');
-const { httpsGet } = require('../bot-helpers');
+const { httpsGet, getSteamToken } = require('../bot-helpers');
 const { getProfile } = require('../profile-builder.js');
 const CONSTS = require('../bot-consts.js');
 
@@ -58,7 +58,7 @@ async function handleListFriends(interaction) {
 	await interaction.deferReply();
 
 	let friends = await httpsGet(CONSTS.FRIEND_URL, {
-		key: steam_token,
+		key: getSteamToken(),
 		steamid: steamid
 	});
 
@@ -78,7 +78,7 @@ async function handleListFriends(interaction) {
 		try {
 			const chunk = friends.slice(i, i + 100);
 			const chunkdata = await httpsGet(CONSTS.SUMMARY_URL, {
-				key: steam_token, 
+				key: getSteamToken(), 
 				steamids: chunk.map(val => val.steamid).join(',')
 			});
 

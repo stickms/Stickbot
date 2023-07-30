@@ -442,16 +442,22 @@ async function resolveQuery(query) {
 
 	// If it is a URL, consider it a file
 	// try {
-	// 	const result = await httpsHead(query, {}, 500, true);
-	// 	if (!result?.headers) {
+	// 	const url = new URL(query);
+	// 	const result = await httpsHead(url.toString(), {}, 500);
+		
+	// 	const type = result.headers?.['content-type'];
+	// 	if (!type) {
 	// 		throw new Error();
 	// 	}
 
-	// 	console.log(result.headers?.['content-type']);
+	// 	// We can only play audio/video files over voice chat
+	// 	if (!type.startsWith('audio') && !type.startsWith('video')) {
+	// 		throw new Error();
+	// 	}
 
 	// 	return {
-	// 		url: null,
-	// 		tracks: [ null ]
+	// 		url: query,
+	// 		tracks: [ query ]
 	// 	}
 	// } catch {
 		// Otherwise, return a YouTube search query for it
@@ -460,7 +466,7 @@ async function resolveQuery(query) {
 			url: search[0]?.url,
 			tracks: search[0]?.url ? [ search[0]?.url ] : []
 	 	};
-	// }
+	//}
 }
 
 function toDuration(str) {

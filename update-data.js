@@ -1,5 +1,5 @@
-const { steam_token, address_guilds } = require('./config.json');
-const { httpsGet } = require('./bot-helpers')
+const { address_guilds } = require('./config.json');
+const { httpsGet, getSteamToken } = require('./bot-helpers')
 const { getProfile } = require('./profile-builder.js');
 const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, 
 	setAddrs, getNames, setNames, getBanwatch } = require('./database');
@@ -47,24 +47,27 @@ async function getSummaries() {
 
 		const players = Object.keys(getPlayers());
 
-		// Using Promise.allSettled to run these API calls at the same time
-		// Seemed to start triggering the API to return 429 errors
 		for (let i = 0; i < players.length; i += 100) {
 			let idlist = players.slice(i, i + 100).join(',');
 
-			profiles.push(await httpsGet(CONSTS.SUMMARY_URL, {
-				key: steam_token, 
+			profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
+				key: getSteamToken(), 
 				steamids: idlist
 			}));
 
-			bandata.push(await httpsGet(CONSTS.BAN_URL, {
-				key: steam_token, 
+			bandata.push(httpsGet(CONSTS.BAN_URL, {
+				key: getSteamToken(), 
 				steamids: idlist
 			}));
 		}
 
-		profiles = profiles.filter(x => x?.players).map(x => x.players).flat();
-		bandata = bandata.filter(x => x?.players).map(x => x.players).flat();
+		profiles = (await Promise.allSettled(profiles)).filter(x => {
+			return x.status == 'fulfilled' && x.value?.response?.players;
+		}).map(x => x.value.response.players).flat();
+
+		bandata = (await Promise.allSettled(bandata)).filter(x => {
+			return x.status == 'fulfilled' && x.value?.players;
+		}).map(x => x.value.players).flat();
 
 		return [ profiles, bandata ];
 	} catch (error) {

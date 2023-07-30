@@ -1,18 +1,27 @@
 const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
-const { steam_token } = require('./config.json');
+const { steam_tokens } = require('./config.json');
 
 module.exports = { 
     httpsGet, httpsHead, resolveSteamID,
     getBanData, getPersonaDict, formatWelcomeMessage,
-    getAPICalls
+    getAPICalls, getSteamToken
 };
 
 let apicalls = 0;
+let tokennum = 0;
 
 function getAPICalls() {
     return apicalls;
+}
+
+function getSteamToken() {
+    if (tokennum >= steam_tokens.length) {
+        tokennum = 0;
+    }
+
+    return steam_tokens[tokennum++];
 }
 
 async function httpsGet(url, params={}, timeout=1000, full=false) {
@@ -62,7 +71,7 @@ async function resolveSteamID(steamid) {
 
         // Try to check if this is a Vanity URL first
         const response = await httpsGet(CONSTS.VANITY_URL, {
-            key: steam_token,
+            key: getSteamToken(),
             vanityurl: steamid
         });
 
@@ -85,7 +94,7 @@ async function getBanData(steamid) {
 
     try {
         let bandata = await httpsGet(CONSTS.BAN_URL, {
-            key: steam_token,
+            key: getSteamToken(),
             steamids: steamid
         });
 
@@ -113,7 +122,7 @@ async function getPersonaDict(steamid) {
 
     try {
         const response = await httpsGet(CONSTS.SUMMARY_URL, {
-            key: steam_token,
+            key: getSteamToken(),
             steamids: steamid
         });
 
