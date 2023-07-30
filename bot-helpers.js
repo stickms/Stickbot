@@ -83,6 +83,7 @@ async function resolveSteamID(steamid) {
             return new SteamID(steamid);
         }
     } catch (error) {
+        console.log(error)
         return null;
     }
 }

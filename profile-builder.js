@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } = require('discord.js');
-const { steam_token, rust_token, sourceban_urls, address_guilds } = require('./config.json');
-const { httpsGet, getBanData } = require('./bot-helpers.js');
+const { rust_token, sourceban_urls, address_guilds } = require('./config.json');
+const { getSteamToken, httpsGet, getBanData } = require('./bot-helpers.js');
 const { getTags, getNames, getAddrs } = require('./database');
 
 const CONSTS = require('./bot-consts.js');
@@ -32,7 +32,7 @@ class SteamProfile {
 
     async generateEmbed(moreinfo = false, known_sourcebans = null) {
         const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
-            key: steam_token,
+            key: getSteamToken(),
             steamids: this.steamid
         });
 
@@ -279,7 +279,7 @@ class SteamProfile {
     async countCheaterFriends() {
         try {
             const response = await httpsGet(CONSTS.FRIEND_URL, {
-                key: steam_token,
+                key: getSteamToken(),
                 steamid: this.steamid
             });
 
