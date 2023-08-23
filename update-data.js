@@ -7,20 +7,17 @@ const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs,
 const CONSTS = require('./bot-consts.js');
 
 async function updatePlayerData(client) {
-	const [ profiles, bandata ] = await getSummaries();
-	if (!profiles || !bandata) {
+	const data = await getSummaries();
+	if (!data) {
 		return;
 	}
 
 	let updates = [];
 
-	for (const summary of bandata) {
-		updates.push(updateBans(summary));
-	}	
-
-	for (const summary of profiles) {
-		updates.push(updateAddresses(summary));
-		updates.push(updateNames(summary));
+	for (const entry of Object.entries(data)) {
+		updates.push(updateBans(entry));
+		updates.push(updateAddresses(entry));
+		updates.push(updateNames(entry));
 	}
 
 	updates = (await Promise.allSettled(updates)).filter(x => {
@@ -44,39 +41,57 @@ async function getSummaries() {
 	try {
 		let profiles = [];
 		let bandata = [];
+		let data = {};
 
 		const players = Object.keys(getPlayers());
 
-		for (let i = 0; i < players.length; i += 100) {
-			let idlist = players.slice(i, i + 100).join(',');
+		for (let i = 0; i < players.length; i++) {
+			data[players[i]] = { summary: {}, bandata: {} };
 
-			profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
-				key: getSteamToken(), 
-				steamids: idlist
-			}));
+			if (i % 100 == 0) {
+				let idlist = players.slice(i, i + 100).join(',');
 
-			bandata.push(httpsGet(CONSTS.BAN_URL, {
-				key: getSteamToken(), 
-				steamids: idlist
-			}));
+				profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
+					key: getSteamToken(), 
+					steamids: idlist
+				}));
+	
+				bandata.push(httpsGet(CONSTS.BAN_URL, {
+					key: getSteamToken(), 
+					steamids: idlist
+				}));
+			}
 		}
 
-		profiles = (await Promise.allSettled(profiles)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.response?.players;
-		}).map(x => x.value.response.players).flat();
+		(await Promise.allSettled(profiles)).filter(x => {
+			return x.status == 'fulfilled' && x.value?.response?.players?.player;
+		}).map(x => { 
+			for (const profile of x.value.response.players.player) {
+				data[profile.steamid].summary = profile
+			}
+		});
 
-		bandata = (await Promise.allSettled(bandata)).filter(x => {
+		(await Promise.allSettled(bandata)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.players;
-		}).map(x => x.value.players).flat();
+		}).map(x => { 
+			//x.value.players;
+			for (const profile of x.value.players) {
+				data[profile.SteamId].bandata = profile
+			}
+		});
 
-		return [ profiles, bandata ];
+		return data;
 	} catch (error) {
-		return [ null, null ];
+		console.log(error);
+		return null;
 	}
 }
 
-async function updateBans(summary) {
-	let bans = await getBans(summary.SteamId);
+async function updateBans(entry) {
+	let summary = entry[1].summary;
+	let bandata = entry[1].bandata;
+
+	let bans = await getBans(bandata.SteamId);
 		
 	if (Object.keys(bans).length == 0) {
 		return;
@@ -84,47 +99,47 @@ async function updateBans(summary) {
 
 	let banmessages = [];
 
-	if (summary.NumberOfVACBans != bans.vacbans) {
-		const prefix = summary.NumberOfVACBans > bans.vacbans ? '' : 'Un-';
+	if (bandata.NumberOfVACBans != bans.vacbans) {
+		const prefix = bandata.NumberOfVACBans > bans.vacbans ? '' : 'Un-';
 		banmessages.push(prefix + 'VAC Banned');
-		bans.vacbans = summary.NumberOfVACBans;
-	} if (summary.NumberOfGameBans != bans.gamebans) {
-		const prefix = summary.NumberOfGameBans > bans.gamebans ? '' : 'Un-';
+		bans.vacbans = bandata.NumberOfVACBans;
+	} if (bandata.NumberOfGameBans != bans.gamebans) {
+		const prefix = bandata.NumberOfGameBans > bans.gamebans ? '' : 'Un-';
 		banmessages.push(prefix + 'Game Banned');
-		bans.gamebans = summary.NumberOfGameBans;
-	} if (summary.CommunityBanned != bans.communityban) {
-		const prefix = summary.CommunityBanned ? '' : 'Un-';
+		bans.gamebans = bandata.NumberOfGameBans;
+	} if (bandata.CommunityBanned != bans.communityban) {
+		const prefix = bandata.CommunityBanned ? '' : 'Un-';
 		banmessages.push(prefix + 'Community Banned');
-		bans.communityban = summary.CommunityBanned;
-	} if ((summary.EconomyBan == 'banned') != bans.tradeban) {
-		const prefix = (summary.EconomyBan == 'banned') ? '' : 'Un-';
+		bans.communityban = bandata.CommunityBanned;
+	} if ((bandata.EconomyBan == 'banned') != bans.tradeban) {
+		const prefix = (bandata.EconomyBan == 'banned') ? '' : 'Un-';
 		banmessages.push(prefix + 'Trade Banned');
-		bans.tradeban = (summary.EconomyBan == 'banned');
+		bans.tradeban = (bandata.EconomyBan == 'banned');
 	}
 
 	if (!banmessages.length) {
 		return;
 	}
 
-	await setBans(summary.SteamId, bans);
+	await setBans(bandata.SteamId, bans);
 	banmessages = banmessages.join(', ');
 
 	let updatemessages = [];
 
-	for (const guildid of getGuilds(summary.SteamId)) {
+	for (const guildid of getGuilds(bandata.SteamId)) {
 		const channel = getBanwatch(guildid);
 		if (!channel) {
 			continue;
 		}
 
-		const profile = await getProfile(summary.SteamId, guildid);
+		const profile = await getProfile(bandata.SteamId, guildid, { 'summary': summary, 'bandata': bandata });
 		let message = {
-			content: `**${summary.SteamId}** has been **${banmessages}**\n`,
+			content: `**${bandata.SteamId}** has been **${banmessages}**\n`,
 			embeds: profile.getEmbed(),
 			components: profile.getComponents()
 		};
 
-		const notis = getNotis(summary.SteamId, guildid);
+		const notis = getNotis(bandata.SteamId, guildid);
 
 		if (notis.ban) {
 			for (const userid of notis.ban) {
@@ -141,7 +156,10 @@ async function updateBans(summary) {
 	return updatemessages;
 }
 
-async function updateAddresses(summary) {
+async function updateAddresses(entry) {
+	let summary = entry[1].summary;
+	let bandata = entry[1].bandata;
+
 	if (!summary.gameserverip) {
 		return;
 	}
@@ -178,7 +196,7 @@ async function updateAddresses(summary) {
 			continue;
 		}
 
-		const profile = await getProfile(summary.steamid, guildid);
+		const profile = await getProfile(summary.steamid, guildid, { 'summary': summary, 'bandata': bandata });
 		let message = {
 			content: `**${summary.steamid}** has a new Address Log`,
 			embeds: profile.getEmbed()
@@ -196,7 +214,10 @@ async function updateAddresses(summary) {
 	return updatemessages;
 }
 
-async function updateNames(summary) {
+async function updateNames(entry) {
+	let summary = entry[1].summary;
+	let bandata = entry[1].bandata;
+
 	let names = getNames(summary.steamid);
 	const persona = JSON.stringify(summary.personaname);
 
@@ -225,7 +246,7 @@ async function updateNames(summary) {
 			continue;
 		}
 
-		const profile = await getProfile(summary.steamid, guildid);
+		const profile = await getProfile(summary.steamid, guildid, { 'summary': summary, 'bandata': bandata });
 		let message = {
 			content: `**${summary.steamid}** has changed their profile name`,
 			embeds: profile.getEmbed()

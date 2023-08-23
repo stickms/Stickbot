@@ -127,11 +127,11 @@ async function getPersonaDict(steamid) {
             steamids: steamid
         });
 
-        if (!response?.response?.players?.[0]) {
+        if (!response?.response?.players?.player?.[0]) {
             return {};
         }
 
-        const summary = response.response.players[0];
+        const summary = response.response.players.player[0];
         const persona = JSON.stringify(summary.personaname);
 
         return {

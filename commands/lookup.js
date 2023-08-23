@@ -26,7 +26,7 @@ module.exports = {
 		}
 
 		const profile = await getProfile(steamid.getSteamID64(), interaction.guildId);
-		if (!profile.getEmbed()) {
+		if (!profile?.getEmbed()) {
 			return await interaction.editReply({
 				content: '❌ Error: Could not load profile data.'
 			});

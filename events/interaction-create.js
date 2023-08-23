@@ -43,7 +43,7 @@ async function handleMoreInfo(interaction) {
 		content: 'Fetching additional profile info...'
 	});
 
-	const profile = await getProfile(steamid, interaction.guildId, true);
+	const profile = await getProfile(steamid, interaction.guildId, { 'moreinfo': true });
 	await interaction.editReply({
 		content: oldcontent,
 		embeds: profile.getEmbed(),
@@ -82,8 +82,8 @@ async function handleListFriends(interaction) {
 				steamids: chunk.map(val => val.steamid).join(',')
 			});
 
-			if (chunkdata?.response?.players) {
-				personadata.push(...chunkdata.response.players);	
+			if (chunkdata?.response?.players?.player) {
+				personadata.push(...chunkdata.response.players.player);	
 			}
 		} catch (error) {
 			// Error with this API request
@@ -156,7 +156,7 @@ async function handleModifyTags(interaction) {
 	const banfield = original.fields.filter(x => x.name == 'Sourcebans');
 	const sourcebans = banfield?.[0]?.value;
 
-	const profile = await getProfile(steamid, interaction.guildId, !!sourcebans, sourcebans);
+	const profile = await getProfile(steamid, interaction.guildId, { 'moreinfo': !!sourcebans, 'sourcebans': sourcebans });
 	await interaction.update({
 		embeds: profile.getEmbed(),
 		components: profile.getComponents(),

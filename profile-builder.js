@@ -9,12 +9,22 @@ const HTMLParser = require('node-html-parser');
 const SteamID = require('steamid');
 
 class SteamProfile {
-    async init(steamid, guildid, moreinfo=false, known_sourcebans=null) {
+    async init(steamid, guildid, options) {
         this.steamid = steamid;
         this.guildid = guildid;
+        this.summary = options['summary'];
+
+        if (options['bandata']) {
+            this.bandata = {
+                vacbans: options['bandata'].NumberOfVACBans,
+                gamebans: options['bandata'].NumberOfGameBans,
+                communityban: options['bandata'].CommunityBanned,
+                tradeban: options['bandata'].EconomyBan == 'banned'
+            };
+        }
 
         await this.countCheaterFriends();
-        await this.generateEmbed(moreinfo, known_sourcebans);
+        await this.generateEmbed(!!options['moreinfo'], options['sourcebans']);
         await this.generateComponents();
     }
 
@@ -31,16 +41,18 @@ class SteamProfile {
     }
 
     async generateEmbed(moreinfo = false, known_sourcebans = null) {
-        const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
-            key: getSteamToken(),
-            steamids: this.steamid
-        });
+        if (!this.summary) {
+            const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
+                key: getSteamToken(),
+                steamids: this.steamid
+            });
 
-        if (!summary_response?.response?.players?.[0]) {
-            return;
+            if (!summary_response?.response?.players?.player?.[0]) {
+                return;
+            }
+
+            this.summary = summary_response.response.players.player[0];
         }
-
-        this.summary = summary_response.response.players[0];
 
         const idlist = this.getSteamIDList();
         const quicklinks = this.getQuicklinks();
@@ -179,7 +191,7 @@ class SteamProfile {
     async getAlertList() {
         const tags = getTags(this.steamid, this.guildid);
         const ipdata = getAddrs(this.steamid);
-        const bandata = await getBanData(this.steamid);
+        const bandata = this.bandata ?? await getBanData(this.steamid);
         const srdata = await this.getSteamRepData();
         
         let alertlist = [];
@@ -402,9 +414,10 @@ class SteamProfile {
 }
 
 module.exports = { 
-    async getProfile(steamid, guildid, moreinfo=false, known_sourcebans=null) {
+    // Options: moreinfo, sourcebans, summary, bandata
+    async getProfile(steamid, guildid, options={}) {
         const profile = new SteamProfile();
-        await profile.init(steamid, guildid, moreinfo, known_sourcebans);
+        await profile.init(steamid, guildid, options);
         return profile;
-    } 
+    }
 };
