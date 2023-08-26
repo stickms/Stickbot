@@ -4,6 +4,7 @@ const { audiobot } = require('../audio-bot');
 const { httpsHead } = require('../bot-helpers');
 const CONSTS = require('../bot-consts');
 const play = require('play-dl');
+const jsmediatags = require('jsmediatags');
 
 const { joinVoiceChannel, getVoiceConnection, 
 		entersState, VoiceConnectionStatus } = require('@discordjs/voice');
@@ -17,6 +18,8 @@ play.setToken({
 	}
 });
 
+jsmediatags.Config.setDisallowedXhrHeaders(['Range']);
+
 module.exports = {
 	data: new SlashCommandBuilder()
 	.setName('music')
@@ -27,7 +30,7 @@ module.exports = {
 		.setDescription('Play a song from a search query or url!')
 		.addStringOption(option => option
 			.setName('query')
-			.setDescription('Search from YouTube, Spotify, or SoundCloud')
+			.setDescription('Search from YouTube, Spotify, SoundCloud, or direct file link!')
 			.setRequired(true)
 		).addBooleanOption(option => option
 			.setName('shuffle')
@@ -184,7 +187,7 @@ async function commandPlay(interaction) {
 			embed.addFields(info.fields);
 		}
 		
-		await interaction.editReply({ embeds: [ embed ] });
+		await interaction.editReply({ embeds: [ embed ], files: info.files });
 	} catch (error) {
 		await interaction.editReply('❌ Error: Could not load video info.');
 	}
@@ -235,7 +238,8 @@ async function commandSkip(interaction) {
 	}
 
 	const info = await trackData(queue[0]);
-	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
+	const value = info.fields[0].value;
+	const title = !value.startsWith('[') ? value : value.substring(1, value.indexOf(']'));
 	await interaction.reply(`🎵 Skipping **${title}**...`);
 
 	audiobot.get(interaction.guildId).skip();
@@ -265,7 +269,8 @@ async function commandMove(interaction) {
 	queue.splice(position - 1, 0, ...track);
 
 	const info = await trackData(queue[position - 1]);
-	const title = info.fields[0].value.substring(1, info.fields[0].value.indexOf(']'));
+	const value = info.fields[0].value;
+	const title = !value.startsWith('[') ? value : value.substring(1, value.indexOf(']'));
 	await interaction.reply(`🎵 Moved **${title}** to position \`[${position}]\``);
 }
 
@@ -311,7 +316,7 @@ async function commandNowPlaying(interaction) {
 		.setThumbnail(info.thumbnail)
 		.addFields(info.fields)
 	
-	await interaction.reply({ embeds: [ embed ] });
+	await interaction.reply({ embeds: [ embed ], files: info.files });
 }
 
 async function commandQueue(interaction) {
@@ -357,12 +362,12 @@ async function commandQueue(interaction) {
 		}
 	}
 
-	let thumbnail = await (await trackData(queue[0])).thumbnail;
+	const leadinfo = await trackData(queue[0]);
 	embed.setDescription(desctext);
-	embed.setThumbnail(thumbnail);
+	embed.setThumbnail(leadinfo.thumbnail);
 	embed.setFooter({ text: `Page ${curpage}/${maxpages}` });
 
-	await interaction.editReply({ embeds: [ embed ] });
+	await interaction.editReply({ embeds: [ embed ], files: leadinfo.files });
 }
 
 // Resolves query as YT, SoundCloud, or Spotify*
@@ -440,33 +445,45 @@ async function resolveQuery(query) {
 		}
 	}
 
-	// If it is a URL, consider it a file
-	// try {
-	// 	const url = new URL(query);
-	// 	const result = await httpsHead(url.toString(), {}, 500);
+	// If it is a URL, consider it a file first
+	try {
+		const url = new URL(query);
+		const result = await httpsHead(url.toString(), {}, 500);
 		
-	// 	const type = result.headers?.['content-type'];
-	// 	if (!type) {
-	// 		throw new Error();
-	// 	}
+		const type = result.headers?.['content-type'];
+		if (!type) {
+			throw new Error();
+		}
 
-	// 	// We can only play audio/video files over voice chat
-	// 	if (!type.startsWith('audio') && !type.startsWith('video')) {
-	// 		throw new Error();
-	// 	}
+		// We can only play audio/video files over voice chat
+		if (!type.startsWith('audio') && !type.startsWith('video')) {
+			return {
+				url: null,
+				tracks: []
+			}
+		}
 
-	// 	return {
-	// 		url: query,
-	// 		tracks: [ query ]
-	// 	}
-	// } catch {
+		if (result.headers?.['content-length'] >= 25_000_000) { // 25 MB max
+			return {
+				url: null,
+				tracks: []
+			}
+		}
+
+		return {
+			url: query,
+			tracks: [ query ]
+		}
+	} catch (error) {
+		console.log(error);
+
 		// Otherwise, return a YouTube search query for it
 		const search = await play.search(query, { limit: 1 });
 		return {
 			url: search[0]?.url,
 			tracks: search[0]?.url ? [ search[0]?.url ] : []
 	 	};
-	//}
+	}
 }
 
 function toDuration(str) {
@@ -482,6 +499,7 @@ function toDuration(str) {
 async function trackData(url) {
 	let thumbnail = null;
 	let fields = null;
+	let files = null;
 
 	if (play.sp_validate(url)) {
 		const spot = await play.spotify(url);
@@ -575,7 +593,7 @@ async function trackData(url) {
 				}
 			];
 		}
-	} else if (play.yt_validate(url)) {
+	} else if (play.yt_validate(url) != false && play.yt_validate(url) != 'search') {
 		const type = play.yt_validate(url);
 		if (type == 'video') {
 			const info = (await play.video_basic_info(url)).video_details;
@@ -622,7 +640,57 @@ async function trackData(url) {
 				fields = [ fields[0] ];
 			}
 		}
+	} else { // Likely a direct file upload
+		fields = [{
+			name: 'Uploaded File',
+			value: `[${url.substring(url.lastIndexOf('/') + 1)}](${url})`,
+		}]
+
+		const tag = await new Promise((resolve, reject) => {
+			jsmediatags.read(url, {
+				onSuccess: tag => resolve(tag),
+				onError: error => resolve(error) // Resolve since we handle this error later anyways
+			})
+		});
+		
+		if (tag.tags) {
+			if (tag.tags.title) {
+				fields = [{
+					name: 'Uploaded File',
+					value: `[${tag.tags.title}](${url})`,
+					inline: true
+				}]
+			}
+
+			if (tag.tags.artist) {
+				fields.push({
+					name: 'Artist',
+					value: tag.tags.artist,
+					inline: true
+				})
+			}
+
+			if (tag.tags.year) {
+				fields.push({
+					name: 'Year',
+					value: tag.tags.year,
+					inline: true
+				})
+			}
+
+			if (tag.tags.picture) {
+				const fmt = tag.tags.picture.format;
+				const type = fmt.substr(fmt.lastIndexOf('/') + 1);
+
+				files = [{
+					attachment: Buffer.from(tag.tags.picture.data),
+					name: `thumbnail.${type}`
+				}]
+
+				thumbnail = `attachment://thumbnail.${type}`;
+			}
+		}
 	}
 
-	return { 'thumbnail': thumbnail, 'fields': fields };
+	return { 'thumbnail': thumbnail, 'fields': fields, 'files': files };
 }

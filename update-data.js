@@ -74,7 +74,6 @@ async function getSummaries() {
 		(await Promise.allSettled(bandata)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.players;
 		}).map(x => { 
-			//x.value.players;
 			for (const profile of x.value.players) {
 				data[profile.SteamId].bandata = profile
 			}
@@ -82,7 +81,7 @@ async function getSummaries() {
 
 		return data;
 	} catch (error) {
-		console.log(error);
+		console.error(error);
 		return null;
 	}
 }

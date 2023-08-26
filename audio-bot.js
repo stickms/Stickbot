@@ -44,6 +44,10 @@ class GuildTracker {
             const resource = createAudioResource(stream.stream, { inputType: stream.type });
             this.audioplayer.play(resource);
             connection.subscribe(this.audioplayer);
+        }).catch(_ => {
+            const resource = createAudioResource(url);
+            this.audioplayer.play(resource);
+            connection.subscribe(this.audioplayer);
         });
     }
 
