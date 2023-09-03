@@ -18,7 +18,7 @@ __Stickbot features:__
 
 * Ban watch and notifying
 
-* Music commands (queue, playlist support, YouTube search)
+* Music commands (queue, playlist support, YouTube search, direct file links)
 
 ## File Formatting
 
@@ -31,6 +31,7 @@ Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_i
 ```yaml
 {
     "client_id": "YOUR-BOTS-CLIENT-ID",
+    "dev_guild": "GUILD-FOR-DEV-ONLY-COMMANDS",
     "discord_token": "YOUR-DISCORD-TOKEN",
     "steam_token": "YOUR-STEAMDEV-TOKEN",
     "rust_token": "RUSTBANNED.COM-API-TOKEN",
@@ -39,7 +40,7 @@ Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_i
         "client_id": "SPOTIFY-USER-ID",
         "client_secret": "SPOTIFY-API-SECRET",
         "refresh_token": "SPOTIFY-API-REFRESH",
-        "market": "2-DIGIT-COUNTRY-CODE",
+        "market": "2-LETTER-COUNTRY-CODE",
     },
     "sourceban_urls": { // Links of various Sourceban websites and their SteamID formats
         "https://www.skial.com/sourcebans/": 3,

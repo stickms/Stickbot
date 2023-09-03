@@ -6,7 +6,7 @@ const { getBanData, getPersonaDict } = require('./bot-helpers')
 let db = {};
 
 module.exports = {
-    loadDB, saveDB,
+    loadDB, saveDB, exportDB,
     getPlayers, getGuilds,
     setTags, getTags,
     setNotis, getNotis,
@@ -28,6 +28,10 @@ function loadDB() {
 
 function saveDB() {
     fs.writeFileSync('./playerlist.json', JSON.stringify(db, null, '\t'));
+}
+
+function exportDB() {
+    return db;
 }
 
 function getPlayers() {

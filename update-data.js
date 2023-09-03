@@ -60,6 +60,8 @@ async function getSummaries() {
 					key: getSteamToken(), 
 					steamids: idlist
 				}));
+
+				await new Promise(x => setTimeout(x, 5_000));
 			}
 		}
 
