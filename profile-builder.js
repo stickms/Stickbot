@@ -8,6 +8,7 @@ const CONSTS = require('./bot-consts.js');
 const HTMLParser = require('node-html-parser');
 const SteamID = require('steamid');
 
+
 class SteamProfile {
     async init(steamid, guildid, options) {
         this.steamid = steamid;
@@ -47,11 +48,11 @@ class SteamProfile {
                 steamids: this.steamid
             });
 
-            if (!summary_response?.response?.players?.player?.[0]) {
+            if (!summary_response?.response?.players?.[0]) {
                 return;
             }
 
-            this.summary = summary_response.response.players.player[0];
+            this.summary = summary_response.response.players[0];
         }
 
         const idlist = this.getSteamIDList();
@@ -347,68 +348,73 @@ class SteamProfile {
     }
 
     async getSourceBans() {
-        let sourcebans = [];
-        let tasks = [];
-
+        let url_list = []; 
+      
         const converted = new SteamID(this.steamid);
-    
+      
         for (let url of Object.keys(sourceban_urls)) {
-            const idfmt = sourceban_urls[url];
-            url += CONSTS.SRCBAN_EXT;
-            
-            if (idfmt == 3) {
-                url += converted.getSteam3RenderedID();
-            } else {
-                const id2 = converted.getSteam2RenderedID();
-                url += id2.substring(id2.indexOf(':') + 1);
-            }
+            let idfmt = sourceban_urls[url];
+          if (idfmt === 3) {
+            url += CONSTS.SRCBAN_EXT + converted.getSteam3RenderedID();
+          } else {
+            const id2 = converted.getSteam2RenderedID();
+            url += CONSTS.SRCBAN_EXT + id2.substring(id2.indexOf(':') + 1);
+          }
+      
+          url_list.push(url);
+        }
 
-            // Extended timeout because some bans sites are slow
-            // Also, we want full response just so that we can grab IP
-            tasks.push(httpsGet(url, {}, 3000, true));
-        }
-    
-        const results = await Promise.allSettled(tasks);
-        if (!results?.length) {
-            return [];
-        }
-    
-        for (const result of results) {
-            if (result?.status != 'fulfilled' || !result?.value?.data) {
+        const results = await Promise.allSettled(url_list.map(url => {
+            return httpsGet(url, {}, 3000, true);
+        }));
+      
+        let sourcebans = [];
+      
+        for (const result of results) {    
+          if (result.status !== 'fulfilled') {
+            continue;
+          }
+
+          if (!result.value?.data) {
+            continue;
+          }
+      
+          let dom = HTMLParser.parse(result.value.data);
+          if (!dom) {
+            continue;
+          }
+      
+          const tables = dom.getElementsByTagName('table');
+      
+          for (const table of tables) {
+            var tds = table.getElementsByTagName('td');
+            if (!tds.length) {
+              continue;
+            }
+      
+            var trs = table.getElementsByTagName('tr');
+            for (const row of trs) {
+              var nodes = row.getElementsByTagName('td');
+              if (nodes.length < 2) {
                 continue;
-            }
-
-            let htmldata = HTMLParser.parse(result.value.data);
-            if (!htmldata) {
+              }
+      
+              if (nodes[0].innerText?.toLowerCase() !== 'reason') {
                 continue;
+              }
+      
+              const key = result.value.config.url;
+              const value = nodes[1].innerText ?? 'Unknown Reason';
+      
+              if (sourcebans.some(x => x.url === key && x.reason === value)) {
+                continue;
+              }
+      
+              sourcebans.push({ url: key, reason: value });
             }
-
-            let tables = htmldata.getElementsByTagName('table');
-    
-            for (const table of tables) {
-                var tds = table.getElementsByTagName('td');
-                if (!tds?.length) {
-                    continue;
-                }
-
-                if (!tds[0].innerText.toLowerCase().includes('ban details')) {
-                    continue;
-                }
-    
-                var trs = table.getElementsByTagName('tr');
-                for (const row of trs) {
-                    var nodes = row.getElementsByTagName('td');
-    
-                    if (nodes.length > 1 && nodes[0].innerText.toLowerCase() == 'reason') {
-                        sourcebans.push({
-                            url: result.value.config.url,
-                            reason: nodes[1].innerText
-                        });
-                    }
-                }
-            }
+          }
         }
-    
+      
         return sourcebans;
     }
 }

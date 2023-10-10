@@ -66,9 +66,9 @@ async function getSummaries() {
 		}
 
 		(await Promise.allSettled(profiles)).filter(x => {
-			return x.status == 'fulfilled' && x.value?.response?.players?.player;
+			return x.status == 'fulfilled' && x.value?.response?.players;
 		}).map(x => { 
-			for (const profile of x.value.response.players.player) {
+			for (const profile of x.value.response.players) {
 				data[profile.steamid].summary = profile
 			}
 		});

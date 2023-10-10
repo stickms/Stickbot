@@ -3,7 +3,7 @@
 module.exports = {
     EMBED_CLR: 0x3297A8,
 
-    SUMMARY_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v1/',
+    SUMMARY_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/',
     FRIEND_URL: 'https://api.steampowered.com/ISteamUser/GetFriendList/v1/',
     VANITY_URL: 'https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/',
     BAN_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/',

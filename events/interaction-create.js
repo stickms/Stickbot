@@ -82,8 +82,8 @@ async function handleListFriends(interaction) {
 				steamids: chunk.map(val => val.steamid).join(',')
 			});
 
-			if (chunkdata?.response?.players?.player) {
-				personadata.push(...chunkdata.response.players.player);	
+			if (chunkdata?.response?.players) {
+				personadata.push(...chunkdata.response.players);	
 			}
 		} catch (error) {
 			// Error with this API request

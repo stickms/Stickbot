@@ -2,6 +2,7 @@ const axios = require('axios');
 const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
 const { steam_tokens } = require('./config.json');
+const { getRandom } = require('random-useragent');
 
 module.exports = { 
     httpsGet, httpsHead, resolveSteamID,
@@ -31,9 +32,11 @@ async function httpsGet(url, params={}, timeout=1000, full=false) {
             apicalls++;
         }
 
-        const response = await axios.get(url, { 
-            params: params, 
+        const response = await axios.get(url, {
+            params: params,
             timeout: timeout
+        }, { 
+            headers: { 'User-Agent': getRandom() }
         });
 
         if (!response?.data) {
@@ -49,8 +52,10 @@ async function httpsGet(url, params={}, timeout=1000, full=false) {
 async function httpsHead(url, params={}, timeout=1000) {
     try {
         const response = await axios.head(url, { 
-            params: params, 
+            params: params,
             timeout: timeout
+        }, { 
+            headers: { 'User-Agent': getRandom() }
         });
 
         if (!response) {
@@ -127,11 +132,11 @@ async function getPersonaDict(steamid) {
             steamids: steamid
         });
 
-        if (!response?.response?.players?.player?.[0]) {
+        if (!response?.response?.players?.[0]) {
             return {};
         }
 
-        const summary = response.response.players.player[0];
+        const summary = response.response.players[0];
         const persona = JSON.stringify(summary.personaname);
 
         return {
