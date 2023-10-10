@@ -2,7 +2,7 @@ const { address_guilds } = require('./config.json');
 const { httpsGet, getSteamToken } = require('./bot-helpers')
 const { getProfile } = require('./profile-builder.js');
 const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, 
-	setAddrs, getNames, setNames, getBanwatch } = require('./database');
+				setAddrs, getNames, setNames, getBanwatch } = require('./database');
 
 const CONSTS = require('./bot-consts.js');
 
@@ -265,4 +265,6 @@ async function updateNames(entry) {
 	return updatemessages;
 }
 
-module.exports = { updatePlayerData };
+module.exports = {
+	updatePlayerData
+};

@@ -117,7 +117,7 @@ async function handleListFriends(interaction) {
 	} 
 
 	if (requireupload) {
-        file = [ { attachment: Buffer.from(fulltext), name: 'friends.txt' } ];
+		file = [ { attachment: Buffer.from(fulltext), name: 'friends.txt' } ];
 		shorttext += '\`Check Attachment for full list\`';
 	}
 

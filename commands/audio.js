@@ -7,11 +7,11 @@ const play = require('play-dl');
 const jsmediatags = require('jsmediatags');
 
 const { joinVoiceChannel, getVoiceConnection, 
-		entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+	entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 play.setToken({
 	spotify : {
-        ...spotify_id
+			...spotify_id
     },
 	soundcloud: {
 		client_id: soundcloud_id
