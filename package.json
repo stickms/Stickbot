@@ -1,13 +1,13 @@
 {
   "dependencies": {
     "@discordjs/voice": "^0.15.0",
-    "axios": "^1.4.0",
+    "axios": "^1.5.1",
     "discord.js": "^14.13.0",
-    "ffmpeg-static": "^5.1.0",
+    "ffmpeg-static": "^5.2.0",
     "jsmediatags": "^3.9.7",
-    "libsodium-wrappers": "^0.7.11",
-    "node-html-parser": "^6.1.5",
-    "play-dl": "^1.9.6",
+    "libsodium-wrappers": "^0.7.13",
+    "node-html-parser": "^6.1.10",
+    "play-dl": "^1.9.7",
     "random-useragent": "^0.5.0",
     "steamid": "^2.0.0"
   }

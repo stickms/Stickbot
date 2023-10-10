@@ -3,6 +3,7 @@ const { getProfile } = require('../profile-builder.js');
 
 module.exports = {
 	name: 'messageCreate',
+
 	async execute(message) {
     if (message.author.bot || message.content.length > 200) {
       return;
