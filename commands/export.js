@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const CONSTS = require('../bot-consts.js');
+const { PROFILE_TAGS } = require('../components/bot-consts.js');
+const { getPlayers, getTags } = require('../components/database');
 const SteamID = require('steamid');
-const { getPlayers, getTags } = require('../database');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ module.exports = {
       option => option.setName('tag')
       .setDescription('Export this tag only (default: \"cheater\")')
       .setRequired(false)
-      .addChoices(...CONSTS.TAGS)
+      .addChoices(...PROFILE_TAGS)
     ),
         
 	async execute(interaction) {

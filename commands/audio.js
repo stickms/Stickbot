@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { soundcloud_id, spotify_id } = require('../config.json');
-const { audiobot } = require('../audio-bot');
-const { httpsHead } = require('../bot-helpers');
-const CONSTS = require('../bot-consts');
+const { audiobot } = require('../components/audio-bot');
+const { httpsHead } = require('../components/bot-helpers');
+const { EMBED_COLOR, MUSIC_ICON } = require('../components/bot-consts');
 const play = require('play-dl');
 const jsmediatags = require('jsmediatags');
 
@@ -171,11 +171,11 @@ async function commandPlay(interaction) {
 		}
 
 		let embed = new EmbedBuilder()
-			.setColor(CONSTS.EMBED_CLR)
+			.setColor(EMBED_COLOR)
 			.setThumbnail(info.thumbnail)
 			.setAuthor({ 
 				name: `Queued ${data.spotify ?? info.fields[0].name}`, 
-				iconURL: CONSTS.MUSIC_ICON 
+				iconURL: MUSIC_ICON 
 			});
 
 		if (data.spotify) {
@@ -311,8 +311,8 @@ async function commandNowPlaying(interaction) {
 	}
 
 	let embed = new EmbedBuilder()
-		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Now Playing', iconURL: CONSTS.MUSIC_ICON })
+		.setColor(EMBED_COLOR)
+		.setAuthor({ name: 'Now Playing', iconURL: MUSIC_ICON })
 		.setThumbnail(info.thumbnail)
 		.addFields(info.fields)
 	
@@ -321,8 +321,8 @@ async function commandNowPlaying(interaction) {
 
 async function commandQueue(interaction) {
 	let embed = new EmbedBuilder()
-		.setColor(CONSTS.EMBED_CLR)
-		.setAuthor({ name: 'Queue', iconURL: CONSTS.MUSIC_ICON });
+		.setColor(EMBED_COLOR)
+		.setAuthor({ name: 'Queue', iconURL: MUSIC_ICON });
 
 	const queue = audiobot.get(interaction.guildId).getQueue();
 	if (!queue.length) {

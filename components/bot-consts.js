@@ -1,7 +1,7 @@
 // List of bot constants I use regularly
 
 module.exports = {
-  EMBED_CLR: 0x3297A8,
+  EMBED_COLOR: 0x3297A8,
 
   SUMMARY_URL: 'https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/',
   FRIEND_URL: 'https://api.steampowered.com/ISteamUser/GetFriendList/v1/',
@@ -10,13 +10,13 @@ module.exports = {
   STEAMREP_URL: 'https://steamrep.com/api/beta3/reputation/',
   RUST_URL: 'https://rustbanned.com/api/eac_ban_check_v2.php',
 
-  SRCBAN_EXT: 'index.php?p=banlist&advType=steam&advSearch=',
+  SOURCEBAN_EXT: 'index.php?p=banlist&advType=steam&advSearch=',
   PROFILE_URL: 'https://steamcommunity.com/profiles/',
   STEAM_ICON: 'https://i.imgur.com/uO7rwHu.png',
   MUSIC_ICON: 'https://i.imgur.com/T3BQLEd.png',
   INFO_ICON: 'https://i.imgur.com/5QESPfY.png',
 
-  TAGS: [
+  PROFILE_TAGS: [
     { name: 'Cheater', value: 'cheater' },
     { name: 'Suspicious', value: 'suspicious' },
     { name: 'Content Creator', value: 'popular' },

@@ -1,5 +1,5 @@
-const { getWelcome } = require('../database');
-const { formatWelcomeMessage } = require('../bot-helpers');
+const { getWelcome } = require('../components/database');
+const { formatWelcomeMessage } = require('../components/bot-helpers');
 
 module.exports = {
   name: 'guildMemberRemove',

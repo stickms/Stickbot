@@ -1,12 +1,13 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } = require('discord.js');
-const { rust_token, sourceban_urls, address_guilds } = require('./config.json');
+const { rust_token, sourceban_urls, address_guilds } = require('../config.json');
 const { getSteamToken, httpsGet, getBanData } = require('./bot-helpers.js');
 const { getTags, getNames, getAddrs } = require('./database');
 
-const CONSTS = require('./bot-consts.js');
 const HTMLParser = require('node-html-parser');
 const SteamID = require('steamid');
+const { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
+        RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } = require('./bot-consts');
 
 class SteamProfile {
   async init(steamid, guildid, options) {
@@ -42,7 +43,7 @@ class SteamProfile {
 
   async generateEmbed(moreinfo = false, known_sourcebans = null) {
       if (!this.summary) {
-          const summary_response = await httpsGet(CONSTS.SUMMARY_URL, {
+          const summary_response = await httpsGet(SUMMARY_URL, {
               key: getSteamToken(),
               steamids: this.steamid
           });
@@ -59,12 +60,12 @@ class SteamProfile {
       const alertlist = await this.getAlertList();
 
       const embed = new EmbedBuilder()
-          .setColor(CONSTS.EMBED_CLR)
+          .setColor(EMBED_COLOR)
           .setThumbnail(this.summary.avatarfull)
           .setAuthor({
               name: this.summary.personaname,
-              iconURL: CONSTS.STEAM_ICON,
-              url: CONSTS.PROFILE_URL + this.steamid
+              iconURL: STEAM_ICON,
+              url: PROFILE_URL + this.steamid
           }).addFields(
               { name: 'Steam IDs', value: idlist, inline: true },
               { name: 'Alerts', value: alertlist, inline: true },
@@ -135,9 +136,9 @@ class SteamProfile {
     const selectmenu = new StringSelectMenuBuilder()
                         .setCustomId(`modifytags:${this.steamid}`)
                         .setPlaceholder('Modify User Tags')
-                        .setMaxValues(CONSTS.TAGS.length);
+                        .setMaxValues(PROFILE_TAGS.length);
 
-    for (const tag of CONSTS.TAGS) {
+    for (const tag of PROFILE_TAGS) {
       const op = tagdata[tag.value] ? 'Remove ' : 'Add ';
       selectmenu.addOptions({
         label: op + tag.name, 
@@ -228,7 +229,7 @@ class SteamProfile {
     }
 
     if (rust_token) {
-      const rustdata = await httpsGet(CONSTS.RUST_URL, {
+      const rustdata = await httpsGet(RUST_URL, {
         apikey: rust_token,
         steamid64: this.steamid
       });
@@ -242,7 +243,7 @@ class SteamProfile {
       alertlist.push('❌ SR Scammer');
     }
 
-    for (const tag of CONSTS.TAGS) {
+    for (const tag of PROFILE_TAGS) {
       if (tags[tag.value] && tag.value != 'banwatch') {
         alertlist.push(`⚠️ ${tag.name}`);
       }
@@ -275,7 +276,7 @@ class SteamProfile {
 
   async getSteamRepData() {
     try {
-      const url = CONSTS.STEAMREP_URL + this.steamid;
+      const url = STEAMREP_URL + this.steamid;
       const response = await httpsGet(url, {
         json: 1,
         extended: 1
@@ -294,7 +295,7 @@ class SteamProfile {
 
   async countCheaterFriends() {
     try {
-      const response = await httpsGet(CONSTS.FRIEND_URL, {
+      const response = await httpsGet(FRIEND_URL, {
         key: getSteamToken(),
         steamid: this.steamid
       });
@@ -358,10 +359,10 @@ class SteamProfile {
     for (let url of Object.keys(sourceban_urls)) {
       let idfmt = sourceban_urls[url];
       if (idfmt === 3) {
-        url += CONSTS.SRCBAN_EXT + converted.getSteam3RenderedID();
+        url += SOURCEBAN_EXT + converted.getSteam3RenderedID();
       } else {
         const id2 = converted.getSteam2RenderedID();
-        url += CONSTS.SRCBAN_EXT + id2.substring(id2.indexOf(':') + 1);
+        url += SOURCEBAN_EXT + id2.substring(id2.indexOf(':') + 1);
       }
   
       url_list.push(url);

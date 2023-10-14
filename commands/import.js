@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { setTags, getTags } = require('../database');
-const { httpsGet } = require('../bot-helpers')
+const { setTags, getTags } = require('../components/database');
+const { httpsGet } = require('../components/bot-helpers')
+const { PROFILE_TAGS } = require('../components/bot-consts');
 const SteamID = require('steamid');
-const CONSTS = require('../bot-consts');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -18,7 +18,7 @@ module.exports = {
       .setName('tag')
       .setDescription('Tag to assign each profile with (default: cheater)')
       .setRequired(false)
-      .addChoices(...CONSTS.TAGS)
+      .addChoices(...PROFILE_TAGS)
     ),
         
 	async execute(interaction) {

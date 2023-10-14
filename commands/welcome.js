@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { setWelcome } = require('../database');
-const CONSTS = require('../bot-consts');
+const { setWelcome } = require('../components/database');
+const { EMBED_COLOR } = require('../components/bot-consts');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -72,7 +72,7 @@ module.exports = {
       await interaction.reply('✅ Set user goodbye message successfully.');
     } else if (sub == 'format') {
       let embed = new EmbedBuilder()
-        .setColor(CONSTS.EMBED_CLR)
+        .setColor(EMBED_COLOR)
         .setTitle('Welcome Message Formatting')
         .setDescription(`
         \`{server}\`/\`{guild}\` -> Current Server Name

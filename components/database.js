@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const SteamID = require('steamid');
 
-const { getBanData, getPersonaDict } = require('./bot-helpers')
+const { getBanData, getPersonaDict } = require('./bot-helpers');
 
 let db = {};
 
@@ -10,7 +10,7 @@ module.exports = {
   getPlayers, getGuilds,
   setTags, getTags,
   setNotis, getNotis,
-  setAddrs, getAddrs,
+  setServers, getServers,
   setNames, getNames,
   setBans, getBans,
   setWelcome, getWelcome,
@@ -86,11 +86,11 @@ async function setNotis(steamid, guildid, notifications) {
   saveDB();
 }
 
-function getAddrs(steamid) {
+function getServers(steamid) {
   return db.players[steamid]?.addresses ?? {};
 }
 
-async function setAddrs(steamid, addresses) {
+async function setServers(steamid, addresses) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }

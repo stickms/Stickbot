@@ -1,10 +1,9 @@
-const { address_guilds } = require('./config.json');
-const { httpsGet, getSteamToken } = require('./bot-helpers')
+const { address_guilds, only_local } = require('../config.json');
+const { httpsGet, getSteamToken } = require('./bot-helpers');
+const { SUMMARY_URL, BAN_URL } = require('./bot-consts');
 const { getProfile } = require('./profile-builder.js');
-const { getPlayers, getGuilds, getNotis, setBans, getBans, getAddrs, 
-				setAddrs, getNames, setNames, getBanwatch } = require('./database');
-
-const CONSTS = require('./bot-consts.js');
+const { getPlayers, getGuilds, getNotis, setBans, getBans, getServers, 
+				setServers, getNames, setNames, getBanwatch } = require('./database');
 
 async function updatePlayerData(client) {
 	const data = await getSummaries();
@@ -16,7 +15,7 @@ async function updatePlayerData(client) {
 
 	for (const entry of Object.entries(data)) {
 		updates.push(updateBans(entry));
-		updates.push(updateAddresses(entry));
+		updates.push(updateServers(entry));
 		updates.push(updateNames(entry));
 	}
 
@@ -31,7 +30,6 @@ async function updatePlayerData(client) {
 
 			if (channel) await channel.send(update.message);
 		} catch (error) {
-			console.error(error);
 			// May be lacking perms, or user does not allow DMs
 		}
 	}
@@ -51,12 +49,12 @@ async function getSummaries() {
 			if (i % 100 == 0) {
 				let idlist = players.slice(i, i + 100).join(',');
 
-				profiles.push(httpsGet(CONSTS.SUMMARY_URL, {
+				profiles.push(httpsGet(SUMMARY_URL, {
 					key: getSteamToken(), 
 					steamids: idlist
 				}));
 	
-				bandata.push(httpsGet(CONSTS.BAN_URL, {
+				bandata.push(httpsGet(BAN_URL, {
 					key: getSteamToken(), 
 					steamids: idlist
 				}));
@@ -157,7 +155,7 @@ async function updateBans(entry) {
 	return updatemessages;
 }
 
-async function updateAddresses(entry) {
+async function updateServers(entry) {
 	let summary = entry[1].summary;
 	let bandata = entry[1].bandata;
 
@@ -165,27 +163,27 @@ async function updateAddresses(entry) {
 		return;
 	}
 
-	if (summary.gameserverip.split(':')[1] != '0') {
+	if (only_local && summary.gameserverip.split(':')[1] != '0') {
 		return;
 	}
 
-	let addrs = getAddrs(summary.steamid);
-	const ipaddr = summary.gameserverip.split(':')[0];
+	let servers = getServers(summary.steamid);
+	const server = only_local ? summary.gameserverip.split(':')[0] : summary.gameserverip;
 
-	addrs[ipaddr] = {
+	servers[server] = {
 		game: summary.gameextrainfo ?? 'Unknown Game',
 		date: Math.floor(Date.now() / 1000)
 	};
 
 	// Delete oldest log if we have more than 6
-	if (Object.keys(addrs).length > 6) {
-		let sorted = Object.entries(addrs).sort(([,a], [,b]) => a.date - b.date);
-		delete addrs[sorted[0][0]];
+	if (Object.keys(servers).length > 6) {
+		let sorted = Object.entries(servers).sort(([,a], [,b]) => a.date - b.date);
+		delete servers[sorted[0][0]];
 	}
 
-	await setAddrs(summary.steamid, addrs);
+	await setServers(summary.steamid, servers);
 
-	if (addrs[ipaddr]) {
+	if (servers[server]) {
 		return;
 	}
 

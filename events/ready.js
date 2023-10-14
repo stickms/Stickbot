@@ -1,4 +1,4 @@
-const { updatePlayerData } = require('../update-data.js');
+const { updatePlayerData } = require('../components/update-data.js');
 
 module.exports = {
 	name: 'ready',

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { setBanwatch } = require('../database');
+const { setBanwatch } = require('../components/database');
 
 module.exports = {
 	data: new SlashCommandBuilder()

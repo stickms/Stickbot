@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getPlayers } = require('../database');
-const { getAPICalls } = require('../bot-helpers');
-const CONSTS = require('../bot-consts');
+const { getPlayers } = require('../components/database');
+const { getAPICalls } = require('../components/bot-helpers');
+const { EMBED_COLOR, INFO_ICON } = require('../components/bot-consts');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -22,10 +22,10 @@ module.exports = {
 	const uptime = Math.floor(interaction.client.uptime / (86_400_000));
 
 	const embed = new EmbedBuilder()
-		.setColor(CONSTS.EMBED_CLR)
+		.setColor(EMBED_COLOR)
 		.setAuthor({
 			name: client.user.tag,
-			iconURL: CONSTS.INFO_ICON
+			iconURL: INFO_ICON
 		})
 		.setThumbnail(client.user.displayAvatarURL({ size: 512 }))
 		.addFields([

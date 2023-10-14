@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { resolveSteamID } = require('../bot-helpers.js');
-const { getProfile } = require('../profile-builder.js');
+const { resolveSteamID } = require('../components/bot-helpers.js');
+const { getProfile } = require('../components/profile-builder.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()

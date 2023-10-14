@@ -1,9 +1,10 @@
-const { address_guilds } = require('../config.json');
+const { address_guilds } = require('../components/config.json');
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { setTags, getTags, setNotis, getNotis } = require('../database');
-const { httpsGet, getSteamToken } = require('../bot-helpers');
-const { getProfile } = require('../profile-builder.js');
-const CONSTS = require('../bot-consts.js');
+const { setTags, getTags, setNotis, getNotis } = require('../components/database');
+const { httpsGet, getSteamToken } = require('../components/bot-helpers');
+const { getProfile } = require('../components/profile-builder.js');
+const { FRIEND_URL, SUMMARY_URL, PROFILE_URL, 
+				EMBED_COLOR, NOTIFICATIONS } = require('../components/bot-consts');
 
 module.exports = {
 	name: 'interactionCreate',
@@ -57,7 +58,7 @@ async function handleListFriends(interaction) {
 
 	await interaction.deferReply();
 
-	let friends = await httpsGet(CONSTS.FRIEND_URL, {
+	let friends = await httpsGet(FRIEND_URL, {
 		key: getSteamToken(),
 		steamid: steamid
 	});
@@ -77,7 +78,7 @@ async function handleListFriends(interaction) {
 	for (let i = 0; i < friends.length; i += 100) {
 		try {
 			const chunk = friends.slice(i, i + 100);
-			const chunkdata = await httpsGet(CONSTS.SUMMARY_URL, {
+			const chunkdata = await httpsGet(SUMMARY_URL, {
 				key: getSteamToken(), 
 				steamids: chunk.map(val => val.steamid).join(',')
 			});
@@ -105,7 +106,7 @@ async function handleListFriends(interaction) {
 
 	for (let data of personadata) {
 		const label = `${data.steamid} - ${data.personaname}`;
-		const buffer = `[${label}](${CONSTS.PROFILE_URL}${data.steamid}/)\n`
+		const buffer = `[${label}](${PROFILE_URL}${data.steamid}/)\n`
 		
 		fulltext += label + '\n';
 
@@ -124,7 +125,7 @@ async function handleListFriends(interaction) {
 	let original = interaction.message.embeds[0];
 
 	let embed = new EmbedBuilder()
-		.setColor(CONSTS.EMBED_CLR)
+		.setColor(EMBED_COLOR)
 		.setAuthor(original.author)
 		.setThumbnail(original.thumbnail.url)
 		.addFields({ 
@@ -176,9 +177,9 @@ async function handleNotifyButton(interaction) {
 	var selectmenu = new StringSelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
 		.setPlaceholder('Notification Settings')
-		.setMaxValues(CONSTS.NOTIFICATIONS.length);
+		.setMaxValues(NOTIFICATIONS.length);
 
-	for (let noti of CONSTS.NOTIFICATIONS) {
+	for (let noti of NOTIFICATIONS) {
 		if (noti.value == 'log' && !address_guilds.includes(interaction.guildId)) {
 			noti.name = 'Unimplemented';
 		}

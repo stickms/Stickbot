@@ -1,5 +1,5 @@
 const { getVoiceConnection } = require('@discordjs/voice');
-const { audiobot } = require('../audio-bot');
+const { audiobot } = require('../components/audio-bot');
 
 module.exports = {
 	name: 'voiceStateUpdate',
@@ -33,7 +33,6 @@ module.exports = {
       const mode = tracker.getQueue().length ? 'pausing playback' : 'disconnecting';
       await channel.send(`🎵 Voice Chanel empty, ${mode}...`);    
     } catch (error) {
-      console.error(error);
       // Sometimes we can't send a message in the corresponding channel
     }
 	},

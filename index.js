@@ -3,7 +3,7 @@ const path = require('node:path');
 
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { discord_token } = require('./config.json');
-const { loadDB } = require('./database');
+const { loadDB } = require('./components/database');
 
 loadDB();
 

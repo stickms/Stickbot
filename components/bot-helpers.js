@@ -1,8 +1,8 @@
 const axios = require('axios');
-const CONSTS = require('./bot-consts.js');
 const SteamID = require('steamid');
-const { steam_tokens } = require('./config.json');
+const { steam_tokens } = require('../config.json');
 const { getRandom } = require('random-useragent');
+const { BAN_URL, FRIEND_URL, PROFILE_URL, SUMMARY_URL, VANITY_URL } = require('./bot-consts');
 
 module.exports = { 
   httpsGet, httpsHead, resolveSteamID,
@@ -27,8 +27,8 @@ function getSteamToken() {
 
 async function httpsGet(url, params={}, timeout=1000, full=false) {
   try {
-    if (url.startsWith(CONSTS.BAN_URL) || url.startsWith(CONSTS.FRIEND_URL) || 
-      url.startsWith(CONSTS.PROFILE_URL) || url.startsWith(CONSTS.SUMMARY_URL)) {
+    if (url.startsWith(BAN_URL) || url.startsWith(FRIEND_URL) || 
+      url.startsWith(PROFILE_URL) || url.startsWith(SUMMARY_URL)) {
       apicalls++;
     }
 
@@ -75,7 +75,7 @@ async function resolveSteamID(steamid) {
     }
 
     // Try to check if this is a Vanity URL first
-    const response = await httpsGet(CONSTS.VANITY_URL, {
+    const response = await httpsGet(VANITY_URL, {
       key: getSteamToken(),
       vanityurl: steamid
     });
@@ -99,7 +99,7 @@ async function getBanData(steamid) {
   }
 
   try {
-    let bandata = await httpsGet(CONSTS.BAN_URL, {
+    let bandata = await httpsGet(BAN_URL, {
       key: getSteamToken(),
       steamids: steamid
     });
@@ -127,7 +127,7 @@ async function getPersonaDict(steamid) {
   }
 
   try {
-    const response = await httpsGet(CONSTS.SUMMARY_URL, {
+    const response = await httpsGet(SUMMARY_URL, {
       key: getSteamToken(),
       steamids: steamid
     });
