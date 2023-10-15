@@ -1,24 +1,22 @@
-const { getWelcome } = require('../components/database');
-const { formatWelcomeMessage } = require('../components/bot-helpers');
+import { getWelcome } from '../components/database.js';
+import { formatWelcomeMessage } from '../components/bot-helpers.js';
 
-module.exports = {
-	name: 'guildMemberAdd',
-  
-	async execute(member) {
-    const welcome = getWelcome(member.guild.id);
-    if (!welcome?.channel || !welcome?.join) return;
+export const name = 'guildMemberAdd';
 
-    try {
-      const channel = await member.guild.channels.fetch(welcome.channel);
-      if (!channel) return;
+export async function execute(member) {
+  const welcome = getWelcome(member.guild.id);
+  if (!welcome?.channel || !welcome?.join) return;
 
-      await channel.send({
-        content: formatWelcomeMessage(welcome.join, member),
-        allowedMentions: { parse: [] }
-      });
-    } catch (error) {
-      // Channel has either been deleted or
-      // bot doesn't have the necessary permissions
-    }
-	},
-};
+  try {
+    const channel = await member.guild.channels.fetch(welcome.channel);
+    if (!channel) return;
+
+    await channel.send({
+      content: formatWelcomeMessage(welcome.join, member),
+      allowedMentions: { parse: [] }
+    });
+  } catch (error) {
+    // Channel has either been deleted or
+    // bot doesn't have the necessary permissions
+  }
+}

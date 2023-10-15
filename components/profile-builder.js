@@ -1,13 +1,13 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
-        StringSelectMenuBuilder, ButtonStyle } = require('discord.js');
-const { rust_token, sourceban_urls, address_guilds } = require('../config.json');
-const { getSteamToken, httpsGet, getBanData } = require('./bot-helpers.js');
-const { getTags, getNames, getAddrs } = require('./database');
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
+        StringSelectMenuBuilder, ButtonStyle } from 'discord.js';
+import { getSteamToken, httpsGet, getBanData } from './bot-helpers.js';
+import { getTags, getNames, getServers } from './database.js';
+import { parse as HTMLParse } from 'node-html-parser';
+import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
+        RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } from './bot-consts.js';
+import { SOURCEBAN_URLS, SERVER_GUILDS } from './bot-config.js';
 
-const HTMLParser = require('node-html-parser');
-const SteamID = require('steamid');
-const { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
-        RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } = require('./bot-consts');
+import SteamID from 'steamid';
 
 class SteamProfile {
   async init(steamid, guildid, options) {
@@ -95,7 +95,7 @@ class SteamProfile {
         return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
       });
 
-      const addrdata = getAddrs(this.steamid);
+      const addrdata = getServers(this.steamid);
       const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1].date - a[1].date; })
         .map(([k, v]) => { 
@@ -116,7 +116,7 @@ class SteamProfile {
         });
       }
       
-      if (iplist?.length && address_guilds.includes(this.guildid)) {
+      if (iplist?.length && SERVER_GUILDS.includes(this.guildid)) {
         embed.addFields({
           name: 'Logged IPs',
           value: iplist.join('\n')
@@ -195,7 +195,7 @@ class SteamProfile {
 
   async getAlertList() {
     const tags = getTags(this.steamid, this.guildid);
-    const ipdata = getAddrs(this.steamid);
+    const ipdata = getServers(this.steamid);
     const bandata = this.bandata ?? await getBanData(this.steamid);
     const srdata = await this.getSteamRepData();
     
@@ -228,9 +228,9 @@ class SteamProfile {
       }
     }
 
-    if (rust_token) {
+    if (process.env.RUST_TOKEN) {
       const rustdata = await httpsGet(RUST_URL, {
-        apikey: rust_token,
+        apikey: process.env.RUST_TOKEN,
         steamid64: this.steamid
       });
 
@@ -258,7 +258,7 @@ class SteamProfile {
     if (tags['banwatch']) {
       alertlist.push('\u2139\uFE0F Ban Watch');
     } if (Object.keys(ipdata).length) {
-      if (address_guilds.includes(this.guildid)) {
+      if (SERVER_GUILDS.includes(this.guildid)) {
         alertlist.push('\u2139\uFE0F IP Logged');
       }
     }
@@ -356,8 +356,8 @@ class SteamProfile {
   
     const converted = new SteamID(this.steamid);
   
-    for (let url of Object.keys(sourceban_urls)) {
-      let idfmt = sourceban_urls[url];
+    for (let url of Object.keys(SOURCEBAN_URLS)) {
+      let idfmt = SOURCEBAN_URLS[url];
       if (idfmt === 3) {
         url += SOURCEBAN_EXT + converted.getSteam3RenderedID();
       } else {
@@ -383,7 +383,7 @@ class SteamProfile {
         continue;
       }
   
-      let dom = HTMLParser.parse(result.value.data);
+      let dom = HTMLParse(result.value.data);
       if (!dom) {
         continue;
       }
@@ -423,11 +423,8 @@ class SteamProfile {
   }
 }
 
-module.exports = { 
-  // Options: moreinfo, sourcebans, summary, bandata
-  async getProfile(steamid, guildid, options={}) {
-    const profile = new SteamProfile();
-    await profile.init(steamid, guildid, options);
-    return profile;
-  }
-};
+export async function getProfile(steamid, guildid, options={}) {
+  const profile = new SteamProfile();
+  await profile.init(steamid, guildid, options);
+  return profile;
+}

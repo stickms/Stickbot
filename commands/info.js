@@ -1,20 +1,19 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getPlayers } = require('../components/database');
-const { getAPICalls } = require('../components/bot-helpers');
-const { EMBED_COLOR, INFO_ICON } = require('../components/bot-consts');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { getPlayers } from '../components/database.js';
+import { getAPICalls } from '../components/bot-helpers.js';
+import { EMBED_COLOR, INFO_ICON } from '../components/bot-consts.js';
 
-module.exports = {
-	data: new SlashCommandBuilder()
+export const data = new SlashCommandBuilder()
 	.setName('info')
-	.setDescription('Some cool bot stats!'),
+	.setDescription('Some cool bot stats!');
         
-	async execute(interaction) {
-    const client = interaction.client;
-    if (!client.user) {
-			return await interaction.reply({
-					content: '❌ Error: Unknown Error when handling interaction.'
-			});
-		}
+export async function execute(interaction) {
+	const client = interaction.client;
+	if (!client.user) {
+		return await interaction.reply({
+				content: '❌ Error: Unknown Error when handling interaction.'
+		});
+	}
 
 	const owner = (await interaction.client.application.fetch()).owner;
 	const profiles =  Object.keys(getPlayers()).length;
@@ -59,7 +58,6 @@ module.exports = {
 				inline: true
 			}
 		]);
-			
-		await interaction.reply({ embeds: [ embed ] });
-	},
-};
+
+	await interaction.reply({ embeds: [ embed ] });
+}

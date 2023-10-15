@@ -1,23 +1,11 @@
-const fs = require('node:fs');
-const SteamID = require('steamid');
+import fs from 'node:fs';
+import SteamID from 'steamid';
 
-const { getBanData, getPersonaDict } = require('./bot-helpers');
+import { getBanData, getPersonaDict } from './bot-helpers.js';
 
 let db = {};
 
-module.exports = {
-  loadDB, saveDB, exportDB,
-  getPlayers, getGuilds,
-  setTags, getTags,
-  setNotis, getNotis,
-  setServers, getServers,
-  setNames, getNames,
-  setBans, getBans,
-  setWelcome, getWelcome,
-  setBanwatch, getBanwatch
-};
-
-function loadDB() {
+export function loadDB() {
   if (fs.existsSync('./playerlist.json')) {
     db = JSON.parse(fs.readFileSync('./playerlist.json'));
   }
@@ -26,19 +14,19 @@ function loadDB() {
   if (!db?.servers) db.servers = {};
 }
 
-function saveDB() {
+export function saveDB() {
   fs.writeFileSync('./playerlist.json', JSON.stringify(db, null, '\t'));
 }
 
-function exportDB() {
+export function exportDB() {
   return db;
 }
 
-function getPlayers() {
+export function getPlayers() {
   return db.players;
 }
 
-async function createPlayer(steamid) {
+export async function createPlayer(steamid) {
   if (typeof steamid === typeof SteamID) {
     steamid = steamid.getSteamID64();
   }
@@ -52,7 +40,7 @@ async function createPlayer(steamid) {
   };
 }
 
-function getGuilds(steamid) {
+export function getGuilds(steamid) {
   if (!db.players[steamid]?.tags) {
     return [];
   }
@@ -60,11 +48,11 @@ function getGuilds(steamid) {
   return Object.keys(db.players[steamid].tags);
 }
 
-function getTags(steamid, guildid) {
+export function getTags(steamid, guildid) {
   return db.players[steamid]?.tags[guildid] ?? {};
 }
 
-async function setTags(steamid, guildid, tags) {
+export async function setTags(steamid, guildid, tags) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }
@@ -73,11 +61,11 @@ async function setTags(steamid, guildid, tags) {
   saveDB();
 }
 
-function getNotis(steamid, guildid) {
+export function getNotis(steamid, guildid) {
   return db.players[steamid]?.notifications[guildid] ?? {};
 }
 
-async function setNotis(steamid, guildid, notifications) {
+export async function setNotis(steamid, guildid, notifications) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }
@@ -86,11 +74,11 @@ async function setNotis(steamid, guildid, notifications) {
   saveDB();
 }
 
-function getServers(steamid) {
+export function getServers(steamid) {
   return db.players[steamid]?.addresses ?? {};
 }
 
-async function setServers(steamid, addresses) {
+export async function setServers(steamid, addresses) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }
@@ -99,11 +87,11 @@ async function setServers(steamid, addresses) {
   saveDB();
 }
 
-function getNames(steamid) {
+export function getNames(steamid) {
   return db.players[steamid]?.names ?? {};
 }
 
-async function setNames(steamid, names) {
+export async function setNames(steamid, names) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }
@@ -112,11 +100,11 @@ async function setNames(steamid, names) {
   saveDB();
 }
 
-async function getBans(steamid) {
+export async function getBans(steamid) {
   return db.players[steamid]?.bandata ?? await getBanData(steamid);
 }
 
-async function setBans(steamid, bans) {
+export async function setBans(steamid, bans) {
   if (!db.players[steamid]) {
     await createPlayer(steamid);
   }
@@ -125,7 +113,7 @@ async function setBans(steamid, bans) {
   saveDB();
 }
 
-function setWelcome(guildid, channel=null, join=null, leave=null) {
+export function setWelcome(guildid, channel=null, join=null, leave=null) {
   if(!db.servers[guildid]) {
     db.servers[guildid] = {};
   }
@@ -140,7 +128,7 @@ function setWelcome(guildid, channel=null, join=null, leave=null) {
   saveDB();
 }
 
-function getWelcome(guildid) {
+export function getWelcome(guildid) {
   if (!db.servers[guildid]?.welcome) {
     return {};
   }
@@ -148,7 +136,7 @@ function getWelcome(guildid) {
   return db.servers[guildid].welcome;
 }
 
-function setBanwatch(guildid, channel) {
+export function setBanwatch(guildid, channel) {
   if(!db.servers[guildid]) {
     db.servers[guildid] = {};
   }
@@ -157,7 +145,7 @@ function setBanwatch(guildid, channel) {
   saveDB();
 }
 
-function getBanwatch(guildid) {
+export function getBanwatch(guildid) {
   if (!db.servers[guildid]?.banwatch) {
     return null;
   }

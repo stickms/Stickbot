@@ -1,33 +1,32 @@
-const { address_guilds } = require('../components/config.json');
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const { setTags, getTags, setNotis, getNotis } = require('../components/database');
-const { httpsGet, getSteamToken } = require('../components/bot-helpers');
-const { getProfile } = require('../components/profile-builder.js');
-const { FRIEND_URL, SUMMARY_URL, PROFILE_URL, 
-				EMBED_COLOR, NOTIFICATIONS } = require('../components/bot-consts');
+import { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
+import { setTags, getTags, setNotis, getNotis } from '../components/database.js';
+import { httpsGet, getSteamToken } from '../components/bot-helpers.js';
+import { getProfile } from '../components/profile-builder.js';
+import { FRIEND_URL, SUMMARY_URL, PROFILE_URL, 
+				EMBED_COLOR, NOTIFICATIONS } from '../components/bot-consts.js';
+import { SERVER_GUILDS } from '../components/bot-config.js';
 
-module.exports = {
-	name: 'interactionCreate',
-	async execute(interaction) {
-		const customid = interaction.customId;
-		if (!customid?.includes(':')) {
-			return;
-		}
+export const name = 'interactionCreate';
 
-		switch (customid.split(':')[0]) {
-			case 'moreinfo':
-				return handleMoreInfo(interaction).catch(console.error);
-			case 'friendinfo':
-				return handleListFriends(interaction).catch(console.error);
-			case 'notifybutton':
-				return handleNotifyButton(interaction).catch(console.error);
-			case 'modifytags':
-				return handleModifyTags(interaction).catch(console.error);
-			case 'notifymenu':
-				return handleNotifyMenu(interaction).catch(console.error);
-		}
-	},
-};
+export async function execute(interaction) {
+	const customid = interaction.customId;
+	if (!customid?.includes(':')) {
+		return;
+	}
+
+	switch (customid.split(':')[0]) {
+		case 'moreinfo':
+			return handleMoreInfo(interaction).catch(console.error);
+		case 'friendinfo':
+			return handleListFriends(interaction).catch(console.error);
+		case 'notifybutton':
+			return handleNotifyButton(interaction).catch(console.error);
+		case 'modifytags':
+			return handleModifyTags(interaction).catch(console.error);
+		case 'notifymenu':
+			return handleNotifyMenu(interaction).catch(console.error);
+	}
+}
 
 async function handleMoreInfo(interaction) {
 	let steamid = interaction.customId.split(':')[1];
@@ -180,7 +179,7 @@ async function handleNotifyButton(interaction) {
 		.setMaxValues(NOTIFICATIONS.length);
 
 	for (let noti of NOTIFICATIONS) {
-		if (noti.value == 'log' && !address_guilds.includes(interaction.guildId)) {
+		if (noti.value == 'log' && !SERVER_GUILDS.includes(interaction.guildId)) {
 			noti.name = 'Unimplemented';
 		}
 

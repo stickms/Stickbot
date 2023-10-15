@@ -1,23 +1,18 @@
-const axios = require('axios');
-const SteamID = require('steamid');
-const { steam_tokens } = require('../config.json');
-const { getRandom } = require('random-useragent');
-const { BAN_URL, FRIEND_URL, PROFILE_URL, SUMMARY_URL, VANITY_URL } = require('./bot-consts');
+import axios from 'axios';
+import SteamID from 'steamid';
+import { getRandom } from 'random-useragent';
+import { BAN_URL, SUMMARY_URL, VANITY_URL } from './bot-consts.js';
 
-module.exports = { 
-  httpsGet, httpsHead, resolveSteamID,
-  getBanData, getPersonaDict, formatWelcomeMessage,
-  getAPICalls, getSteamToken
-};
+const steam_tokens = process.env.STEAM_TOKENS.split(',');
 
 let apicalls = 0;
 let tokennum = 0;
 
-function getAPICalls() {
+export function getAPICalls() {
   return apicalls;
 }
 
-function getSteamToken() {
+export function getSteamToken() {
   if (tokennum >= steam_tokens.length) {
     tokennum = 0;
   }
@@ -25,10 +20,9 @@ function getSteamToken() {
   return steam_tokens[tokennum++];
 }
 
-async function httpsGet(url, params={}, timeout=1000, full=false) {
+export async function httpsGet(url, params={}, timeout=1000, full=false) {
   try {
-    if (url.startsWith(BAN_URL) || url.startsWith(FRIEND_URL) || 
-      url.startsWith(PROFILE_URL) || url.startsWith(SUMMARY_URL)) {
+    if (url.startsWith('https://api.steampowered.com/')) {
       apicalls++;
     }
 
@@ -49,7 +43,7 @@ async function httpsGet(url, params={}, timeout=1000, full=false) {
   }
 }
 
-async function httpsHead(url, params={}, timeout=1000) {
+export async function httpsHead(url, params={}, timeout=1000) {
   try {
     const response = await axios.head(url, { 
       params: params,
@@ -68,7 +62,7 @@ async function httpsHead(url, params={}, timeout=1000) {
   }
 }
 
-async function resolveSteamID(steamid) {
+export async function resolveSteamID(steamid) {
   try {
     if (typeof steamid === 'string' && steamid.split('/').length > 4) {
       steamid = steamid.split('/')[4];
@@ -93,7 +87,7 @@ async function resolveSteamID(steamid) {
   }
 }
 
-async function getBanData(steamid) {
+export async function getBanData(steamid) {
   if (typeof steamid === typeof SteamID) {
     steamid = steamid.getSteamID64();
   }
@@ -121,7 +115,7 @@ async function getBanData(steamid) {
   }
 }
 
-async function getPersonaDict(steamid) {
+export async function getPersonaDict(steamid) {
   if (typeof steamid === typeof SteamID) {
     steamid = steamid.getSteamID64();
   }
@@ -147,7 +141,7 @@ async function getPersonaDict(steamid) {
   }
 }
 
-function formatWelcomeMessage(message, member) {
+export function formatWelcomeMessage(message, member) {
   message = message.replaceAll('{mention}', `<@${member.user.id}>`);
   message = message.replaceAll('{disc}', member.user?.discriminator);
   message = message.replaceAll('{id}', member.user.id);

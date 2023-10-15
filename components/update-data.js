@@ -1,11 +1,11 @@
-const { address_guilds, only_local } = require('../config.json');
-const { httpsGet, getSteamToken } = require('./bot-helpers');
-const { SUMMARY_URL, BAN_URL } = require('./bot-consts');
-const { getProfile } = require('./profile-builder.js');
-const { getPlayers, getGuilds, getNotis, setBans, getBans, getServers, 
-				setServers, getNames, setNames, getBanwatch } = require('./database');
+import { httpsGet, getSteamToken } from './bot-helpers.js';
+import { SUMMARY_URL, BAN_URL } from './bot-consts.js';
+import { getProfile } from './profile-builder.js';
+import { getPlayers, getGuilds, getNotis, setBans, getBans, getServers, 
+				setServers, getNames, setNames, getBanwatch } from './database.js'
+import { SERVER_GUILDS, LOCAL_SERVER_ONLY } from './bot-config.js';
 
-async function updatePlayerData(client) {
+export async function updatePlayerData(client) {
 	const data = await getSummaries();
 	if (!data) {
 		return;
@@ -87,8 +87,8 @@ async function getSummaries() {
 }
 
 async function updateBans(entry) {
-	let summary = entry[1].summary;
-	let bandata = entry[1].bandata;
+	const summary = entry[1].summary;
+	const bandata = entry[1].bandata;
 
 	let bans = await getBans(bandata.SteamId);
 		
@@ -156,19 +156,19 @@ async function updateBans(entry) {
 }
 
 async function updateServers(entry) {
-	let summary = entry[1].summary;
-	let bandata = entry[1].bandata;
+	const summary = entry[1].summary;
+	const bandata = entry[1].bandata;
 
 	if (!summary.gameserverip) {
 		return;
 	}
 
-	if (only_local && summary.gameserverip.split(':')[1] != '0') {
+	if (LOCAL_SERVER_ONLY && summary.gameserverip.split(':')[1] != '0') {
 		return;
 	}
 
 	let servers = getServers(summary.steamid);
-	const server = only_local ? summary.gameserverip.split(':')[0] : summary.gameserverip;
+	const server = LOCAL_SERVER_ONLY ? summary.gameserverip.split(':')[0] : summary.gameserverip;
 
 	servers[server] = {
 		game: summary.gameextrainfo ?? 'Unknown Game',
@@ -191,7 +191,7 @@ async function updateServers(entry) {
 
 	for (const guildid of getGuilds(summary.steamid)) {
 		const notis = getNotis(summary.steamid, guildid);
-		if (!notis.log || !address_guilds.includes(guildid)) {
+		if (!notis.log || !SERVER_GUILDS.includes(guildid)) {
 			continue;
 		}
 
@@ -214,8 +214,8 @@ async function updateServers(entry) {
 }
 
 async function updateNames(entry) {
-	let summary = entry[1].summary;
-	let bandata = entry[1].bandata;
+	const summary = entry[1].summary;
+	const bandata = entry[1].bandata;
 
 	let names = getNames(summary.steamid);
 	const persona = JSON.stringify(summary.personaname);
@@ -262,7 +262,3 @@ async function updateNames(entry) {
 
 	return updatemessages;
 }
-
-module.exports = {
-	updatePlayerData
-};

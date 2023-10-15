@@ -1,10 +1,12 @@
 # Stickbot
 
-Discord bot made in JavaScript with Discord.JS
+Discord bot made by Stick in JavaScript with Discord.JS
 
 ## Functionality
 
 Stickbot is a Discord bot that helps you keep track of Steam profiles that you want to log or keep track of.
+
+It also has some other cool features.
 
 __Stickbot features:__
 
@@ -22,32 +24,25 @@ __Stickbot features:__
 
 ## File Formatting
 
-### config.json formatting
+### Bot configuration formatting
 
-`config.json` __must__ be placed in the same directory as index.js for it to work.
-
-Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_id`, and `spotify_id` are optional:
+Tokens and other secrets can be placed in a `.env` file. They are as follows:
 
 ```yaml
-{
-    "client_id": "YOUR-BOTS-CLIENT-ID",
-    "dev_guild": "GUILD-FOR-DEV-ONLY-COMMANDS",
-    "discord_token": "YOUR-DISCORD-TOKEN",
-    "steam_token": "YOUR-STEAMDEV-TOKEN",
-    "rust_token": "RUSTBANNED.COM-API-TOKEN",
-    "soundcloud_id": "SOUNDCLOUD-USER-ID",
-    "spotify_id": {
-        "client_id": "SPOTIFY-USER-ID",
-        "client_secret": "SPOTIFY-API-SECRET",
-        "refresh_token": "SPOTIFY-API-REFRESH",
-        "market": "2-LETTER-COUNTRY-CODE",
-    },
-    "sourceban_urls": { // Links of various Sourceban websites and their SteamID formats
-        "https://www.skial.com/sourcebans/": 3,
-        "https://lazypurple.com/sourcebans/": 2,
-    }
-}
+CLIENT_ID           # Discord bot Client ID
+DISCORD_TOKEN       # Discord bot token
+STEAM_TOKENS        # Comma-deliminated list of SteamWebAPI tokens
+
+# Optional (but highly recommended) below
+
+RUST_TOKEN          # Rustbanned.com token
+SOUNDCLOUD_TOKEN    # Soundcloud.com account token
+SPOTIFY_TOKEN       # Spotify developer token
+SPOTIFY_SECRET      # Spotify developer secret token
+SPOTIFY_REFRESH     # Spotify developer refresh token
 ```
+
+Other configuration settings can be changed in `components/bot-config.js` and are commented accordingly.
 
 ### playerlist.json formatting
 
@@ -59,32 +54,37 @@ Make sure it's formatted exactly as below, note that `rust_token`, `soundcloud_i
         "STEAM-ID-HERE": {
             "tags": {
                 "cheater": {
-                    "addedby": "DISCORD-USER-ID",
-                    "date": 1669857194 // Date Added
+                    "addedby": "511661119996297226",
+                    "date": 1669857194
                 }
             },
             "addresses": {
-                "GAME-SERVER-IP": {
-                    "game": "NAME-OF-GAME",
-                    "date": 1669857194 // Date Played
+                "91.216.250.42:27015": {
+                    "game": "Team Fortress 2",
+                    "date": 1669857194
                 }
             },
             "notifications": {
                 "ban": [
-                    "DISCORD-USER-IDS"
+                    "511661119996297226"
                 ]
             },
             "bandata": {
-                "vacbans": 0, // Number of VAC Bans
-                "gamebans": 0, // Number of Game Bans
-                "communityban": false, // Community ban status
-                "tradeban": false, // Trade ban status
+                "vacbans": 0,
+                "gamebans": 0,
+                "communityban": false,
+                "tradeban": false,
             }
         }
     },
     "servers": {
-        "<DISCORD-GUILD-ID>": {
-            "banwatch": "CHANNEL-ID"
+        "944816654569844796": {
+            "banwatch": "1020127285229146112"
+            "welcome": {
+                "channel": "1020127285229146112",
+                "join": "{name} just left {guild}!",
+                "leave": "bye bye {name}..."
+            }
         }
     }
 }

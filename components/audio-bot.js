@@ -1,6 +1,6 @@
-const play = require('play-dl');
-const { createAudioResource, createAudioPlayer, getVoiceConnection, 
-        NoSubscriberBehavior, AudioPlayerStatus, } = require('@discordjs/voice');
+import play from 'play-dl';
+import { createAudioResource, createAudioPlayer, getVoiceConnection, 
+        NoSubscriberBehavior, AudioPlayerStatus, } from '@discordjs/voice';
 
 class GuildTracker {
   constructor(guildId) {
@@ -112,6 +112,4 @@ class AudioBot {
   }
 }
 
-module.exports = {
-  audiobot: new AudioBot()
-}
+export const audiobot = new AudioBot();

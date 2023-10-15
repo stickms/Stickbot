@@ -1,27 +1,28 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { soundcloud_id, spotify_id } = require('../config.json');
-const { audiobot } = require('../components/audio-bot');
-const { httpsHead } = require('../components/bot-helpers');
-const { EMBED_COLOR, MUSIC_ICON } = require('../components/bot-consts');
-const play = require('play-dl');
-const jsmediatags = require('jsmediatags');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { audiobot } from '../components/audio-bot.js';
+import { httpsHead } from '../components/bot-helpers.js';
+import { EMBED_COLOR, MUSIC_ICON } from '../components/bot-consts.js';
+import { joinVoiceChannel, getVoiceConnection, 
+				entersState, VoiceConnectionStatus } from '@discordjs/voice';
 
-const { joinVoiceChannel, getVoiceConnection, 
-				entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-
+import play from 'play-dl';
+import jsmediatags from 'jsmediatags';
+				
 play.setToken({
 	spotify : {
-			...spotify_id
-    },
+		client_id: process.env.SPOTIFY_TOKEN,
+		client_secret: process.env.SPOTIFY_SECRET,
+		refresh_token: process.env.SPOTIFY_REFRESH,
+		market: 'US'
+  },
 	soundcloud: {
-		client_id: soundcloud_id
+		client_id: process.env.SOUNDCLOUD_TOKEN
 	}
 });
 
 jsmediatags.Config.setDisallowedXhrHeaders(['Range']);
 
-module.exports = {
-	data: new SlashCommandBuilder()
+export const data = new SlashCommandBuilder()
 	.setName('music')
 	.setDescription('Music Bot commands!')
 	.setDMPermission(false)
@@ -87,31 +88,30 @@ module.exports = {
 	).addSubcommand(command => command
 		.setName('nowplaying')
 		.setDescription('Shows the currently playing track.')
-	),
+	);
 
-	async execute(interaction) {
-		switch (interaction.options.getSubcommand()) {
-			case 'play':
-				return commandPlay(interaction);
-			case 'join':
-				return commandJoin(interaction);
-			case 'leave':
-				return commandLeave(interaction);
-			case 'skip':
-				return commandSkip(interaction);
-			case 'move':
-				return commandMove(interaction);
-			case 'clear':
-				return commandClear(interaction);
-			case 'loop':
-				return commandLoop(interaction);
-			case 'nowplaying':
-				return commandNowPlaying(interaction);
-			case 'queue':
-				return commandQueue(interaction);
-		}
+export async function execute(interaction) {
+	switch (interaction.options.getSubcommand()) {
+		case 'play':
+			return commandPlay(interaction);
+		case 'join':
+			return commandJoin(interaction);
+		case 'leave':
+			return commandLeave(interaction);
+		case 'skip':
+			return commandSkip(interaction);
+		case 'move':
+			return commandMove(interaction);
+		case 'clear':
+			return commandClear(interaction);
+		case 'loop':
+			return commandLoop(interaction);
+		case 'nowplaying':
+			return commandNowPlaying(interaction);
+		case 'queue':
+			return commandQueue(interaction);
 	}
-};
+}
 
 async function commandPlay(interaction) {
 	if (!interaction.member.voice?.channel)  {
@@ -475,8 +475,6 @@ async function resolveQuery(query) {
 			tracks: [ query ]
 		}
 	} catch (error) {
-		console.log(error);
-
 		// Otherwise, return a YouTube search query for it
 		const search = await play.search(query, { limit: 1 });
 		return {

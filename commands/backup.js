@@ -1,22 +1,20 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { exportDB } = require('../components/database.js'); 
+import { SlashCommandBuilder } from 'discord.js';
+import { exportDB } from '../components/database.js'; 
 
-module.exports = {
-	data: new SlashCommandBuilder()
+export const data = new SlashCommandBuilder()
 	.setName('backup')
-	.setDescription('Uploads playerlist data to Discord'),
+	.setDescription('Uploads playerlist data to Discord');
 
-	dev_guild: true,
+export const dev_guild = true;
         
-	async execute(interaction) {
-		const file = {
-			attachment: Buffer.from(JSON.stringify(exportDB(), null, 4)),
-			name: 'playerlist.json'
-		};
+export async function execute(interaction) {
+	const file = {
+		attachment: Buffer.from(JSON.stringify(exportDB(), null, 4)),
+		name: 'playerlist.json'
+	};
 
-		await interaction.reply({
-			content: '✅ Backup exported and uploaded!',
-			files: [ file ]
-		});
-	},
-};
+	await interaction.reply({
+		content: '✅ Backup exported and uploaded!',
+		files: [ file ]
+	});
+}

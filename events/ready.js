@@ -1,14 +1,12 @@
-const { updatePlayerData } = require('../components/update-data.js');
+import { updatePlayerData } from '../components/update-data.js';
 
-module.exports = {
-	name: 'ready',
-	once: true,
+export const name = 'ready';
+export const once = true;
 
-	execute(client) {
-		console.log(`Ready! Logged in as ${client.user.tag}`);
-		setInterval(updatePlayerData, 7_200_000, client); // every 2 hours
-		client.user.setPresence({
-			activities: [ { name: 'Slash Commands!', type: 2 } ]
-		});
-	},
-};
+export async function execute(client) {
+	console.log(`Ready! Logged in as ${client.user.tag}`);
+	setInterval(updatePlayerData, 7_200_000, client); // every 2 hours
+	client.user.setPresence({
+		activities: [ { name: 'Slash Commands!', type: 2 } ]
+	});
+}

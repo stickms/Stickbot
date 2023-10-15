@@ -1,9 +1,8 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { resolveSteamID } = require('../components/bot-helpers.js');
-const { getProfile } = require('../components/profile-builder.js');
+import { SlashCommandBuilder } from 'discord.js';
+import { resolveSteamID } from '../components/bot-helpers.js';
+import { getProfile } from '../components/profile-builder.js';
 
-module.exports = {
-	data: new SlashCommandBuilder()
+export const data = new SlashCommandBuilder()
 	.setName('lookup')
 	.setDescription('Lookup a Steam Profile!')
 	.setDMPermission(false)
@@ -11,30 +10,29 @@ module.exports = {
 		.setName('profile')
 		.setDescription('Lookup this Profile')
 		.setRequired(true)
-	),
+	);
     
-	async execute(interaction) {
-		await interaction.deferReply();
+export async function execute(interaction) {
+	await interaction.deferReply();
 
-		const query = interaction.options.getString('profile');
-		const steamid = await resolveSteamID(query);
+	const query = interaction.options.getString('profile');
+	const steamid = await resolveSteamID(query);
 
-		if (!steamid) {
-			return await interaction.editReply({
-				content: '❌ Error: Could not find profile.'
-			});
-		}
-
-		const profile = await getProfile(steamid.getSteamID64(), interaction.guildId);
-		if (!profile?.getEmbed()) {
-			return await interaction.editReply({
-				content: '❌ Error: Could not load profile data.'
-			});
-		}
-
-		await interaction.editReply({
-			embeds: profile.getEmbed(),
-			components: profile.getComponents()
+	if (!steamid) {
+		return await interaction.editReply({
+			content: '❌ Error: Could not find profile.'
 		});
-	},
-};
+	}
+
+	const profile = await getProfile(steamid.getSteamID64(), interaction.guildId);
+	if (!profile?.getEmbed()) {
+		return await interaction.editReply({
+			content: '❌ Error: Could not load profile data.'
+		});
+	}
+
+	await interaction.editReply({
+		embeds: profile.getEmbed(),
+		components: profile.getComponents()
+	});
+}
