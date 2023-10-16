@@ -331,7 +331,7 @@ class SteamProfile {
     }
 
     if (fulltext.length > shorttext.length) {
-      const url = await uploadText(fulltext);
+      const url = await uploadText(fulltext.replace('\n', '  \n'));
       if (url) shorttext += `[\`Click to view more bans\`](${url})`;
       else shorttext += '\`Error when uploading more sourcebans\`';
     } else if (!shorttext) {

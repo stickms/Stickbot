@@ -112,8 +112,8 @@ async function handleListFriends(interaction) {
 	} 
 
 	if (fulltext.length > shorttext.length) {
-		const url = await uploadText(fulltext);
-		if (url) shorttext += `\`(Click to view more friends)[${url}]\``;
+		const url = await uploadText(fulltext.replace('\n', '  \n'));
+		if (url) shorttext += `[\`Click to view more friends\`](${url})`;
 		else shorttext += '\`Error when uploading more friends\`';
 	}
 
