@@ -16,7 +16,7 @@ export async function execute(interaction) {
 	}
 
 	const owner = (await interaction.client.application.fetch()).owner;
-	const profiles =  Object.keys(getPlayers()).length;
+	const profiles =  (await getPlayers()).length;
 	const guilds = await interaction.client.guilds.fetch();
 	const uptime = Math.floor(interaction.client.uptime / (86_400_000));
 
