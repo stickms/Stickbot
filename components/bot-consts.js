@@ -8,6 +8,7 @@ export const VANITY_URL = 'https://api.steampowered.com/ISteamUser/ResolveVanity
 export const BAN_URL = 'https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/';
 export const STEAMREP_URL = 'https://steamrep.com/api/beta3/reputation/';
 export const RUST_URL = 'https://rustbanned.com/api/eac_ban_check_v2.php';
+export const DPASTE_URL = 'https://dpaste.com/api/v2/';
 
 export const SOURCEBAN_EXT = 'index.php?p=banlist&advType=steam&advSearch=';
 export const PROFILE_URL = 'https://steamcommunity.com/profiles/';

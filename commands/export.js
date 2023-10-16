@@ -30,16 +30,16 @@ export async function execute(interaction) {
   let fmt = interaction.options.getString('format');
   let tag = interaction.options.getString('tag') ?? 'cheater';
 
-  let result = Object.keys(getPlayers()).map(id64 => {
-    if (!getTags(id64, interaction.guildId)[tag]) {
+  let result = (await getPlayers()).map(async x => {
+    if (!(await getTags(x._id, interaction.guildId)[tag])) {
       return '';
     }
 
-    const steamid = new SteamID(id64);
+    const steamid = new SteamID(x._id);
 
     switch(fmt) {
       case 'id64':
-        return id64 + '\n';
+        return steamid.getSteamID64() + '\n';
       case 'id3':
         return steamid.getSteam3RenderedID() + '\n';
       case 'id2':

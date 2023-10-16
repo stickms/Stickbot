@@ -45,7 +45,7 @@ export async function execute(interaction) {
       });
     }
 
-    setWelcome(interaction.guildId, channel.id);
+    await setWelcome(interaction.guildId, channel.id);
     await interaction.reply(`\u2139\uFE0F Welcome messages will now be posted in <#${channel.id}>`);
   } else if (sub == 'join') {
     const message = interaction.options.getString('message');
@@ -56,7 +56,7 @@ export async function execute(interaction) {
       });
     }
 
-    setWelcome(interaction.guildId, null, message);
+    await setWelcome(interaction.guildId, null, message);
     await interaction.reply('✅ Set user welcome message successfully.');
   } else if (sub == 'leave') {
     const message = interaction.options.getString('message');
@@ -67,7 +67,7 @@ export async function execute(interaction) {
       });
     }
 
-    setWelcome(interaction.guildId, null, null, message);
+    await setWelcome(interaction.guildId, null, null, message);
     await interaction.reply('✅ Set user goodbye message successfully.');
   } else if (sub == 'format') {
     let embed = new EmbedBuilder()

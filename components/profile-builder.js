@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } from 'discord.js';
-import { getSteamToken, httpsGet, getBanData } from './bot-helpers.js';
+import { getSteamToken, httpsGet, getBanData, uploadText } from './bot-helpers.js';
 import { getTags, getNames, getServers } from './database.js';
 import { parse as HTMLParse } from 'node-html-parser';
 import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
@@ -35,10 +35,6 @@ class SteamProfile {
 
   getComponents() {
     return this.components;
-  }
-
-  getAttachments() {
-    return this.banfile;
   }
 
   async generateEmbed(moreinfo = false, known_sourcebans = null) {
@@ -83,19 +79,19 @@ class SteamProfile {
       }
 
     if (moreinfo) {
-      const tagdata = getTags(this.steamid, this.guildid);
+      const tagdata = await getTags(this.steamid, this.guildid);
       const taglist = Object.entries(tagdata).map(([k, v]) => { 
         return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
       });
 
-      const namedata = getNames(this.steamid, this.guildid);
+      const namedata = await getNames(this.steamid, this.guildid);
       const namelist = Object.entries(namedata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1] - a[1]; })
         .map(([k, v]) => { 
         return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
       });
 
-      const addrdata = getServers(this.steamid);
+      const addrdata = await getServers(this.steamid);
       const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1].date - a[1].date; })
         .map(([k, v]) => { 
@@ -131,7 +127,7 @@ class SteamProfile {
   }
 
   async generateComponents() {
-    const tagdata = getTags(this.steamid, this.guildid);
+    const tagdata = await getTags(this.steamid, this.guildid);
     
     const selectmenu = new StringSelectMenuBuilder()
                         .setCustomId(`modifytags:${this.steamid}`)
@@ -194,8 +190,8 @@ class SteamProfile {
   }
 
   async getAlertList() {
-    const tags = getTags(this.steamid, this.guildid);
-    const ipdata = getServers(this.steamid);
+    const tags = await getTags(this.steamid, this.guildid);
+    const ipdata = await getServers(this.steamid);
     const bandata = this.bandata ?? await getBanData(this.steamid);
     const srdata = await this.getSteamRepData();
     
@@ -308,7 +304,7 @@ class SteamProfile {
       this.cheaterfriends = 0;
 
       for (const val of Object.values(frienddata)) {
-        const tags = getTags(val.steamid, this.guildid);
+        const tags = await getTags(val.steamid, this.guildid);
         if (tags['cheater']) this.cheaterfriends++;
       } 
     } catch (error) {
@@ -320,7 +316,6 @@ class SteamProfile {
   async getSourceBanData() {
     const sourcebans = await this.getSourceBans();
 
-    let requireupload = false;
     let shorttext = '';
     let fulltext = '';
 
@@ -328,22 +323,17 @@ class SteamProfile {
       const label = `${ban.url.split('/')[2]} - ${ban.reason}`;            
       const buffer = `[${label}](${ban.url})\n`;
 
-      fulltext += label + '\n';
+      fulltext += buffer;
 
-      if ((shorttext + buffer).length > 950) {
-        requireupload = true;
-      } else {
+      if ((shorttext + buffer).length <= 950) {
         shorttext += buffer;
       }
     }
 
-    if (requireupload) {
-      this.banfile = [{
-        attachment: Buffer.from(fulltext),
-        name: 'bans.txt'
-      }];
-
-      shorttext += '\`Check Attachment for full list\`';
+    if (fulltext.length > shorttext.length) {
+      const url = await uploadText(fulltext);
+      if (url) shorttext += `[\`Click to view more bans\`](${url})`;
+      else shorttext += '\`Error when uploading more sourcebans\`';
     } else if (!shorttext) {
       shorttext = '✅ None';
     }

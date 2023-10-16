@@ -4,7 +4,7 @@ import { formatWelcomeMessage } from '../components/bot-helpers.js';
 export const name = 'guildMemberRemove';
 
 export async function execute(member) {
-  const welcome = getWelcome(member.guild.id);
+  const welcome = await getWelcome(member.guild.id);
   if (!welcome?.channel || !welcome?.leave) return;
 
   try {

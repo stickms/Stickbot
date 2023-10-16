@@ -41,7 +41,7 @@ async function getSummaries() {
 		let bandata = [];
 		let data = {};
 
-		const players = Object.keys(getPlayers());
+		const players = (await getPlayers()).map(x => x._id);
 
 		for (let i = 0; i < players.length; i++) {
 			data[players[i]] = { summary: {}, bandata: {} };
@@ -125,8 +125,8 @@ async function updateBans(entry) {
 
 	let updatemessages = [];
 
-	for (const guildid of getGuilds(bandata.SteamId)) {
-		const channel = getBanwatch(guildid);
+	for (const guildid of await getGuilds(bandata.SteamId)) {
+		const channel = await getBanwatch(guildid);
 		if (!channel) {
 			continue;
 		}
@@ -138,7 +138,7 @@ async function updateBans(entry) {
 			components: profile.getComponents()
 		};
 
-		const notis = getNotis(bandata.SteamId, guildid);
+		const notis = await getNotis(bandata.SteamId, guildid);
 
 		if (notis.ban) {
 			for (const userid of notis.ban) {
@@ -167,7 +167,7 @@ async function updateServers(entry) {
 		return;
 	}
 
-	let servers = getServers(summary.steamid);
+	let servers = await getServers(summary.steamid);
 	const server = LOCAL_SERVER_ONLY ? summary.gameserverip.split(':')[0] : summary.gameserverip;
 
 	servers[server] = {
@@ -189,8 +189,8 @@ async function updateServers(entry) {
 
 	let updatemessages = [];
 
-	for (const guildid of getGuilds(summary.steamid)) {
-		const notis = getNotis(summary.steamid, guildid);
+	for (const guildid of await getGuilds(summary.steamid)) {
+		const notis = await getNotis(summary.steamid, guildid);
 		if (!notis.log || !SERVER_GUILDS.includes(guildid)) {
 			continue;
 		}
@@ -217,7 +217,7 @@ async function updateNames(entry) {
 	const summary = entry[1].summary;
 	const bandata = entry[1].bandata;
 
-	let names = getNames(summary.steamid);
+	let names = await getNames(summary.steamid);
 	const persona = JSON.stringify(summary.personaname);
 
 	if (Object.keys(names).length) {
@@ -239,8 +239,8 @@ async function updateNames(entry) {
 
 	let updatemessages = [];
 
-	for (const guildid of getGuilds(summary.steamid)) {
-		const notis = getNotis(summary.steamid, guildid);
+	for (const guildid of await getGuilds(summary.steamid)) {
+		const notis = await getNotis(summary.steamid, guildid);
 		if (!notis.name) {
 			continue;
 		}

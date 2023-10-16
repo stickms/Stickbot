@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
 import { setTags, getTags, setNotis, getNotis } from '../components/database.js';
-import { httpsGet, getSteamToken } from '../components/bot-helpers.js';
+import { httpsGet, getSteamToken, uploadText } from '../components/bot-helpers.js';
 import { getProfile } from '../components/profile-builder.js';
 import { FRIEND_URL, SUMMARY_URL, PROFILE_URL, 
 				EMBED_COLOR, NOTIFICATIONS } from '../components/bot-consts.js';
@@ -47,8 +47,7 @@ async function handleMoreInfo(interaction) {
 	await interaction.editReply({
 		content: oldcontent,
 		embeds: profile.getEmbed(),
-		components: profile.getComponents(),
-		files: profile.getAttachments()
+		components: profile.getComponents()
 	});
 }
 
@@ -70,8 +69,8 @@ async function handleListFriends(interaction) {
 
 	let personadata = []; 
 
-	friends = friends.friendslist.friends.filter(x => { 
-		return getTags(x.steamid, interaction.guildId)['cheater'];
+	friends = friends.friendslist.friends.filter(async x => { 
+		return await getTags(x.steamid, interaction.guildId)['cheater'];
 	});
 
 	for (let i = 0; i < friends.length; i += 100) {
@@ -100,25 +99,22 @@ async function handleListFriends(interaction) {
 
 	let shorttext = '';
 	let fulltext = '';
-	let requireupload = false;
-	let file = null;
 
 	for (let data of personadata) {
 		const label = `${data.steamid} - ${data.personaname}`;
 		const buffer = `[${label}](${PROFILE_URL}${data.steamid}/)\n`
 		
-		fulltext += label + '\n';
+		fulltext += buffer;
 
-		if ((shorttext + buffer).length > 950) {
-			requireupload = true;
-		} else {
+		if ((shorttext + buffer).length <= 950) {
 			shorttext += buffer;
 		}
 	} 
 
-	if (requireupload) {
-		file = [ { attachment: Buffer.from(fulltext), name: 'friends.txt' } ];
-		shorttext += '\`Check Attachment for full list\`';
+	if (fulltext.length > shorttext.length) {
+		const url = await uploadText(fulltext);
+		if (url) shorttext += `\`(Click to view more friends)[${url}]\``;
+		else shorttext += '\`Error when uploading more friends\`';
 	}
 
 	let original = interaction.message.embeds[0];
@@ -132,12 +128,12 @@ async function handleListFriends(interaction) {
 			value: shorttext 
 		});
 
-	await interaction.editReply({ content: null, embeds: [ embed ], files: file });
+	await interaction.editReply({ content: null, embeds: [ embed ] });
 }
 
 async function handleModifyTags(interaction) {
 	const steamid = interaction.customId.split(':')[1];
-	let usertags = getTags(steamid, interaction.guildId);
+	let usertags = await getTags(steamid, interaction.guildId);
 
 	for (let tag of interaction.values) {
 		if (usertags[tag]) {
@@ -159,8 +155,7 @@ async function handleModifyTags(interaction) {
 	const profile = await getProfile(steamid, interaction.guildId, { 'moreinfo': !!sourcebans, 'sourcebans': sourcebans });
 	await interaction.update({
 		embeds: profile.getEmbed(),
-		components: profile.getComponents(),
-		files: profile.getAttachments()
+		components: profile.getComponents()
 	});
 
 	await interaction.followUp({
@@ -171,7 +166,7 @@ async function handleModifyTags(interaction) {
 
 async function handleNotifyButton(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let usernotis = getNotis(steamid, interaction.guildId);
+	let usernotis = await getNotis(steamid, interaction.guildId);
 
 	var selectmenu = new StringSelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
@@ -199,7 +194,7 @@ async function handleNotifyButton(interaction) {
 
 async function handleNotifyMenu(interaction) {
 	let steamid = interaction.customId.split(':')[1];
-	let usernotis = getNotis(steamid, interaction.guildId);
+	let usernotis = await getNotis(steamid, interaction.guildId);
 	let userid = interaction.user.id;
 
 	for (let event of interaction.values) {

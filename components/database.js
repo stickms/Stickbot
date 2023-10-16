@@ -1,154 +1,178 @@
-import fs from 'node:fs';
 import SteamID from 'steamid';
 
+import { MongoClient } from 'mongodb';
 import { getBanData, getPersonaDict } from './bot-helpers.js';
 
-let db = {};
+const client = new MongoClient(process.env.DATABASE_URL);
+const players = client.db('stickbot').collection('players');
+const servers = client.db('stickbot').collection('servers');
 
-export function loadDB() {
-  if (fs.existsSync('./playerlist.json')) {
-    db = JSON.parse(fs.readFileSync('./playerlist.json'));
-  }
-
-  if (!db?.players) db.players = {};
-  if (!db?.servers) db.servers = {};
+export async function getPlayers() {
+  return await players.find({}).toArray();
 }
 
-export function saveDB() {
-  fs.writeFileSync('./playerlist.json', JSON.stringify(db, null, '\t'));
-}
-
-export function exportDB() {
-  return db;
-}
-
-export function getPlayers() {
-  return db.players;
-}
-
-export async function createPlayer(steamid) {
+export async function getGuilds(steamid) {
   if (typeof steamid === typeof SteamID) {
     steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid] = {
-    tags: {},
-    addresses: {},
-    notifications: {},
-    names: await getPersonaDict(steamid),
-    bandata: await getBanData(steamid)
-  };
+  const query = await players.findOne({ _id: steamid });
+  return query?.tags ? Object.keys(query.tags) : [];
 }
 
-export function getGuilds(steamid) {
-  if (!db.players[steamid]?.tags) {
-    return [];
+export async function getTags(steamid, guildid) {
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  return Object.keys(db.players[steamid].tags);
-}
-
-export function getTags(steamid, guildid) {
-  return db.players[steamid]?.tags[guildid] ?? {};
+  const query = await players.findOne({ _id: steamid });
+  return query?.tags?.[guildid] ?? {};
 }
 
 export async function setTags(steamid, guildid, tags) {
-  if (!db.players[steamid]) {
-    await createPlayer(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid].tags[guildid] = tags;
-  saveDB();
+  await players.updateOne({ _id: steamid }, { 
+    $set: {
+      [`tags.${guildid}`]: tags
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function getNotis(steamid, guildid) {
-  return db.players[steamid]?.notifications[guildid] ?? {};
+export async function getNotis(steamid, guildid) {
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
+  }
+
+  const query = await players.findOne({ _id: steamid });
+  return query?.notifications?.[guildid] ?? {};
 }
 
 export async function setNotis(steamid, guildid, notifications) {
-  if (!db.players[steamid]) {
-    await createPlayer(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid].notifications[guildid] = notifications;
-  saveDB();
+  await players.updateOne({ _id: steamid }, { 
+    $set: {
+      [`notifications.${guildid}`]: notifications
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function getServers(steamid) {
-  return db.players[steamid]?.addresses ?? {};
+export async function getServers(steamid) {
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
+  }
+
+  const query = await players.findOne({ _id: steamid });
+  return query?.addresses ?? {};
 }
 
 export async function setServers(steamid, addresses) {
-  if (!db.players[steamid]) {
-    await createPlayer(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid].addresses = addresses;
-  saveDB();
+  await players.updateOne({ _id: steamid }, { 
+    $set: {
+      addresses: addresses
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function getNames(steamid) {
-  return db.players[steamid]?.names ?? {};
+export async function getNames(steamid) {
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
+  }
+
+  const query = await players.findOne({ _id: steamid });
+  return query?.names ?? await getPersonaDict(steamid);
 }
 
 export async function setNames(steamid, names) {
-  if (!db.players[steamid]) {
-    await createPlayer(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid].names = names;
-  saveDB();
+  await players.updateOne({ _id: steamid }, { 
+    $set: {
+      names: names
+    }
+  }, {
+    upsert: true
+  });
 }
 
 export async function getBans(steamid) {
-  return db.players[steamid]?.bandata ?? await getBanData(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
+  }
+
+  const query = await players.findOne({ _id: steamid });
+  return query?.bandata ?? await getBanData(steamid);
 }
 
 export async function setBans(steamid, bans) {
-  if (!db.players[steamid]) {
-    await createPlayer(steamid);
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
   }
 
-  db.players[steamid].bandata = bans;
-  saveDB();
+  await players.updateOne({ _id: steamid }, { 
+    $set: {
+      bandata: bans
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function setWelcome(guildid, channel=null, join=null, leave=null) {
-  if(!db.servers[guildid]) {
-    db.servers[guildid] = {};
+export async function setWelcome(guildid, channel=null, join=null, leave=null) {
+  let update = {};
+
+  if (channel) update.channel = channel;
+  if (join) update.join = join;
+  if (leave) update.leave = leave;
+
+  if (!update) {
+    return;
   }
 
-  const cur = db.servers[guildid].welcome;
-  db.servers[guildid].welcome = {
-    channel: channel ?? cur?.channel,
-    join: join ?? cur?.join,
-    leave: leave ?? cur?.leave 
-  };
-
-  saveDB();
+  await servers.updateOne({ _id: guildid }, { 
+    $set: {
+      welcome: {
+        ...update
+      }
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function getWelcome(guildid) {
-  if (!db.servers[guildid]?.welcome) {
-    return {};
-  }
-
-  return db.servers[guildid].welcome;
+export async function getWelcome(guildid) {
+  const query = await servers.findOne({ _id: guildid });
+  return query?.welcome ?? {};
 }
 
-export function setBanwatch(guildid, channel) {
-  if(!db.servers[guildid]) {
-    db.servers[guildid] = {};
-  }
-
-  db.servers[guildid].banwatch = channel;
-  saveDB();
+export async function setBanwatch(guildid, channel) {
+  await servers.updateOne({ _id: guildid }, { 
+    $set: {
+      banwatch: channel
+    }
+  }, {
+    upsert: true
+  });
 }
 
-export function getBanwatch(guildid) {
-  if (!db.servers[guildid]?.banwatch) {
-    return null;
-  }
-
-  return db.servers[guildid].banwatch;
+export async function getBanwatch(guildid) {
+  const query = await servers.findOne({ _id: guildid });
+  return query?.banwatch ?? {};
 }

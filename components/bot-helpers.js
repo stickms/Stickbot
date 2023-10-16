@@ -1,7 +1,7 @@
 import axios from 'axios';
 import SteamID from 'steamid';
 import { getRandom } from 'random-useragent';
-import { BAN_URL, SUMMARY_URL, VANITY_URL } from './bot-consts.js';
+import { BAN_URL, DPASTE_URL, SUMMARY_URL, VANITY_URL } from './bot-consts.js';
 
 const steam_tokens = process.env.STEAM_TOKENS.split(',');
 
@@ -13,10 +13,7 @@ export function getAPICalls() {
 }
 
 export function getSteamToken() {
-  if (tokennum >= steam_tokens.length) {
-    tokennum = 0;
-  }
-
+  if (tokennum >= steam_tokens.length) tokennum = 0;
   return steam_tokens[tokennum++];
 }
 
@@ -138,6 +135,29 @@ export async function getPersonaDict(steamid) {
     };
   } catch (error) {
     return {};
+  }
+}
+
+uploadText('This is a link: [clicky link](https://google.com)');
+
+// Uploads to Hastebin API, used for friends and sourcebans
+export async function uploadText(text) {
+  try {
+    const response = await axios.post(DPASTE_URL, {
+      content: text,
+      syntax: 'md',
+      expiry_days: 7
+    }, { 
+      timeout: 1000,
+      headers: {
+        'User-Agent': getRandom(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data.replace('\n', '-preview');
+  } catch (e) {
+    return null;
   }
 }
 

@@ -2,12 +2,7 @@ import fs from 'node:fs';
 import 'dotenv/config';
 
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
-import { loadDB } from './components/database.js';
-
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-loadDB();
+import './components/database.js';
 
 const client = new Client({ 
 	intents: [

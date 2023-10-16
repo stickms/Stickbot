@@ -53,7 +53,7 @@ export async function execute(interaction) {
         continue;
       }
 
-      let curtags = getTags(steamid, interaction.guildId);
+      let curtags = await getTags(steamid, interaction.guildId);
 
       if (!curtags[tag]) {
         curtags[tag] = {
