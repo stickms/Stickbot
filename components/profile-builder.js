@@ -308,7 +308,6 @@ class SteamProfile {
         if (tags['cheater']) this.cheaterfriends++;
       } 
     } catch (error) {
-      console.error(error);
       this.cheaterfriends = 0;
     }
   }

@@ -61,7 +61,9 @@ async function handleListFriends(interaction) {
 		steamid: steamid
 	});
 
-	if (!friends?.friendslist?.friends) {
+	friends = friends?.friendslist?.friends;
+
+	if (!friends) {
 		return await interaction.editReply({
 			content: '❌ Error grabbing friends.'
 		});
@@ -69,8 +71,16 @@ async function handleListFriends(interaction) {
 
 	let personadata = []; 
 
-	friends = friends.friendslist.friends.filter(async x => { 
-		return await getTags(x.steamid, interaction.guildId)['cheater'];
+	// TODO: This is gross!
+	friends = (await Promise.all(friends.map(async x => { 
+		return {
+			value: x.steamid,
+			promise: await getTags(x.steamid, interaction.guildId) 
+		}
+	}))).filter(x => { 
+		return Object.keys(x.promise).includes('cheater');
+	}).map(x => {
+		return x.value;
 	});
 
 	for (let i = 0; i < friends.length; i += 100) {
@@ -78,7 +88,7 @@ async function handleListFriends(interaction) {
 			const chunk = friends.slice(i, i + 100);
 			const chunkdata = await httpsGet(SUMMARY_URL, {
 				key: getSteamToken(), 
-				steamids: chunk.map(val => val.steamid).join(',')
+				steamids: chunk.join(',')
 			});
 
 			if (chunkdata?.response?.players) {
@@ -132,6 +142,8 @@ async function handleListFriends(interaction) {
 }
 
 async function handleModifyTags(interaction) {
+	await interaction.deferUpdate({ ephemeral: true });
+
 	const steamid = interaction.customId.split(':')[1];
 	let usertags = await getTags(steamid, interaction.guildId);
 
@@ -152,8 +164,12 @@ async function handleModifyTags(interaction) {
 	const banfield = original.fields.filter(x => x.name == 'Sourcebans');
 	const sourcebans = banfield?.[0]?.value;
 
-	const profile = await getProfile(steamid, interaction.guildId, { 'moreinfo': !!sourcebans, 'sourcebans': sourcebans });
-	await interaction.update({
+	const profile = await getProfile(steamid, interaction.guildId, {
+		'moreinfo': !!sourcebans,
+		'sourcebans': sourcebans
+	});
+
+	await interaction.editReply({
 		embeds: profile.getEmbed(),
 		components: profile.getComponents()
 	});
