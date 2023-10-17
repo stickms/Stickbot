@@ -132,7 +132,7 @@ async function handleListFriends(interaction) {
 }
 
 async function handleModifyTags(interaction) {
-	await interaction.deferReply();
+	await interaction.deferReply({ ephemeral: true });
 
 	const steamid = interaction.customId.split(':')[1];
 	let usertags = await getTags(steamid, interaction.guildId);
@@ -165,8 +165,7 @@ async function handleModifyTags(interaction) {
 	});
 
 	await interaction.editReply({
-		content: `✅ Modified tags for **${steamid}**`,
-		ephemeral: true
+		content: `✅ Modified tags for **${steamid}**`
 	});
 }
 
