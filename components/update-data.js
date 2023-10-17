@@ -1,7 +1,7 @@
 import { httpsGet, getSteamToken } from './bot-helpers.js';
 import { SUMMARY_URL, BAN_URL } from './bot-consts.js';
 import { getProfile } from './profile-builder.js';
-import { getAllDocuments, setBans, setServers, setNames, getBanwatch, getAllDocuments } from './database.js'
+import { getAllDocuments, setBans, setServers, setNames, getBanwatch } from './database.js'
 import { SERVER_GUILDS, LOCAL_SERVER_ONLY } from './bot-config.js';
 
 export async function updatePlayerData(client) {
