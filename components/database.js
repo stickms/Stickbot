@@ -11,6 +11,17 @@ export async function getPlayers() {
   return await players.find({}).toArray();
 }
 
+export async function getDocument(steamid) {
+  if (typeof steamid === typeof SteamID) {
+    steamid = steamid.getSteamID64();
+  } else if (Array.isArray(steamid)) {
+    return await players.find({ _id: { $in: steamid } }).toArray();
+  }
+
+  const query = await players.findOne({ _id: steamid });
+  return query ?? {};
+}
+
 export async function getGuilds(steamid) {
   if (typeof steamid === typeof SteamID) {
     steamid = steamid.getSteamID64();

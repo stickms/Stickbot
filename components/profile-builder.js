@@ -1,7 +1,7 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } from 'discord.js';
-import { getSteamToken, httpsGet, getBanData, uploadText } from './bot-helpers.js';
-import { getTags, getNames, getServers } from './database.js';
+import { getSteamToken, httpsGet, getBanData, uploadText, getPersonaDict } from './bot-helpers.js';
+import { getDocument, getTags } from './database.js';
 import { parse as HTMLParse } from 'node-html-parser';
 import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
         RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } from './bot-consts.js';
@@ -24,6 +24,8 @@ class SteamProfile {
       };
     }
 
+    this.profile = await getDocument(steamid);
+    
     await this.countCheaterFriends();
     await this.generateEmbed(!!options['moreinfo'], options['sourcebans']);
     await this.generateComponents();
@@ -79,19 +81,19 @@ class SteamProfile {
       }
 
     if (moreinfo) {
-      const tagdata = await getTags(this.steamid, this.guildid);
+      const tagdata = this.profile.tags?.[this.guildid] ?? {};
       const taglist = Object.entries(tagdata).map(([k, v]) => { 
         return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
       });
 
-      const namedata = await getNames(this.steamid, this.guildid);
+      const namedata = this.profile.names ?? await getPersonaDict(this.steamid);
       const namelist = Object.entries(namedata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1] - a[1]; })
         .map(([k, v]) => { 
         return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
       });
 
-      const addrdata = await getServers(this.steamid);
+      const addrdata = this.profile.addresses ?? {};
       const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1].date - a[1].date; })
         .map(([k, v]) => { 
@@ -127,8 +129,8 @@ class SteamProfile {
   }
 
   async generateComponents() {
-    const tagdata = await getTags(this.steamid, this.guildid);
-    
+    const tagdata = this.profile.tags?.[this.guildid] ?? {};
+
     const selectmenu = new StringSelectMenuBuilder()
                         .setCustomId(`modifytags:${this.steamid}`)
                         .setPlaceholder('Modify User Tags')
@@ -190,8 +192,8 @@ class SteamProfile {
   }
 
   async getAlertList() {
-    const tags = await getTags(this.steamid, this.guildid);
-    const ipdata = await getServers(this.steamid);
+    const tags = this.profile.tags?.[this.guildid] ?? {};
+    const ipdata = this.profile.addresses ?? {};
     const bandata = this.bandata ?? await getBanData(this.steamid);
     const srdata = await this.getSteamRepData();
     
@@ -255,7 +257,7 @@ class SteamProfile {
       alertlist.push('\u2139\uFE0F Ban Watch');
     } if (Object.keys(ipdata).length) {
       if (SERVER_GUILDS.includes(this.guildid)) {
-        alertlist.push('\u2139\uFE0F IP Logged');
+        alertlist.push('\u2139\uFE0F Server Logged');
       }
     }
 
@@ -291,6 +293,8 @@ class SteamProfile {
 
   async countCheaterFriends() {
     try {
+      this.cheaterfriends = 0;
+
       const response = await httpsGet(FRIEND_URL, {
         key: getSteamToken(),
         steamid: this.steamid
@@ -301,12 +305,15 @@ class SteamProfile {
       }
 
       const frienddata = response.friendslist.friends;
-      this.cheaterfriends = 0;
+      const idlist = Object.values(frienddata).map(x => {
+        return x.steamid;
+      });
 
-      for (const val of Object.values(frienddata)) {
-        const tags = await getTags(val.steamid, this.guildid);
-        if (tags['cheater']) this.cheaterfriends++;
-      } 
+      for (const doc of await getDocument(idlist)) {
+        if (doc.tags?.[this.guildid]?.['cheater']) {
+          this.cheaterfriends++;
+        }
+      }
     } catch (error) {
       this.cheaterfriends = 0;
     }

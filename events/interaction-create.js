@@ -1,5 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
-import { setTags, getTags, setNotis, getNotis } from '../components/database.js';
+import { setTags, getTags, setNotis, getNotis, getDocument } from '../components/database.js';
 import { httpsGet, getSteamToken, uploadText } from '../components/bot-helpers.js';
 import { getProfile } from '../components/profile-builder.js';
 import { FRIEND_URL, SUMMARY_URL, PROFILE_URL, 
@@ -68,34 +68,24 @@ async function handleListFriends(interaction) {
 			content: '❌ Error grabbing friends.'
 		});
 	}
+	
+	friends = friends.map(x => x.steamid);
+
+	const cheaters = (await getDocument(friends)).filter(x => {
+		return x.tags?.[interaction.guildId]?.['cheater'];
+	}).map(x => x._id);
 
 	let personadata = []; 
 
-	// TODO: This is gross!
-	friends = (await Promise.all(friends.map(async x => { 
-		return {
-			value: x.steamid,
-			promise: await getTags(x.steamid, interaction.guildId) 
-		}
-	}))).filter(x => { 
-		return Object.keys(x.promise).includes('cheater');
-	}).map(x => {
-		return x.value;
-	});
+	for (let i = 0; i < cheaters.length; i += 100) {
+		const chunk = cheaters.slice(i, i + 100);
+		const chunkdata = await httpsGet(SUMMARY_URL, {
+			key: getSteamToken(), 
+			steamids: chunk.join(',')
+		});
 
-	for (let i = 0; i < friends.length; i += 100) {
-		try {
-			const chunk = friends.slice(i, i + 100);
-			const chunkdata = await httpsGet(SUMMARY_URL, {
-				key: getSteamToken(), 
-				steamids: chunk.join(',')
-			});
-
-			if (chunkdata?.response?.players) {
-				personadata.push(...chunkdata.response.players);	
-			}
-		} catch (error) {
-			// Error with this API request
+		if (chunkdata?.response?.players) {
+			personadata.push(...chunkdata.response.players);	
 		}
 	}
 
@@ -142,7 +132,7 @@ async function handleListFriends(interaction) {
 }
 
 async function handleModifyTags(interaction) {
-	await interaction.deferUpdate({ ephemeral: true });
+	await interaction.deferReply();
 
 	const steamid = interaction.customId.split(':')[1];
 	let usertags = await getTags(steamid, interaction.guildId);
@@ -169,12 +159,12 @@ async function handleModifyTags(interaction) {
 		'sourcebans': sourcebans
 	});
 
-	await interaction.editReply({
+	await interaction.message.edit({
 		embeds: profile.getEmbed(),
 		components: profile.getComponents()
 	});
 
-	await interaction.followUp({
+	await interaction.editReply({
 		content: `✅ Modified tags for **${steamid}**`,
 		ephemeral: true
 	});
