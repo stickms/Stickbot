@@ -72,7 +72,7 @@ async function handleListFriends(interaction) {
 	friends = friends.map(x => x.steamid);
 
 	const cheaters = (await getDocument(friends)).filter(x => {
-		return x.tags?.[interaction.guildId]?.['cheater'];
+		return x.tags?.[interaction.guildId]?.cheater;
 	}).map(x => x._id);
 
 	let personadata = []; 

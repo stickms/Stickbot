@@ -7,7 +7,7 @@ const client = new MongoClient(process.env.DATABASE_URL);
 const players = client.db('stickbot').collection('players');
 const servers = client.db('stickbot').collection('servers');
 
-export async function getPlayers() {
+export async function getAllDocuments() {
   return await players.find({}).toArray();
 }
 

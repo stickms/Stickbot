@@ -94,7 +94,7 @@ class SteamProfile {
       });
 
       const addrdata = this.profile.addresses ?? {};
-      const iplist = Object.entries(addrdata).map(([k, v]) => [k, v])
+      const addrlist = Object.entries(addrdata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1].date - a[1].date; })
         .map(([k, v]) => { 
         return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
@@ -114,10 +114,10 @@ class SteamProfile {
         });
       }
       
-      if (iplist?.length && SERVER_GUILDS.includes(this.guildid)) {
+      if (addrlist?.length && SERVER_GUILDS.includes(this.guildid)) {
         embed.addFields({
-          name: 'Logged IPs',
-          value: iplist.join('\n')
+          name: 'Logged Servers',
+          value: addrlist.join('\n')
         });
       }
 
@@ -188,12 +188,12 @@ class SteamProfile {
     return `[SteamRep](https://steamrep.com/profiles/${id}/)\n` + 
     `[SteamID.uk](https://steamid.uk/profile/${id}/)\n` +
     `[Backpack.tf](https://backpack.tf/profiles/${id}/)\n` +
-    `[SteamDB](https://steamdb.info/calculator/${id}/)`;
+    `[SteamDB](https://steamdb.info/calculator/${id}/)\n` + 
+    `[Open in Client](https://stickbot.net/openprofile/${id}/)`;
   }
 
   async getAlertList() {
     const tags = this.profile.tags?.[this.guildid] ?? {};
-    const ipdata = this.profile.addresses ?? {};
     const bandata = this.bandata ?? await getBanData(this.steamid);
     const srdata = await this.getSteamRepData();
     
@@ -252,10 +252,10 @@ class SteamProfile {
       alertlist.push(`⚠️ Friends with ${this.cheaterfriends} ${plural}`);
     }
 
-    // Place Ban Watch/IP Logs Last
+    // Place Ban Watch/Server Logs Last
     if (tags['banwatch']) {
       alertlist.push('\u2139\uFE0F Ban Watch');
-    } if (Object.keys(ipdata).length) {
+    } if (Object.keys(this.profile.addresses ?? {}).length) {
       if (SERVER_GUILDS.includes(this.guildid)) {
         alertlist.push('\u2139\uFE0F Server Logged');
       }
@@ -286,7 +286,6 @@ class SteamProfile {
 
       return response.steamrep.reputation.full.split(',');
     } catch (error) {
-      console.error(error);
       return [];
     }
   }
@@ -309,11 +308,9 @@ class SteamProfile {
         return x.steamid;
       });
 
-      for (const doc of await getDocument(idlist)) {
-        if (doc.tags?.[this.guildid]?.['cheater']) {
-          this.cheaterfriends++;
-        }
-      }
+      (await getDocument(idlist)).forEach(x => {
+        if (x.tags?.[this.guildid]?.cheater) this.cheaterfriends++;
+      });
     } catch (error) {
       this.cheaterfriends = 0;
     }

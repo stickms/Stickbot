@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { PROFILE_TAGS } from '../components/bot-consts.js';
-import { getPlayers, getTags } from '../components/database.js';
+import { getAllDocuments, getTags } from '../components/database.js';
 
 import SteamID from 'steamid';
 
@@ -30,7 +30,7 @@ export async function execute(interaction) {
   let fmt = interaction.options.getString('format');
   let tag = interaction.options.getString('tag') ?? 'cheater';
 
-  let result = (await getPlayers()).map(async x => {
+  let result = (await getAllDocuments()).map(async x => {
     if (!(await getTags(x._id, interaction.guildId)[tag])) {
       return '';
     }

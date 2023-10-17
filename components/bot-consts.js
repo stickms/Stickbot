@@ -25,6 +25,6 @@ export const PROFILE_TAGS = [
 
 export const NOTIFICATIONS = [
   { name: 'Ban', value: 'ban' },
-  { name: 'Address Log', value: 'log' },
+  { name: 'Server Log', value: 'log' },
   { name: 'Name Change', value: 'name' }
 ];

@@ -29,7 +29,7 @@ export async function execute(message) {
     }
 
     const profile = await getProfile(steamid.getSteamID64(), message.guildId);
-    if (!profile?.getEmbed()) {
+    if (!profile.getEmbed()) {
       return;
     }
 

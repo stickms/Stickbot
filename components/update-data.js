@@ -1,7 +1,7 @@
 import { httpsGet, getSteamToken } from './bot-helpers.js';
 import { SUMMARY_URL, BAN_URL } from './bot-consts.js';
 import { getProfile } from './profile-builder.js';
-import { getPlayers, setBans, setServers, setNames, getBanwatch, getDocument } from './database.js'
+import { getAllDocuments, setBans, setServers, setNames, getBanwatch, getAllDocuments } from './database.js'
 import { SERVER_GUILDS, LOCAL_SERVER_ONLY } from './bot-config.js';
 
 export async function updatePlayerData(client) {
@@ -12,39 +12,39 @@ export async function updatePlayerData(client) {
 
 	let updates = [];
 
-	for (const entry of Object.entries(data)) {
-		if (!entry[1].dbata) continue;
+	Object.values(data).forEach(entry => {
+		if (!entry.dbata) return;
 
 		updates.push(updateBans(entry));
 		updates.push(updateServers(entry));
 		updates.push(updateNames(entry));
-	}
+	});
 
 	updates = (await Promise.allSettled(updates)).filter(x => {
 		return x.status == 'fulfilled' && x.value;
 	}).map(x => x.value).flat();
 
-	for (let update of updates) {
+	updates.forEach(async update => {
 		try {
 			const channel = !update.dm ? await client.channels.fetch(update.snowflake)
-				: await client.users.fetch(update.snowflake, { force: true }); 
+				: await client.users.fetch(update.snowflake, { force: true });
 
 			if (channel) await channel.send(update.message);
 		} catch (error) {
 			// May be lacking perms, or user does not allow DMs
 		}
-	}
+	});
 }
 
 async function getSummaries() {
 	try {
 		let profiles = [];
 		let bandata = [];
-		let dbdata = [];
 
 		let data = {};
 
-		const players = (await getPlayers()).map(x => x._id);
+		const documents = await getAllDocuments();
+		const players = documents.map(x => x._id);
 
 		for (let i = 0; i < players.length; i++) {
 			data[players[i]] = { summary: {}, bandata: {}, dbdata: {} };
@@ -62,15 +62,13 @@ async function getSummaries() {
 					steamids: idlist
 				}));
 
-				dbdata.push(getDocument(idlist));
-
 				await new Promise(x => setTimeout(x, 5_000));
 			}
 		}
 
 		(await Promise.allSettled(profiles)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.response?.players;
-		}).map(x => { 
+		}).forEach(x => { 
 			for (const profile of x.value.response.players) {
 				data[profile.steamid].summary = profile
 			}
@@ -78,18 +76,14 @@ async function getSummaries() {
 
 		(await Promise.allSettled(bandata)).filter(x => {
 			return x.status == 'fulfilled' && x.value?.players;
-		}).map(x => { 
+		}).forEach(x => { 
 			for (const profile of x.value.players) {
 				data[profile.SteamId].bandata = profile
 			}
 		});
 
-		(await Promise.allSettled(dbdata)).filter(x => {
-			return x.status == 'fulfilled' && x.value._id;
-		}).map(x => {
-			for (const profile of x.value) {
-				data[profile._id].dbdata = profile;
-			}
+		documents.forEach(x => {
+			data[x._id].dbdata = x;
 		});
 
 		return data;
@@ -99,9 +93,9 @@ async function getSummaries() {
 }
 
 async function updateBans(entry) {
-	const summary = entry[1].summary;
-	const bandata = entry[1].bandata;
-	const dbdata = entry[1].dbdata;
+	const summary = entry.summary;
+	const bandata = entry.bandata;
+	const dbdata = entry.dbdata;
 
 	let bans = dbdata.bandata;
 		
@@ -169,9 +163,9 @@ async function updateBans(entry) {
 }
 
 async function updateServers(entry) {
-	const summary = entry[1].summary;
-	const bandata = entry[1].bandata;
-	const dbdata = entry[1].dbdata;
+	const summary = entry.summary;
+	const bandata = entry.bandata;
+	const dbdata = entry.dbdata;
 
 	if (!summary.gameserverip) {
 		return;
@@ -228,9 +222,9 @@ async function updateServers(entry) {
 }
 
 async function updateNames(entry) {
-	const summary = entry[1].summary;
-	const bandata = entry[1].bandata;
-	const dbdata = entry[1].dbdata;
+	const summary = entry.summary;
+	const bandata = entry.bandata;
+	const dbdata = entry.dbdata;
 
 	let names = dbdata.names ?? {};
 	const persona = JSON.stringify(summary.personaname);

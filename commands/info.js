@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { getPlayers } from '../components/database.js';
+import { getAllDocuments } from '../components/database.js';
 import { getAPICalls } from '../components/bot-helpers.js';
 import { EMBED_COLOR, INFO_ICON } from '../components/bot-consts.js';
 
@@ -16,7 +16,7 @@ export async function execute(interaction) {
 	}
 
 	const owner = (await interaction.client.application.fetch()).owner;
-	const profiles =  (await getPlayers()).length;
+	const profiles =  (await getAllDocuments()).length;
 	const guilds = await interaction.client.guilds.fetch();
 	const uptime = Math.floor(interaction.client.uptime / (86_400_000));
 
