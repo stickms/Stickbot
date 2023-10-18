@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { setTags, getTags } from '../components/database.js';
+import { setTags, getTags, getDocument } from '../components/database.js';
 import { httpsGet } from '../components/bot-helpers.js';
 import { PROFILE_TAGS } from '../components/bot-consts.js';
 
@@ -46,27 +46,27 @@ export async function execute(interaction) {
   const tag = interaction.options.getString('tag') ?? 'cheater';
   const curdate = Math.floor(Date.now() / 1000);
 
-  for (const line of fulltext.split('\n')) {
-    try {
-      const steamid = (new SteamID(line)).getSteamID64();
-      if (!steamid) {
-        continue;
-      }
+  const steamids = fulltext.split('\n').filter(x => {
+    try { return (new SteamID(x)).isValid() } catch { return false; }
+  }).map(x => (new SteamID(x)).getSteamID64());
 
-      let curtags = await getTags(steamid, interaction.guildId);
+  await steamids.forEach(async x => {
+    let data = await getDocument(x);
+    if (data.tags?.[interaction.guildId]?.[tag]) {
+      return;
+    }
 
-      if (!curtags[tag]) {
-        curtags[tag] = {
+    data.tags = Object.assign({}, data.tags, {
+      [interaction.guildId]: {
+        [tag]: {
           addedby: interaction.user.id,
           date: curdate
-        };
-
-        await setTags(steamid, interaction.guildId, curtags);
+        }
       }
-    } catch (error) {
-      continue;
-    }
-  }
+    });
+
+    await setTags(x, interaction.guildId, data.tags[interaction.guildId]);
+  });
 
   await interaction.editReply({
     content: '✅ Successfully imported cheaters.',

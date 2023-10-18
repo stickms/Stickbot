@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { PROFILE_TAGS } from '../components/bot-consts.js';
-import { getAllDocuments, getTags } from '../components/database.js';
+import { getAllDocuments } from '../components/database.js';
 
 import SteamID from 'steamid';
 
@@ -30,11 +30,9 @@ export async function execute(interaction) {
   let fmt = interaction.options.getString('format');
   let tag = interaction.options.getString('tag') ?? 'cheater';
 
-  let result = (await getAllDocuments()).map(async x => {
-    if (!(await getTags(x._id, interaction.guildId)[tag])) {
-      return '';
-    }
-
+  const output = (await getAllDocuments()).filter(x => {
+    return x.tags?.[interaction.guildId]?.[tag];
+  }).map(x => {
     const steamid = new SteamID(x._id);
 
     switch(fmt) {
@@ -48,23 +46,23 @@ export async function execute(interaction) {
         return `${steamid.accountid.toString(16).toUpperCase()};10;`;
       case 'cat':
         return `cat_pl_add ${steamid.accountid} RAGE\n`;
-    }
+      }
   }).join('');
 
-  if (result.length == 0) {
+  if (!output.length) {
     return await interaction.reply({
-      content: '❌ Error: There are no profiles with that tag.',
+      content: '❌ Error: There are no profiles with tag \`${tag}\`',
       ephemeral: true
     });
   }
 
   const filename = 'playerlist' + (fmt == 'cat' ? '.cfg' : '.txt');
-  const file = { attachment: Buffer.from(result), name: filename };
+  const file = { attachment: Buffer.from(output), name: filename };
   let message = `✅ Playerlist successfully exported with tag \`${tag}\`\n`;
 
   if (fmt == 'lbox') {
-    message +=  "\u2139\uFE0F Paste the export after \`c1 = \` ";
-    message += "under the [pl] section of your config in \`%localappdata%\`\n";
+    message += '\u2139\uFE0F Paste the export after \`c1 = \` ';
+    message += 'under the [pl] section of your config in \`%localappdata%\`\n';
   }
 
   await interaction.reply({ content: message, files: [ file ] });
