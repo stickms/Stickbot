@@ -78,7 +78,6 @@ export async function execute(interaction) {
       \`{name}\` -> User's Discord Username
       \`{nick}\` -> User's Server Nickanme (defaults to username)
       \`{mention}\` -> User Mention
-      \`{disc}\` -> User's discriminator (e.g. #1234)
       \`{id}\` -> Discord User ID
       `);
 

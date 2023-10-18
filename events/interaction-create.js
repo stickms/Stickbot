@@ -173,14 +173,15 @@ async function handleNotifyButton(interaction) {
 	let steamid = interaction.customId.split(':')[1];
 	let usernotis = await getNotis(steamid, interaction.guildId);
 
+	const showlog = SERVER_GUILDS.includes(interaction.guildId);
 	var selectmenu = new StringSelectMenuBuilder()
 		.setCustomId(`notifymenu:${steamid}`)
 		.setPlaceholder('Notification Settings')
-		.setMaxValues(NOTIFICATIONS.length);
+		.setMaxValues(showlog ? NOTIFICATIONS.length : NOTIFICATIONS.length - 1);
 
 	for (let noti of NOTIFICATIONS) {
-		if (noti.value == 'log' && !SERVER_GUILDS.includes(interaction.guildId)) {
-			noti.name = 'Unimplemented';
+		if (noti.value == 'log' && !showlog) {
+			continue;
 		}
 
 		let hasnoti = usernotis[noti.value]?.includes(interaction.user.id);

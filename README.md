@@ -28,19 +28,19 @@ __Stickbot features:__
 
 Tokens and other secrets can be placed in a `.env` file. They are as follows:
 
-```yaml
-CLIENT_ID           # Discord bot Client ID
-DISCORD_TOKEN       # Discord bot token
-STEAM_TOKENS        # Comma-deliminated list of SteamWebAPI tokens
-DATABASE_URL        # MongoDB Database URL
+```js
+CLIENT_ID           // Discord bot Client ID
+DISCORD_TOKEN       // Discord bot token
+STEAM_TOKENS        // Comma-deliminated list of SteamWebAPI tokens
+DATABASE_URL        // MongoDB Database URL
 
-# Optional (but highly recommended) below
+// Optional (but highly recommended) below
 
-RUST_TOKEN          # Rustbanned.com token
-SOUNDCLOUD_TOKEN    # Soundcloud.com account token
-SPOTIFY_TOKEN       # Spotify developer token
-SPOTIFY_SECRET      # Spotify developer secret token
-SPOTIFY_REFRESH     # Spotify developer refresh token
+RUST_TOKEN          // Rustbanned.com token
+SOUNDCLOUD_TOKEN    // Soundcloud.com account token
+SPOTIFY_TOKEN       // Spotify developer token
+SPOTIFY_SECRET      // Spotify developer secret token
+SPOTIFY_REFRESH     // Spotify developer refresh token
 ```
 
 Other configuration settings can be changed in `components/bot-config.js` and are commented accordingly.
@@ -54,7 +54,8 @@ Stickbot uses [MongoDB](https://github.com/mongodb/mongo) for databse operations
 For the `players` collection, a typical profile would look like this:
 
 ```yaml
-"76561197960287930": {
+{
+    "_id": "76561197960287930",
     "tags": {
         "cheater": {
             "addedby": "511661119996297226",
@@ -87,7 +88,8 @@ For the `players` collection, a typical profile would look like this:
 A typical guild in the `servers` collection would look like this:
 
 ```yaml
-"944816654569844796": {
+{
+    "_id": "944816654569844796",
     "banwatch": "1020127285229146112"
     "welcome": {
         "channel": "1020127285229146112",

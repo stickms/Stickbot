@@ -37,7 +37,7 @@ export async function execute(message) {
     await message.reply({
       embeds: profile.getEmbed(),
       components: profile.getComponents(),
-      allowedMentions: { repliedUser: false }
+      allowedMentions: { parse: [] }
     });
   } catch (error) {
     // Not a valid URL, or does not have the necessary permissions

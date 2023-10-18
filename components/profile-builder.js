@@ -1,7 +1,7 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } from 'discord.js';
 import { getSteamToken, httpsGet, getBanData, uploadText, getPersonaDict } from './bot-helpers.js';
-import { getDocument, getTags } from './database.js';
+import { getDocument } from './database.js';
 import { parse as HTMLParse } from 'node-html-parser';
 import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
         RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } from './bot-consts.js';

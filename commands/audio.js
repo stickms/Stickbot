@@ -152,7 +152,7 @@ async function commandPlay(interaction) {
 	let data = await resolveQuery(query);
 
 	if (!data.url) {
-		return await interaction.editReply('❌ Error: Could not find that track.');
+		return await interaction.editReply('❌ Error: Could not find or load that track (may be age restricted)');
 	}
 
 	if (interaction.options.getBoolean('shuffle')) {
