@@ -50,11 +50,11 @@ function parseWebHTML(steamid, url, body) {
     return div.getElementsByTagName('td').some(td => {
       const steamid2 = steamid.getSteam2RenderedID().replace('_0:', '_[01]:');
       const regex1 = new RegExp(steamid.getSteamID64());
-      const regex2 = new RegExp(`\s*${steamid2}\s*`);
+      const regex2 = new RegExp(`^${steamid2}$`);
       return (td.innerText === 'Steam Community'
-        && td.nextElementSibling?.innerText?.match(regex1))
+        && regex1.test(td.nextElementSibling?.innerText))
         || (td.innerText === 'Steam ID'
-        && td.nextElementSibling?.innerText?.match(regex2));
+        && regex2.test(td.nextElementSibling?.innerText?.trim()));
     });
   }).map(div => {
     for (const td of div.getElementsByTagName('td')) {

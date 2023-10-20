@@ -87,7 +87,7 @@ class SteamProfile {
         return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
       });
 
-      const namedata = this.profile.names ?? await getPersonaDict(this.steamid);
+      const namedata = this.profile.names ?? {};
       const namelist = Object.entries(namedata).map(([k, v]) => [k, v])
         .sort(function (a, b) { return b[1] - a[1]; })
         .map(([k, v]) => { 
