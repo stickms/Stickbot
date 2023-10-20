@@ -48,8 +48,9 @@ function parseWebHTML(steamid, url, body) {
 
   let reasons = divs.filter(div => {
     return div.getElementsByTagName('td').some(td => {
+      const steamid2 = steamid.getSteam2RenderedID().replace('_0:', '_[01]:');
       const regex1 = new RegExp(steamid.getSteamID64());
-      const regex2 = new RegExp(steamid.getSteam2RenderedID().replace('_0:', '_.+:'));
+      const regex2 = new RegExp(`\s*${steamid2}\s*`);
       return (td.innerText === 'Steam Community'
         && td.nextElementSibling?.innerText?.match(regex1))
         || (td.innerText === 'Steam ID'
