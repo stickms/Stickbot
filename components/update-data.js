@@ -13,7 +13,7 @@ export async function updatePlayerData(client) {
 	let updates = [];
 
 	Object.values(data).forEach(entry => {
-		if (!entry.dbata) return;
+		if (!entry.dbdata) return;
 
 		updates.push(updateBans(entry));
 		updates.push(updateServers(entry));
