@@ -43,10 +43,10 @@ function parseWebHTML(steamid, url, body) {
     return null;
   }
 
-  const div = dom.querySelectorAll('div.opener').length ?
+  let divs = dom.querySelectorAll('div.opener').length ?
     dom.querySelectorAll('div.opener') : dom.querySelectorAll('div.collapse');
 
-  const reasons = div.filter(div => {
+  let reasons = divs.filter(div => {
     return div.getElementsByTagName('td').some(td => {
       const regex1 = new RegExp(steamid.getSteamID64());
       const regex2 = new RegExp(steamid.getSteam2RenderedID().replace('_0:', '_.+:'));
@@ -62,6 +62,25 @@ function parseWebHTML(steamid, url, body) {
       }
     }
   });
+
+  // If we can't find that div, we probably have a "Fluent Design" Theme
+  if (!divs.length) {
+    divs = dom.querySelectorAll('div.collapse_content');
+    
+    reasons = divs.filter(div => {
+      return div.getElementsByTagName('span').some(span => {
+        const regex = new RegExp(steamid.getSteamID64());
+        return span.innerText.match(new RegExp('.+Steam Community'))
+          && span.nextElementSibling?.innerText?.match(regex);
+      });
+    }).map(div => {
+      for (const span of div.getElementsByTagName('span')) {
+        if (span.innerText.match(new RegExp('.+Reason'))) {
+          return span.nextElementSibling?.innerText;
+        }
+      }  
+    });
+  }
 
   return reasons.filter(x => x).map(reason => {
     return {
