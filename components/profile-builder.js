@@ -6,6 +6,7 @@ import { parse as HTMLParse } from 'node-html-parser';
 import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
         RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } from './bot-consts.js';
 import { SOURCEBAN_URLS, SERVER_GUILDS } from './bot-config.js';
+import { getSourceBans } from './sourcebans.js';
 
 import SteamID from 'steamid';
 
@@ -317,7 +318,7 @@ class SteamProfile {
   }
 
   async getSourceBanData() {
-    const sourcebans = await this.getSourceBans();
+    const sourcebans = await getSourceBans(this.steamid);
 
     let shorttext = '';
     let fulltext = '';
@@ -342,77 +343,6 @@ class SteamProfile {
     }
 
     return shorttext;
-  }
-
-  async getSourceBans() {
-    let url_list = []; 
-  
-    const converted = new SteamID(this.steamid);
-  
-    for (let url of Object.keys(SOURCEBAN_URLS)) {
-      let idfmt = SOURCEBAN_URLS[url];
-      if (idfmt === 3) {
-        url += SOURCEBAN_EXT + converted.getSteam3RenderedID();
-      } else {
-        const id2 = converted.getSteam2RenderedID();
-        url += SOURCEBAN_EXT + id2.substring(id2.indexOf(':') + 1);
-      }
-  
-      url_list.push(url);
-    }
-
-    const results = await Promise.allSettled(url_list.map(url => {
-      return httpsGet(url, {}, 3000, true);
-    }));
-  
-    let sourcebans = [];
-  
-    for (const result of results) {    
-      if (result.status !== 'fulfilled') {
-        continue;
-      }
-
-      if (!result.value?.data) {
-        continue;
-      }
-  
-      let dom = HTMLParse(result.value.data);
-      if (!dom) {
-        continue;
-      }
-  
-      const tables = dom.getElementsByTagName('table');
-  
-      for (const table of tables) {
-        var tds = table.getElementsByTagName('td');
-        if (!tds.length) {
-          continue;
-        }
-  
-        var trs = table.getElementsByTagName('tr');
-        for (const row of trs) {
-          var nodes = row.getElementsByTagName('td');
-          if (nodes.length < 2) {
-            continue;
-          }
-  
-          if (nodes[0].innerText?.toLowerCase() !== 'reason') {
-            continue;
-          }
-  
-          const key = result.value.config.url;
-          const value = nodes[1].innerText ?? 'Unknown Reason';
-  
-          if (sourcebans.some(x => x.url === key && x.reason === value)) {
-            continue;
-          }
-  
-          sourcebans.push({ url: key, reason: value });
-        }
-      }
-    }
-  
-    return sourcebans;
   }
 }
 
