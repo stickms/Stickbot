@@ -152,7 +152,7 @@ async function commandPlay(interaction) {
 	let data = await resolveQuery(query);
 
 	if (!data.url) {
-		return await interaction.editReply('❌ Error: Could not find or load that track (may be age restricted)');
+		return await interaction.editReply('❌ Error: Could not find or load that track.');
 	}
 
 	if (interaction.options.getBoolean('shuffle')) {
@@ -489,7 +489,7 @@ function toDuration(str) {
 	const secs = String(num % 60).padStart(2, '0');
 	const mins = String(Math.floor((num / 60) % 60)).padStart(2, '0');
 	const hrs = String(Math.floor(num / 3600)).padStart(2, '0');
-	return `${hrs > 0 ? hrs : ''}:` + `${mins}:${secs}`;
+	return `${hrs > 0 ? `${hrs}:` : ''}` + `${mins}:${secs}`;
 }
 
 // For use in embeds
@@ -544,7 +544,7 @@ async function trackData(url) {
 					inline: true
 				}, {
 					name: 'Artist' + (spot.artists.length > 1 ? 's' : ''), 
-					value: spot.artists.map(x => `[${x.name}](${x.url})`),
+					value: spot.artists.map(x => `[${x.name}](${x.url})`).join(', '),
 					inline: true
 				}, {
 					name: 'Statistics', 
@@ -603,7 +603,7 @@ async function trackData(url) {
 					inline: true
 				}, {
 					name: 'Uploaded By', 
-					value: `[${info.channel.name}](${info.channel.url})`,
+					value: `[${info.channel?.name}](${info.channel?.url})`,
 					inline: true
 				}, {
 					name: 'Statistics', 
@@ -623,7 +623,7 @@ async function trackData(url) {
 					inline: true
 				}, {
 					name: 'Uploaded By', 
-					value: `[${playlist.channel.name}](${playlist.channel.url})`,
+					value: `[${playlist.channel?.name}](${playlist.channel?.url})`,
 					inline: true
 				}, {
 					name: 'Statistics', 
@@ -634,7 +634,7 @@ async function trackData(url) {
 				}
 			];
 
-			if (!playlist.channel.name) { // Likely a YouTube 'Mix' which has everything else null
+			if (!playlist.channel?.name) { // Likely a YouTube 'Mix' which has everything else null
 				fields = [ fields[0] ];
 			}
 		}
