@@ -137,16 +137,19 @@ async function handleModifyTags(interaction) {
 	const steamid = interaction.customId.split(':')[1];
 	let usertags = await getTags(steamid, interaction.guildId);
 
-	for (let tag of interaction.values) {
-		if (usertags[tag]) {
+	interaction.values.forEach(value => {
+		const op = value.split(':')[0];
+		const tag = value.split(':')[1];
+
+		if (usertags[tag] && op === 'rem') {
 			delete usertags[tag];
-		} else {
+		} else if (!usertags[tag] && op === 'add') {
 			usertags[tag] = {
 				addedby: interaction.user.id,
 				date: Math.floor(Date.now() / 1000)
 			};
 		}
-	}
+	});
 
 	await setTags(steamid, interaction.guildId, usertags);
 

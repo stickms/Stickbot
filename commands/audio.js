@@ -7,17 +7,19 @@ import { joinVoiceChannel, getVoiceConnection,
 
 import play from 'play-dl';
 import jsmediatags from 'jsmediatags';
-				
-play.setToken({
-	spotify : {
-		client_id: process.env.SPOTIFY_TOKEN,
-		client_secret: process.env.SPOTIFY_SECRET,
-		refresh_token: process.env.SPOTIFY_REFRESH,
-		market: 'US'
-  },
-	soundcloud: {
-		client_id: process.env.SOUNDCLOUD_TOKEN
-	}
+
+play.getFreeClientID().then(clientid => {
+	play.setToken({
+		spotify : {
+			client_id: process.env.SPOTIFY_TOKEN,
+			client_secret: process.env.SPOTIFY_SECRET,
+			refresh_token: process.env.SPOTIFY_REFRESH,
+			market: 'US'
+		},	
+		soundcloud: {
+			client_id: clientid
+		}
+	})
 });
 
 jsmediatags.Config.setDisallowedXhrHeaders(['Range']);

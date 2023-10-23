@@ -2,10 +2,9 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder,
         StringSelectMenuBuilder, ButtonStyle } from 'discord.js';
 import { getSteamToken, httpsGet, getBanData, uploadText, getPersonaDict } from './bot-helpers.js';
 import { getDocument } from './database.js';
-import { parse as HTMLParse } from 'node-html-parser';
 import { SUMMARY_URL, EMBED_COLOR, STEAM_ICON, PROFILE_URL, PROFILE_TAGS,
-        RUST_URL, STEAMREP_URL, FRIEND_URL, SOURCEBAN_EXT } from './bot-consts.js';
-import { SOURCEBAN_URLS, SERVER_GUILDS } from './bot-config.js';
+        RUST_URL, STEAMREP_URL, FRIEND_URL } from './bot-consts.js';
+import { SERVER_GUILDS } from './bot-config.js';
 import { getSourceBans } from './sourcebans.js';
 
 import SteamID from 'steamid';
@@ -138,10 +137,11 @@ class SteamProfile {
                         .setMaxValues(PROFILE_TAGS.length);
 
     for (const tag of PROFILE_TAGS) {
-      const op = tagdata[tag.value] ? 'Remove ' : 'Add ';
+      const op1 = tagdata[tag.value] ? 'Remove ' : 'Add ';
+      const op2 = tagdata[tag.value] ? 'rem:' : 'add:';
       selectmenu.addOptions({
-        label: op + tag.name, 
-        value: tag.value
+        label: op1 + tag.name, 
+        value: op2 + tag.value
       });
     }
 

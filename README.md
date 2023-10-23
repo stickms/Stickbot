@@ -37,7 +37,6 @@ DATABASE_URL        // MongoDB Database URL
 // Optional (but highly recommended) below
 
 RUST_TOKEN          // Rustbanned.com token
-SOUNDCLOUD_TOKEN    // Soundcloud.com account token
 SPOTIFY_TOKEN       // Spotify developer token
 SPOTIFY_SECRET      // Spotify developer secret token
 SPOTIFY_REFRESH     // Spotify developer refresh token
