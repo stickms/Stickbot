@@ -221,7 +221,7 @@ async function commandJoin(interaction) {
 		connection.subscribe(audiobot.get(interaction.guildId).getPlayer());
 		await interaction.reply(`🎵 Joined voice channel <#${interaction.member.voice.channel.id}>`);
 	} catch (error) {
-		return await interaction.reply('❌ Error: Could not join voice channe;.');
+		return await interaction.reply('❌ Error: Could not join voice channel.');
 	}
 }
 
@@ -262,7 +262,7 @@ async function commandMove(interaction) {
 	const position = interaction.options.getInteger('position');
 
 	if (tracknum > length) {
-		return await interaction.reply('❌ Error: There is no track at that position in queue.');
+		return await interaction.reply(`❌ Error: There is no track at position \`${tracknum}\` in queue.`);
 	} else if (position > length) {
 		position = length; // Clamp max value (so people can put '999' if they just want to put a track at the end)
 	}
