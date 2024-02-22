@@ -46,7 +46,7 @@ export async function execute(interaction) {
   const tag = interaction.options.getString('tag') ?? 'cheater';
   const curdate = Math.floor(Date.now() / 1000);
 
-  const steamids = fulltext.split('\n').filter(x => {
+  const steamids = fulltext.split('\n').map(x => x.trim()).filter(x => {
     try { return (new SteamID(x)).isValid() } catch { return false; }
   }).map(x => (new SteamID(x)).getSteamID64());
 
