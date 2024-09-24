@@ -1,14 +1,17 @@
-import SteamID from "steamid";
-import SteamAPI from "./steam-api.js";
+import SteamID from 'steamid';
+import SteamAPI from './steam-api.js';
+import Database from './database.js';
 
 class SteamProfile {
   #steamid;
 
+  #dbdata;
   #summary;
   #bandata;
 
-  constructor(steamid, summary, bandata) {
+  constructor(steamid, dbdata, summary, bandata) {
     this.#steamid = steamid;
+    this.#dbdata = dbdata;
     this.#summary = summary;
     this.#bandata = bandata;
   }
@@ -20,19 +23,28 @@ class SteamProfile {
       return null;
     }
 
+    const dbdata = await Database.lookupSteamId(steamid);
+    if (!dbdata) {
+      return null;
+    }
+
     const summary = await SteamAPI.getProfileSummaries(
       steamid.getSteamID64()
     );
+
+    if (!summary) {
+      return null;
+    }
 
     const bandata = await SteamAPI.getPlayerBans(
       steamid.getSteamID64()
     );
 
-    if (!summary || !bandata) {
+    if (!bandata) {
       return null;
     }
 
-    return new SteamProfile(steamid, summary, bandata);
+    return new SteamProfile(steamid, dbdata, summary, bandata);
   }
 
   static async #resolveSteamId(steamid) {
@@ -99,6 +111,10 @@ class SteamProfile {
     return links.map((k, v) => {
       return `[${k}](${v}${id64}/)`;
     }).join('\n');
+  }
+
+  #getAlertList() {
+    
   }
 
   get steamid() {
