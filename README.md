@@ -46,7 +46,7 @@ Other configuration settings can be changed in `components/bot-config.js` and ar
 
 ## Steam Profile Database
 
-Stickbot uses [MongoDB](https://github.com/mongodb/mongo) for databse operations. You will need your own MongoDB URL in order to use the bot. There are separate collections for Steam Profiles (`players`) and Server-specific data (`servers`).
+Stickbot uses [MongoDB](https://github.com/mongodb/mongo) for database operations. You will need your own MongoDB URL in order to use the bot. There are separate collections for Steam Profiles (`players`) and Server-specific data (`servers`).
 
 ### MongoDB formatting
 
