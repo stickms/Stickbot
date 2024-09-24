@@ -1,7 +1,5 @@
 import axios from "axios";
 
-import 'dotenv/config';
-
 class SteamAPI {
   // We mainly deal with ISteamUser functions
   static #endpoint = 'https://api.steampowered.com/ISteamUser/';
@@ -71,9 +69,30 @@ class SteamAPI {
 
     return data?.players;
   }
-}
 
-console.log(await SteamAPI.getProfileSummaries('76561197960287930'));
-console.log(await SteamAPI.getPlayerBans('76561197960287930'));
+  static async getFriendList(steamid) {
+    if (!steamid) {
+      return null;
+    }
+
+    const data = await this.#callSteamApi('GetFriendList/v1/', {
+      steamid: steamid
+    });
+
+    return data?.friendslist?.friends;
+  }
+
+  static async resolveVanityUrl(vanity) {
+    if (!vanity?.length) {
+      return null;
+    }
+
+    const data = await this.#callSteamApi('ResolveVanityURL/v1/', {
+      vanityurl: vanity
+    });
+
+    return data?.response;
+  }
+}
 
 export default SteamAPI;
