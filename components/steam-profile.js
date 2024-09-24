@@ -4,6 +4,7 @@ import Database from './database.js';
 
 class SteamProfile {
   #steamid;
+  #guildid;
 
   #dbdata;
   #summary;
@@ -11,13 +12,14 @@ class SteamProfile {
 
   constructor(steamid, dbdata, summary, bandata) {
     this.#steamid = steamid;
+    this.#guildid = guildid;
     this.#dbdata = dbdata;
     this.#summary = summary;
     this.#bandata = bandata;
   }
 
   // Use this instead of constructor() to create new SteamProfile instances
-  static async create(steamid) {
+  static async create(steamid, guildid = -1) {
     steamid = await SteamProfile.#resolveSteamId(steamid);
     if (!steamid) {
       return null;
@@ -44,7 +46,7 @@ class SteamProfile {
       return null;
     }
 
-    return new SteamProfile(steamid, dbdata, summary, bandata);
+    return new SteamProfile(steamid, guildid, dbdata, summary, bandata);
   }
 
   static async #resolveSteamId(steamid) {
@@ -114,7 +116,20 @@ class SteamProfile {
   }
 
   #getAlertList() {
+    const TAG_NAMES = [
+      { name: 'Cheater', value: 'cheater' },
+      { name: 'Suspicious', value: 'suspicious' },
+      { name: 'Content Creator', value: 'popular' },
+      { name: 'Ban Watch', value: 'banwatch' }
+    ];
     
+    const alertlist = [];
+
+    const tags = this.#dbdata.tags?.[this.#guildid] ?? {};
+
+    for (const tag of tags) {
+      
+    }
   }
 
   get steamid() {

@@ -20,16 +20,18 @@ class Database {
       .collection('servers');  
   }
 
-  static async lookupSteamId(steamid) {
-    if (typeof steamid !== typeof SteamID) {
-      steamid = new SteamID(steamid);
+  static async lookup(...steamids) {
+    if (!steamids?.length) {
+      return {};
+    } else if (steamids.length > 1) {
+      return await Database.#players.find({
+        _id: { $in: steamids }
+      }).toArray(); 
     }
 
-    const query = await Database.#players.findOne({
-      _id: steamid.getSteamID64()
-    });
-
-    return query ?? {};
+    return await Database.#players.findOne({
+      _id: steamids
+    }) ?? {};
   }
 }
 
