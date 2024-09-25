@@ -1,4 +1,4 @@
-import SteamID from 'steamid';
+import { MongoClient } from 'mongodb';
 
 class Database {
   static #client = null;
@@ -30,7 +30,7 @@ class Database {
     }
 
     return await Database.#players.findOne({
-      _id: steamids
+      _id: steamids[0]
     }) ?? {};
   }
 }

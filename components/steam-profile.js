@@ -1,6 +1,7 @@
 import SteamID from 'steamid';
 import SteamAPI from './steam-api.js';
 import Database from './database.js';
+import { EmbedBuilder } from 'discord.js';
 
 class SteamProfile {
   #steamid;
@@ -10,7 +11,7 @@ class SteamProfile {
   #summary;
   #bandata;
 
-  constructor(steamid, dbdata, summary, bandata) {
+  constructor(steamid, guildid, dbdata, summary, bandata) {
     this.#steamid = steamid;
     this.#guildid = guildid;
     this.#dbdata = dbdata;
@@ -25,7 +26,10 @@ class SteamProfile {
       return null;
     }
 
-    const dbdata = await Database.lookupSteamId(steamid);
+    const dbdata = await Database.lookup(
+      steamid.getSteamID64()
+    );
+
     if (!dbdata) {
       return null;
     }
@@ -45,6 +49,8 @@ class SteamProfile {
     if (!bandata) {
       return null;
     }
+
+    console.log('created profile!');
 
     return new SteamProfile(steamid, guildid, dbdata, summary, bandata);
   }
@@ -95,7 +101,7 @@ class SteamProfile {
         label: '❌ Trade Ban',
         valid: this.#bandata.EconomyBan == 'banned'
       }
-    ].filter(x => x.valid).map(x => x.label).join('\n');
+    ].filter(x => x.valid).map(x => x.label);
   }
 
   // Returns a string of all of the "quick links" of this profile
@@ -120,16 +126,49 @@ class SteamProfile {
       { name: 'Cheater', value: 'cheater' },
       { name: 'Suspicious', value: 'suspicious' },
       { name: 'Content Creator', value: 'popular' },
-      { name: 'Ban Watch', value: 'banwatch' }
     ];
     
-    const alertlist = [];
+    const alertlist = [ ...this.#getBanList() ];
 
+    // First, add bot tags
     const tags = this.#dbdata.tags?.[this.#guildid] ?? {};
 
-    for (const tag of tags) {
-      
+    for (const tag of TAG_NAMES) {
+      if (tags[tag.value]) {
+        alertlist.push(`⚠️ ${tag.name}`);
+      }
     }
+
+    // Next, list any cheater friends (TODO)
+
+    // Ban watch/server logs (TODO) last for visibility
+    if (tags['banwatch']) {
+      alertlist.push('\u2139\uFE0F Ban Watch');
+    }
+
+    if (this.#summary.timecreated) {
+      const created = new Date(this.#summary.timecreated * 1000);
+
+      if (created.getFullYear() <= 2006) {
+        alertlist.push(`\u2139\uFE0F Made in ${created.getFullYear()}`);
+      }
+    }
+
+    return alertlist.length ? alertlist.join('\n') : '✅ None';
+  }
+
+  #addGameInfo(embed) {
+    if (!this.#summary.gameextrainfo) {
+      return;
+    }
+
+    const gameinfo = `**${this.#summary.gameextrainfo}**`;
+    const gameip = this.#summary.gameserverip;
+
+    embed.addFields({
+        name: 'Now Playing',
+        value: gameinfo + (gameip ? ` on \`${gameip}\`` : '')
+    });
   }
 
   get steamid() {
@@ -138,7 +177,34 @@ class SteamProfile {
 
   // Get embed
   get embed() {
+    const profile_url = 'https://steamcommunity.com/profiles/';
 
+    const embed = new EmbedBuilder()
+      .setColor(0x3297A8)
+      .setThumbnail(this.#summary.avatarfull)
+      .setAuthor({
+          name: this.#summary.personaname,
+          iconURL: STEAM_ICON,
+          url: profile_url + this.#steamid.getSteamID64()
+      }).addFields(
+          { 
+            name: 'Steam IDs', 
+            value: this.#getSteamIdList(), 
+            inline: true 
+          }, { 
+            name: 'Alerts', 
+            value: this.#getAlertList(), 
+            inline: true 
+          }, { 
+            name: 'Quick Links', 
+            value: this.#getLinksList(), 
+            inline: true 
+          }
+      );
+
+    this.#addGameInfo(embed);
+
+    return embed;
   }
 
   // Get message components (drop down, etc.)
