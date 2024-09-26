@@ -25,6 +25,7 @@ export async function execute(interaction) {
 
 	await interaction.editReply({
 		embeds: profile.embeds,
-		components: profile.components
+		components: profile.components,
+		allowedMentions: { parse: [] }
 	});
 }
