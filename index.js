@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import 'dotenv/config';
-
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
+
+import 'dotenv/config';
 import './components/database.js';
 
 const client = new Client({ 
@@ -33,7 +33,7 @@ for (const file of eventFiles) {
 	}
 }
 
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', interaction => {
 	if (!interaction.isChatInputCommand()) {
 		return;
 	}
@@ -43,7 +43,7 @@ client.on('interactionCreate', async interaction => {
 		return;
 	}
 	
-	await command.execute(interaction).catch(console.error);
+	command.execute(interaction).catch(console.error);
 });
 
 process.on('unhandledRejection', error => {

@@ -50,8 +50,6 @@ class SteamProfile {
       return null;
     }
 
-    console.log('created profile!');
-
     return new SteamProfile(steamid, guildid, dbdata, summary, bandata);
   }
 
@@ -116,7 +114,7 @@ class SteamProfile {
 
     const id64 = this.#steamid.getSteamID64();
 
-    return links.map((k, v) => {
+    return Object.entries(links).map(([k, v]) => {
       return `[${k}](${v}${id64}/)`;
     }).join('\n');
   }
@@ -184,7 +182,7 @@ class SteamProfile {
       .setThumbnail(this.#summary.avatarfull)
       .setAuthor({
           name: this.#summary.personaname,
-          iconURL: STEAM_ICON,
+          iconURL: 'https://i.imgur.com/uO7rwHu.png',
           url: profile_url + this.#steamid.getSteamID64()
       }).addFields(
           { 
@@ -205,6 +203,11 @@ class SteamProfile {
     this.#addGameInfo(embed);
 
     return embed;
+  }
+
+  // Return an array of embeds (for cleaner messages)
+  get embeds() {
+    return [ this.embed ];
   }
 
   // Get message components (drop down, etc.)
