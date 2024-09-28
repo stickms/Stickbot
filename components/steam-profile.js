@@ -272,7 +272,7 @@ class SteamProfile {
           .setLabel('More Info')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
-          .setCustomId(`notifications:${this.steamid}`)
+          .setCustomId(`notifybutton:${this.steamid}`)
           .setLabel('Notifications')
           .setStyle(ButtonStyle.Primary)
       ]);
