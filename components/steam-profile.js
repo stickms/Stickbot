@@ -1,7 +1,8 @@
 import SteamID from 'steamid';
 import SteamAPI from './steam-api.js';
 import Database from './database.js';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, StringSelectMenuBuilder, 
+  ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 
 class SteamProfile {
   #steamid;
@@ -11,12 +12,15 @@ class SteamProfile {
   #summary;
   #bandata;
 
-  constructor(steamid, guildid, dbdata, summary, bandata) {
+  #friends;
+
+  constructor(steamid, guildid, dbdata, summary, bandata, friends) {
     this.#steamid = steamid;
     this.#guildid = guildid;
     this.#dbdata = dbdata;
     this.#summary = summary;
     this.#bandata = bandata;
+    this.#friends = friends;
   }
 
   // Use this instead of constructor() to create new SteamProfile instances
@@ -50,7 +54,28 @@ class SteamProfile {
       return null;
     }
 
-    return new SteamProfile(steamid, guildid, dbdata, summary, bandata);
+    let friends = await SteamAPI.getFriendList(
+      steamid.getSteamID64()
+    );
+
+    if (!friends) {
+      friends = 0;
+    } else {
+      const tables = await Database.lookup(
+        ...friends.map(f => {
+          return f.steamid;
+        })
+      );
+
+      friends = 0;
+
+      tables.forEach(e => {
+        e.tags?.[guildid]?.cheater && friends++;
+      })
+    }
+
+    return new SteamProfile(steamid, guildid, dbdata, 
+      summary, bandata, friends);
   }
 
   static async #resolveSteamId(steamid) {
@@ -120,24 +145,23 @@ class SteamProfile {
   }
 
   #getAlertList() {
-    const TAG_NAMES = [
-      { name: 'Cheater', value: 'cheater' },
-      { name: 'Suspicious', value: 'suspicious' },
-      { name: 'Content Creator', value: 'popular' },
-    ];
-    
     const alertlist = [ ...this.#getBanList() ];
 
     // First, add bot tags
     const tags = this.#dbdata.tags?.[this.#guildid] ?? {};
 
-    for (const tag of TAG_NAMES) {
+    // Slice last element as banwatch is added after
+    for (const tag of this.#profiletags.slice(-1)) {
       if (tags[tag.value]) {
         alertlist.push(`⚠️ ${tag.name}`);
       }
     }
 
-    // Next, list any cheater friends (TODO)
+    // Next, list any cheater friends
+    if (this.#friends > 0) {
+      const pl = `cheater${this.#friends == 1 ? '' : 's'}`;
+      alertlist.push(`⚠️ Friends with ${this.#friends} ${pl}`);
+    }
 
     // Ban watch/server logs (TODO) last for visibility
     if (tags['banwatch']) {
@@ -167,6 +191,15 @@ class SteamProfile {
         name: 'Now Playing',
         value: gameinfo + (gameip ? ` on \`${gameip}\`` : '')
     });
+  }
+
+  get #profiletags() {
+    return [
+      { name: 'Cheater', value: 'cheater' },
+      { name: 'Suspicious', value: 'suspicious' },
+      { name: 'Content Creator', value: 'popular' },
+      { name: 'Ban Watch', value: 'banwatch'}
+    ];
   }
 
   get steamid() {
@@ -212,7 +245,48 @@ class SteamProfile {
 
   // Get message components (drop down, etc.)
   get components() {
+    const tagdata = this.#dbdata.tags?.[this.#guildid] ?? {};
 
+    const selectmenu = new StringSelectMenuBuilder()
+      .setCustomId(`modifytags:${this.steamid}`)
+      .setPlaceholder('Modify User Tags')
+      .setMaxValues(this.#profiletags.length);
+
+    for (const tag of this.#profiletags) {
+      const label = tagdata[tag.value] ? 'Remove ' : 'Add ';
+      const value = tagdata[tag.value] ? 'remove:' : 'add:';
+
+      selectmenu.addOptions({
+        label: label + tag.name, 
+        value: value + tag.value
+      });
+    }
+
+    const dropdown = new ActionRowBuilder()
+      .addComponents(selectmenu);
+    
+    const buttons = new ActionRowBuilder()
+      .addComponents([
+        new ButtonBuilder()
+          .setCustomId(`moreinfo:${this.steamid}`)
+          .setLabel('More Info')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`notifications:${this.steamid}`)
+          .setLabel('Notifications')
+          .setStyle(ButtonStyle.Primary)
+      ]);
+
+    if (this.#friends > 0) {
+      buttonrow.addComponents(
+        new ButtonBuilder()
+            .setCustomId(`friends:${this.steamid}`)
+            .setLabel('List Friends')
+            .setStyle(ButtonStyle.Primary)
+      );
+    }
+
+    return [ dropdown, buttons ];
   }
 }
 
