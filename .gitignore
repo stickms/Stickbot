@@ -132,6 +132,9 @@ dist
 #macOS
 .DS_Store
 
+# TypeScript
+build/
+
 # Stickbot
 playerlist.json
 config.json
