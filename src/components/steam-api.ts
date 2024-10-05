@@ -39,14 +39,12 @@ type SteamPlayerBans = {
   EconomyBan: string
 };
 
-type SteamFriendData = {
-  steamid: string,
-  relationship: string,
-  friend_since: number
-};
-
 type SteamFriendList = {
-  friends: SteamFriendData[]
+  friends: {
+    steamid: string,
+    relationship: string,
+    friend_since: number
+  }[]
 };
 
 type SteamVanityURL = {

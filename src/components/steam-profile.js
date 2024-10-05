@@ -1,8 +1,9 @@
-import SteamID from 'steamid';
 import SteamAPI from './steam-api.js';
 import Database from './database.js';
 import { EmbedBuilder, StringSelectMenuBuilder, 
   ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+
+import SteamID from 'steamid';
 
 class SteamProfile {
   #steamid;
@@ -24,7 +25,7 @@ class SteamProfile {
   }
 
   // Use this instead of constructor() to create new SteamProfile instances
-  static async create(steamid, guildid = '-1') {
+  static async create(steamid, guildid='-1') {
     steamid = await SteamProfile.#resolveSteamId(steamid);
     if (!steamid) {
       return null;
@@ -148,7 +149,7 @@ class SteamProfile {
     const alertlist = [ ...this.#getBanList() ];
 
     // First, add bot tags
-    const tags = this.#dbdata.tags?.[this.#guildid] ?? {};
+    const tags = this.#dbdata.tags[this.#guildid] ?? {};
 
     // Slice last element as banwatch is added after
     for (const tag of this.#profiletags.slice(-1)) {
@@ -278,7 +279,7 @@ class SteamProfile {
       ]);
 
     if (this.#friends > 0) {
-      buttonrow.addComponents(
+      buttons.addComponents(
         new ButtonBuilder()
             .setCustomId(`friends:${this.steamid}`)
             .setLabel('List Friends')

@@ -1,6 +1,8 @@
 {
 	"type": "module",
+	"allowSyntheticDefaultImports": true,
 	"dependencies": {
+		"@types/steamid": "^2.0.3",
 		"axios": "^1.7.7",
 		"discord.js": "^14.16.2",
 		"dotenv": "^16.4.5",
