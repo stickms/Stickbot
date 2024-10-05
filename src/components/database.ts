@@ -10,7 +10,7 @@ type TagEntry = {
   date: number
 }
 
-interface DatabasePlayerEntry extends WithId<Document> {
+export interface DatabasePlayerEntry extends WithId<Document> {
   addresses: {
     [ip: string]: {
       game: string,

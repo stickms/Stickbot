@@ -5,7 +5,7 @@ dotenv.config({ path: path.join(import.meta.dirname, '..', '..', '.env') });
 
 import axios from 'axios';
 
-type SteamProfileSummary = {
+export type SteamProfileSummary = {
   steamid: string,
   communityvisibilitystate: number,
   profilestate: number,
@@ -29,7 +29,7 @@ type SteamProfileSummary = {
   gameserverip?: string
 };
 
-type SteamPlayerBans = {
+export type SteamPlayerBans = {
   SteamId: string,
   CommunityBanned: boolean,
   VACBanned: boolean,
@@ -39,15 +39,13 @@ type SteamPlayerBans = {
   EconomyBan: string
 };
 
-type SteamFriendList = {
-  friends: {
-    steamid: string,
-    relationship: string,
-    friend_since: number
-  }[]
+export type SteamFriendList = {
+  steamid: string,
+  relationship: string,
+  friend_since: number
 };
 
-type SteamVanityURL = {
+export type SteamVanityURL = {
   steamid?: string,
   success: number,
   message?: string
@@ -130,7 +128,7 @@ class SteamAPI {
     return data['players'] as SteamPlayerBans[];
   }
 
-  static async getFriendList(steamid: string): Promise<SteamFriendList | null> {
+  static async getFriendList(steamid: string): Promise<SteamFriendList[] | null> {
     if (!steamid?.length) {
       return null;
     }
@@ -143,7 +141,7 @@ class SteamAPI {
       return null;
     }
 
-    return data['friendslist'].friends as SteamFriendList;
+    return data['friendslist'].friends as SteamFriendList[];
   }
 
   static async resolveVanityUrl(vanity: string) : Promise<SteamVanityURL | null> {

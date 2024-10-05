@@ -4,7 +4,8 @@
     "allowJs": true,
     "target": "ES2022",
     "moduleResolution": "Node",
-    "module": "ES2022"
+    "module": "ES2022",
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
 }
