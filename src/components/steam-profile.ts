@@ -1,8 +1,17 @@
-import SteamAPI, { SteamPlayerBans, SteamProfileSummary } from './steam-api.js';
+import SteamAPI, {
+  SteamFriendList,
+  SteamPlayerBans,
+  SteamProfileSummary
+} from './steam-api.js';
 import Database, { DatabasePlayerEntry } from './database.js';
-import { EmbedBuilder, StringSelectMenuBuilder, 
-  ActionRowBuilder, ButtonBuilder, ButtonStyle, 
-  AnyComponentBuilder} from 'discord.js';
+import {
+  EmbedBuilder,
+  StringSelectMenuBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  AnyComponentBuilder
+} from 'discord.js';
 
 import SteamID from 'steamid';
 
@@ -16,7 +25,14 @@ class SteamProfile {
 
   private friends: number;
 
-  constructor(steamid, guildid, dbdata, summary, bandata, friends) {
+  constructor(
+    steamid: SteamID,
+    guildid: string,
+    dbdata: DatabasePlayerEntry,
+    summary: SteamProfileSummary,
+    bandata: SteamPlayerBans,
+    friends: number
+  ) {
     this.steamid = steamid;
     this.guildid = guildid;
     this.dbdata = dbdata;
@@ -33,7 +49,7 @@ class SteamProfile {
     }
 
     const [dbdata, summary, bandata, friends] = await Promise.all([
-      Database.lookup(steamid.getSteamID64()),
+      Database.lookupOne(steamid.getSteamID64()),
       SteamAPI.getProfileSummaries(steamid.getSteamID64()),
       SteamAPI.getPlayerBans(steamid.getSteamID64()),
       SteamAPI.getFriendList(steamid.getSteamID64())
@@ -45,11 +61,9 @@ class SteamProfile {
 
     let friendcount = 0;
 
-    if (!friends) {
-      friendcount = 0;
-    } else {
-      const tables = await Database.lookup(
-        ...friends.map(f => {
+    if (friends) {
+      const tables = await Database.lookupMany(
+        friends.map((f: SteamFriendList) => {
           return f.steamid;
         })
       );
@@ -59,8 +73,14 @@ class SteamProfile {
       });
     }
 
-    return new SteamProfile(steamid, guildid, dbdata, 
-      summary, bandata, friendcount);
+    return new SteamProfile(
+      steamid,
+      guildid,
+      dbdata as DatabasePlayerEntry,
+      summary as SteamProfileSummary,
+      bandata as SteamPlayerBans,
+      friendcount
+    );
   }
 
   private static async resolveSteamId(steamid: string) {
@@ -81,7 +101,7 @@ class SteamProfile {
       this.steamid.getSteamID64(),
       this.steamid.getSteam3RenderedID(),
       this.steamid.getSteam2RenderedID(true)
-    ]
+    ];
 
     if (this.summary.profileurl?.includes('/id/')) {
       idlist.push(this.summary.profileurl.split('/')[4]);
@@ -91,46 +111,53 @@ class SteamProfile {
   }
 
   private getBanList() {
-    const plural = (num, label) => {
-      return `${num} ${label}${num == 1 ? ''  : 's'}`;
+    const plural = (num: number, label: string) => {
+      return `${num} ${label}${num == 1 ? '' : 's'}`;
     };
 
     return [
       {
         label: `❌ ${plural(this.bandata.NumberOfVACBans, 'VAC Ban')}`,
         valid: this.bandata.NumberOfVACBans > 0
-      }, {
+      },
+      {
         label: `❌ ${plural(this.bandata.NumberOfGameBans, 'Game Ban')}`,
         valid: this.bandata.NumberOfGameBans > 0
-      }, {
+      },
+      {
         label: '❌ Community Ban',
         valid: this.bandata.CommunityBanned
-      }, {
+      },
+      {
         label: '❌ Trade Ban',
         valid: this.bandata.EconomyBan == 'banned'
       }
-    ].filter(x => x.valid).map(x => x.label);
+    ]
+      .filter((x) => x.valid)
+      .map((x) => x.label);
   }
 
   // Returns a string of all of the "quick links" of this profile
   private getLinksList() {
     const links = {
-      'SteamRep': 'https://steamrep.com/profiles/',
+      SteamRep: 'https://steamrep.com/profiles/',
       'SteamID.uk': 'https://steamid.uk/profile/',
       'Backpack.tf': 'https://backpack.tf/profiles/',
-      'SteamDB': 'https://steamdb.info/calculator/',
-      'Open in Client': 'https://stickbot.net/openprofile/',
-    }
+      SteamDB: 'https://steamdb.info/calculator/',
+      'Open in Client': 'https://stickbot.net/openprofile/'
+    };
 
     const id64 = this.steamid.getSteamID64();
 
-    return Object.entries(links).map(([k, v]) => {
-      return `[${k}](${v}${id64}/)`;
-    }).join('\n');
+    return Object.entries(links)
+      .map(([k, v]) => {
+        return `[${k}](${v}${id64}/)`;
+      })
+      .join('\n');
   }
 
   private getAlertList() {
-    const alertlist = [ ...this.getBanList() ];
+    const alertlist: string[] = [...this.getBanList()];
 
     // First, add bot tags
     const tags = this.dbdata.tags[this.guildid] ?? {};
@@ -164,7 +191,7 @@ class SteamProfile {
     return alertlist.length ? alertlist.join('\n') : '✅ None';
   }
 
-  private addGameInfo(embed) {
+  private addGameInfo(embed: EmbedBuilder) {
     if (!this.summary.gameextrainfo) {
       return;
     }
@@ -173,17 +200,17 @@ class SteamProfile {
     const gameip = this.summary.gameserverip;
 
     embed.addFields({
-        name: 'Now Playing',
-        value: gameinfo + (gameip ? ` on \`${gameip}\`` : '')
+      name: 'Now Playing',
+      value: gameinfo + (gameip ? ` on \`${gameip}\`` : '')
     });
   }
 
-  get #profiletags() {
+  get #profiletags(): { name: string; value: string }[] {
     return [
       { name: 'Cheater', value: 'cheater' },
       { name: 'Suspicious', value: 'suspicious' },
       { name: 'Content Creator', value: 'popular' },
-      { name: 'Ban Watch', value: 'banwatch'}
+      { name: 'Ban Watch', value: 'banwatch' }
     ];
   }
 
@@ -192,26 +219,29 @@ class SteamProfile {
     const profile_url = 'https://steamcommunity.com/profiles/';
 
     const embed = new EmbedBuilder()
-      .setColor(0x3297A8)
+      .setColor(0x3297a8)
       .setThumbnail(this.summary.avatarfull)
       .setAuthor({
-          name: this.summary.personaname,
-          iconURL: 'https://i.imgur.com/uO7rwHu.png',
-          url: profile_url + this.steamid.getSteamID64()
-      }).addFields(
-          { 
-            name: 'Steam IDs', 
-            value: this.getSteamIdList(), 
-            inline: true 
-          }, { 
-            name: 'Alerts', 
-            value: this.getAlertList(), 
-            inline: true 
-          }, { 
-            name: 'Quick Links', 
-            value: this.getLinksList(), 
-            inline: true 
-          }
+        name: this.summary.personaname,
+        iconURL: 'https://i.imgur.com/uO7rwHu.png',
+        url: profile_url + this.steamid.getSteamID64()
+      })
+      .addFields(
+        {
+          name: 'Steam IDs',
+          value: this.getSteamIdList(),
+          inline: true
+        },
+        {
+          name: 'Alerts',
+          value: this.getAlertList(),
+          inline: true
+        },
+        {
+          name: 'Quick Links',
+          value: this.getLinksList(),
+          inline: true
+        }
       );
 
     this.addGameInfo(embed);
@@ -221,11 +251,14 @@ class SteamProfile {
 
   // Return an array of embeds (for cleaner messages)
   get embeds(): EmbedBuilder[] {
-    return [ this.embed ];
+    return [this.embed];
   }
 
   // Get message components (drop down, etc.)
-  get components(): ActionRowBuilder<AnyComponentBuilder>[] {
+  get components(): (
+    | ActionRowBuilder<StringSelectMenuBuilder>
+    | ActionRowBuilder<ButtonBuilder>
+  )[] {
     const tagdata = this.dbdata.tags[this.guildid] ?? {};
 
     const selectmenu = new StringSelectMenuBuilder()
@@ -238,36 +271,35 @@ class SteamProfile {
       const value = tagdata[tag.value] ? 'remove:' : 'add:';
 
       selectmenu.addOptions({
-        label: label + tag.name, 
+        label: label + tag.name,
         value: value + tag.value
       });
     }
 
-    const dropdown = new ActionRowBuilder()
-      .addComponents(selectmenu);
-    
-    const buttons = new ActionRowBuilder()
-      .addComponents([
-        new ButtonBuilder()
-          .setCustomId(`moreinfo:${this.steamid}`)
-          .setLabel('More Info')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(`notifybutton:${this.steamid}`)
-          .setLabel('Notifications')
-          .setStyle(ButtonStyle.Primary)
-      ]);
+    const dropdown =
+      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectmenu);
+
+    const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents([
+      new ButtonBuilder()
+        .setCustomId(`moreinfo:${this.steamid}`)
+        .setLabel('More Info')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`notifybutton:${this.steamid}`)
+        .setLabel('Notifications')
+        .setStyle(ButtonStyle.Primary)
+    ]);
 
     if (this.friends > 0) {
       buttons.addComponents(
         new ButtonBuilder()
-            .setCustomId(`friends:${this.steamid}`)
-            .setLabel('List Friends')
-            .setStyle(ButtonStyle.Primary)
+          .setCustomId(`friends:${this.steamid}`)
+          .setLabel('List Friends')
+          .setStyle(ButtonStyle.Primary)
       );
     }
 
-    return [ dropdown, buttons ];
+    return [dropdown, buttons];
   }
 }
 

@@ -1,5 +1,9 @@
 {
 	"type": "module",
+	"scripts": {
+    "start": "npx tsx \"./src/\"",
+    "prettier": "prettier --write \"src/**/*.{js,ts}\" --config \".prettierrc.json\""
+  },
 	"dependencies": {
 		"@types/steamid": "^2.0.3",
 		"axios": "^1.7.7",

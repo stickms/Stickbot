@@ -19,8 +19,10 @@ export async function execute(message: Message) {
       return;
     }
 
-    if (!url.pathname.startsWith('/profiles/') && 
-        !url.pathname.startsWith('/id/')) {
+    if (
+      !url.pathname.startsWith('/profiles/') &&
+      !url.pathname.startsWith('/id/')
+    ) {
       return;
     }
 
@@ -36,7 +38,7 @@ export async function execute(message: Message) {
     await message.suppressEmbeds();
     await message.reply({
       embeds: profile.embeds,
-      components: profile.components as [],
+      components: profile.components,
       allowedMentions: { parse: [] }
     });
   } catch (error) {

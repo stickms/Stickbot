@@ -6,49 +6,49 @@ dotenv.config({ path: path.join(import.meta.dirname, '..', '..', '.env') });
 import axios from 'axios';
 
 export type SteamProfileSummary = {
-  steamid: string,
-  communityvisibilitystate: number,
-  profilestate: number,
-  personaname: string,
-  commentpermission?: number,
-  profileurl: string,
-  avatar: string,
-  avatarmedium: string,
-  avatarfull: string,
-  avatarhash: string,
-  personastate: number,
-  realname?: string,
-  primaryclanid?: string,
-  timecreated?: number,
-  personastateflags: number,
-  loccountrycode?: string,
-  locstatecode?: string
-  loccityid?: number,
-  gameid?: string,
-  gameextrainfo?: string,
-  gameserverip?: string
+  steamid: string;
+  communityvisibilitystate: number;
+  profilestate: number;
+  personaname: string;
+  commentpermission?: number;
+  profileurl: string;
+  avatar: string;
+  avatarmedium: string;
+  avatarfull: string;
+  avatarhash: string;
+  personastate: number;
+  realname?: string;
+  primaryclanid?: string;
+  timecreated?: number;
+  personastateflags: number;
+  loccountrycode?: string;
+  locstatecode?: string;
+  loccityid?: number;
+  gameid?: string;
+  gameextrainfo?: string;
+  gameserverip?: string;
 };
 
 export type SteamPlayerBans = {
-  SteamId: string,
-  CommunityBanned: boolean,
-  VACBanned: boolean,
-  NumberOfVACBans: number,
-  DaysSinceLastBan: number,
-  NumberOfGameBans: number,
-  EconomyBan: string
+  SteamId: string;
+  CommunityBanned: boolean;
+  VACBanned: boolean;
+  NumberOfVACBans: number;
+  DaysSinceLastBan: number;
+  NumberOfGameBans: number;
+  EconomyBan: string;
 };
 
 export type SteamFriendList = {
-  steamid: string,
-  relationship: string,
-  friend_since: number
+  steamid: string;
+  relationship: string;
+  friend_since: number;
 };
 
 export type SteamVanityURL = {
-  steamid?: string,
-  success: number,
-  message?: string
+  steamid?: string;
+  success: number;
+  message?: string;
 };
 
 class SteamAPI {
@@ -66,11 +66,13 @@ class SteamAPI {
 
     this.token = this.tokenlist[this.tokennum++];
 
-    if (this.tokennum >= this.tokenlist.length) 
-      this.tokennum = 0;
+    if (this.tokennum >= this.tokenlist.length) this.tokennum = 0;
   }
 
-  static async #callSteamApi(func: string, params: {}): Promise<{error?: string}> {
+  static async #callSteamApi(
+    func: string,
+    params: {}
+  ): Promise<{ error?: string }> {
     this.#updateApiKey();
 
     try {
@@ -88,7 +90,9 @@ class SteamAPI {
     }
   }
 
-  static async getProfileSummaries(...profiles: string[]): Promise<SteamProfileSummary | SteamProfileSummary[] | null> {
+  static async getProfileSummaries(
+    ...profiles: string[]
+  ): Promise<SteamProfileSummary | SteamProfileSummary[] | null> {
     if (!profiles?.length) {
       return null;
     }
@@ -108,7 +112,9 @@ class SteamAPI {
     return data['response']?.players as SteamProfileSummary[];
   }
 
-  static async getPlayerBans(...profiles: string[]): Promise<SteamPlayerBans | SteamPlayerBans[] | null> {
+  static async getPlayerBans(
+    ...profiles: string[]
+  ): Promise<SteamPlayerBans | SteamPlayerBans[] | null> {
     if (!profiles?.length) {
       return null;
     }
@@ -128,7 +134,9 @@ class SteamAPI {
     return data['players'] as SteamPlayerBans[];
   }
 
-  static async getFriendList(steamid: string): Promise<SteamFriendList[] | null> {
+  static async getFriendList(
+    steamid: string
+  ): Promise<SteamFriendList[] | null> {
     if (!steamid?.length) {
       return null;
     }
@@ -144,7 +152,9 @@ class SteamAPI {
     return data['friendslist'].friends as SteamFriendList[];
   }
 
-  static async resolveVanityUrl(vanity: string) : Promise<SteamVanityURL | null> {
+  static async resolveVanityUrl(
+    vanity: string
+  ): Promise<SteamVanityURL | null> {
     if (!vanity?.length) {
       return null;
     }
