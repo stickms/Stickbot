@@ -1,9 +1,10 @@
-import { Collection, MongoClient, OptionalId } from 'mongodb';
-import { WithId, Document, Condition, ObjectId } from 'mongodb';
+import { Collection, MongoClient } from 'mongodb';
 import * as path from 'node:path';
 
 import * as dotenv from 'dotenv';
-dotenv.config({ path: path.join(import.meta.dirname, '..', '..', '.env') });
+dotenv.config({
+  path: path.join(import.meta.dirname, '..', '..', '.env')
+});
 
 type TagEntry = {
   addedby: string;

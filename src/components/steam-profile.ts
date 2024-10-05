@@ -42,7 +42,10 @@ class SteamProfile {
   }
 
   // Use this instead of constructor() to create new SteamProfile instances
-  static async create(_steamid: string, guildid: string = '-1') {
+  static async create(
+    _steamid: string,
+    guildid: string = '-1'
+  ): Promise<SteamProfile> {
     const steamid = await SteamProfile.resolveSteamId(_steamid);
     if (!steamid) {
       return null;

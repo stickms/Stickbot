@@ -1,9 +1,9 @@
 import {
   SlashCommandBuilder,
   InteractionContextType,
-  CommandInteraction,
   ChatInputCommandInteraction
 } from 'discord.js';
+
 import SteamProfile from '../components/steam-profile.js';
 
 export const data = new SlashCommandBuilder()

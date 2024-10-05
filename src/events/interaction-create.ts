@@ -60,5 +60,5 @@ async function handleFriends(interaction: MessageComponentInteraction) {
     })
     .map((e: DatabasePlayerEntry) => e._id);
 
-  console.log(cheaters);
+  console.log(await SteamAPI.getProfileSummaries(cheaters));
 }

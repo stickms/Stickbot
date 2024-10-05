@@ -91,25 +91,35 @@ class SteamAPI {
   }
 
   static async getProfileSummaries(
-    ...profiles: string[]
+    profiles: (string | string[])
   ): Promise<SteamProfileSummary | SteamProfileSummary[] | null> {
-    if (!profiles?.length) {
-      return null;
-    }
+    if (Array.isArray(profiles)) {
+      const promises = [];
 
-    const data = await this.#callSteamApi('GetPlayerSummaries/v2/', {
-      steamids: profiles.join(',')
-    });
+      for (let i = 0; i < profiles.length; i += 100) {
+        promises.push(this.#callSteamApi('GetPlayerSummaries/v2/', {
+          steamids: profiles.slice(i, i + 100).join(',')
+        }));
+      }
 
-    if (data.error) {
-      return null;
-    }
+      const results = await Promise.all(promises);
 
-    if (profiles.length == 1) {
+      if (results.some((d => d['error']))) {
+        return null;
+      }
+
+      return results.map((d => d['response']['players'])).flat() as SteamProfileSummary[];
+    } else {
+      const data = await this.#callSteamApi('GetPlayerSummaries/v2/', {
+        steamids: profiles
+      });
+  
+      if (data.error) {
+        return null;
+      }
+
       return data['response']?.players?.[0] as SteamProfileSummary;
     }
-
-    return data['response']?.players as SteamProfileSummary[];
   }
 
   static async getPlayerBans(
