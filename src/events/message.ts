@@ -1,8 +1,9 @@
+import { Message } from 'discord.js';
 import SteamProfile from '../components/steam-profile.js';
 
 export const name = 'messageCreate';
 
-export async function execute(message) {
+export async function execute(message: Message) {
   if (!message.guildId || message.author.bot) {
     return;
   }
@@ -35,7 +36,7 @@ export async function execute(message) {
     await message.suppressEmbeds();
     await message.reply({
       embeds: profile.embeds,
-      components: profile.components,
+      components: profile.components as [],
       allowedMentions: { parse: [] }
     });
   } catch (error) {

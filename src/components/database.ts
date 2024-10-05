@@ -24,7 +24,7 @@ class Database {
       .collection('servers');  
   }
 
-  static async lookup(...steamids) {
+  static async lookup(...steamids: any[]): Promise<any> {
     if (!steamids?.length) {
       return {};
     } else if (steamids.length > 1) {

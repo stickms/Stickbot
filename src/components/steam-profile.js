@@ -24,7 +24,7 @@ class SteamProfile {
   }
 
   // Use this instead of constructor() to create new SteamProfile instances
-  static async create(steamid, guildid = -1) {
+  static async create(steamid, guildid = '-1') {
     steamid = await SteamProfile.#resolveSteamId(steamid);
     if (!steamid) {
       return null;

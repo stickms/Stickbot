@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { Client, GatewayIntentBits, Collection, SlashCommandBuilder, Interaction } from 'discord.js';
+import { Client, GatewayIntentBits, Collection, SlashCommandBuilder, Interaction, Routes, REST } from 'discord.js';
 
 import './components/database.js';
 
@@ -58,4 +58,18 @@ client.on('interactionCreate', interaction => {
 	command.execute(interaction).catch(console.error);
 });
 
+// Register commands
+const rest: REST = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { 
+		body: commands.map((cmd: Command) => {
+			return cmd.data.toJSON();
+		})
+	})
+	.then((data) => {
+		console.log(`Registered ${data['length']} application commands.`);
+	})
+	.catch(console.error);
+
+// Login
 client.login(process.env.DISCORD_TOKEN);

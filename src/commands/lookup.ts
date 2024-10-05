@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, InteractionContextType } from 'discord.js';
+import { SlashCommandBuilder, InteractionContextType, CommandInteraction, ChatInputCommandInteraction } from 'discord.js';
 import SteamProfile from '../components/steam-profile.js';
 
 export const data = new SlashCommandBuilder()
@@ -11,7 +11,7 @@ export const data = new SlashCommandBuilder()
 		.setRequired(true)
 	);
     
-export async function execute(interaction) {
+export async function execute(interaction: ChatInputCommandInteraction) {
 	await interaction.deferReply();
 
 	const query = interaction.options.getString('profile');
@@ -25,7 +25,7 @@ export async function execute(interaction) {
 
 	await interaction.editReply({
 		embeds: profile.embeds,
-		components: profile.components,
+		components: profile.components as [],
 		allowedMentions: { parse: [] }
 	});
 }
