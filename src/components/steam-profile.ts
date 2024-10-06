@@ -142,10 +142,10 @@ class SteamProfile {
   // Returns a string of all of the "quick links" of this profile
   private getLinksList() {
     const links = {
-      SteamRep: 'https://steamrep.com/profiles/',
+      'SteamRep': 'https://steamrep.com/profiles/',
       'SteamID.uk': 'https://steamid.uk/profile/',
       'Backpack.tf': 'https://backpack.tf/profiles/',
-      SteamDB: 'https://steamdb.info/calculator/',
+      'SteamDB': 'https://steamdb.info/calculator/',
       'Open in Client': 'https://stickbot.net/openprofile/'
     };
 
