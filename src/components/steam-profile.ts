@@ -9,8 +9,7 @@ import {
   StringSelectMenuBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle,
-  AnyComponentBuilder
+  ButtonStyle
 } from 'discord.js';
 
 import SteamID from 'steamid';
@@ -53,8 +52,8 @@ class SteamProfile {
 
     const [dbdata, summary, bandata, friends] = await Promise.all([
       Database.lookupOne(steamid.getSteamID64()),
-      SteamAPI.getProfileSummaries(steamid.getSteamID64()),
-      SteamAPI.getPlayerBans(steamid.getSteamID64()),
+      SteamAPI.getProfileSummariesOne(steamid.getSteamID64()),
+      SteamAPI.getPlayerBansOne(steamid.getSteamID64()),
       SteamAPI.getFriendList(steamid.getSteamID64())
     ]);
 

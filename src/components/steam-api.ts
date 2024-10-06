@@ -69,7 +69,7 @@ class SteamAPI {
     if (this.tokennum >= this.tokenlist.length) this.tokennum = 0;
   }
 
-  static async #callSteamApi(
+  private static async callSteamApi(
     func: string,
     params: {}
   ): Promise<{ error?: string }> {
@@ -90,58 +90,78 @@ class SteamAPI {
     }
   }
 
-  static async getProfileSummaries(
-    profiles: (string | string[])
-  ): Promise<SteamProfileSummary | SteamProfileSummary[] | null> {
-    if (Array.isArray(profiles)) {
-      const promises = [];
-
-      for (let i = 0; i < profiles.length; i += 100) {
-        promises.push(this.#callSteamApi('GetPlayerSummaries/v2/', {
-          steamids: profiles.slice(i, i + 100).join(',')
-        }));
-      }
-
-      const results = await Promise.all(promises);
-
-      if (results.some((d => d['error']))) {
-        return null;
-      }
-
-      return results.map((d => d['response']['players'])).flat() as SteamProfileSummary[];
-    } else {
-      const data = await this.#callSteamApi('GetPlayerSummaries/v2/', {
-        steamids: profiles
-      });
-  
-      if (data.error) {
-        return null;
-      }
-
-      return data['response']?.players?.[0] as SteamProfileSummary;
-    }
-  }
-
-  static async getPlayerBans(
-    ...profiles: string[]
-  ): Promise<SteamPlayerBans | SteamPlayerBans[] | null> {
-    if (!profiles?.length) {
-      return null;
-    }
-
-    const data = await this.#callSteamApi('GetPlayerBans/v1/', {
-      steamids: profiles.join(',')
+  static async getProfileSummariesOne(
+    profile: string
+  ): Promise<SteamProfileSummary | null> {
+    const data = await this.callSteamApi('GetPlayerSummaries/v2/', {
+      steamids: profile
     });
 
     if (data.error) {
       return null;
     }
 
-    if (profiles.length == 1) {
-      return data['players'][0] as SteamPlayerBans;
+    return data['response']?.players?.[0] as SteamProfileSummary;
+  }
+
+  static async getProfileSummariesMany(
+    profiles: string[]
+  ): Promise<SteamProfileSummary[] | null> {
+    const promises = [];
+
+    for (let i = 0; i < profiles.length; i += 100) {
+      promises.push(
+        this.callSteamApi('GetPlayerSummaries/v2/', {
+          steamids: profiles.slice(i, i + 100).join(',')
+        })
+      );
     }
 
-    return data['players'] as SteamPlayerBans[];
+    const results = await Promise.all(promises);
+
+    if (results.some((d) => d['error'])) {
+      return null;
+    }
+
+    return results
+      .map((d) => d['response']['players'])
+      .flat() as SteamProfileSummary[];
+  }
+
+  static async getPlayerBansOne(
+    profile: string
+  ): Promise<SteamPlayerBans | null> {
+    const data = await this.callSteamApi('GetPlayerBans/v1/', {
+      steamids: profile
+    });
+
+    if (data.error) {
+      return null;
+    }
+
+    return data['players'][0] as SteamPlayerBans;
+  }
+
+  static async getPlayerBansMany(
+    profiles: string[]
+  ): Promise<SteamPlayerBans[] | null> {
+    const promises = [];
+
+    for (let i = 0; i < profiles.length; i += 100) {
+      promises.push(
+        this.callSteamApi('GetPlayerBans/v1/', {
+          steamids: profiles.slice(i, i + 100).join(',')
+        })
+      );
+    }
+
+    const results = await Promise.all(promises);
+
+    if (results.some((d) => d['error'])) {
+      return null;
+    }
+
+    return results.map((d) => d['players']).flat() as SteamPlayerBans[];
   }
 
   static async getFriendList(
@@ -151,7 +171,7 @@ class SteamAPI {
       return null;
     }
 
-    const data = await this.#callSteamApi('GetFriendList/v1/', {
+    const data = await this.callSteamApi('GetFriendList/v1/', {
       steamid: steamid
     });
 
@@ -169,7 +189,7 @@ class SteamAPI {
       return null;
     }
 
-    const data = await this.#callSteamApi('ResolveVanityURL/v1/', {
+    const data = await this.callSteamApi('ResolveVanityURL/v1/', {
       vanityurl: vanity
     });
 

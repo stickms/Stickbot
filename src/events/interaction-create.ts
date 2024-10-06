@@ -1,5 +1,12 @@
-import { BaseInteraction, MessageComponentInteraction } from 'discord.js';
-import SteamAPI, { SteamFriendList } from '../components/steam-api';
+import {
+  BaseInteraction,
+  EmbedBuilder,
+  MessageComponentInteraction
+} from 'discord.js';
+import SteamAPI, {
+  SteamFriendList,
+  SteamProfileSummary
+} from '../components/steam-api';
 import Database, { DatabasePlayerEntry } from '../components/database';
 
 export const name = 'interactionCreate';
@@ -54,11 +61,45 @@ async function handleFriends(interaction: MessageComponentInteraction) {
   }
 
   const guildid = interaction.guildId;
-  const cheaters = documents
+  const profiles = documents
     .filter((e: DatabasePlayerEntry) => {
       return e.tags[guildid]?.cheater ?? false;
     })
     .map((e: DatabasePlayerEntry) => e._id);
 
-  console.log(await SteamAPI.getProfileSummaries(cheaters));
+  profiles.unshift(steamid);
+
+  const summaries = await SteamAPI.getProfileSummariesMany(profiles);
+  if (!summaries) {
+    await interaction.editReply({
+      content: '❌ Error grabbing friends.'
+    });
+
+    return;
+  }
+
+  const current = summaries.find(
+    (p: SteamProfileSummary) => p.steamid == steamid
+  );
+  const profile_url = 'https://steamcommunity.com/profiles/';
+
+  let embed = new EmbedBuilder()
+    .setColor(0x3297a8)
+    .setAuthor({
+      name: current.personaname,
+      iconURL: 'https://i.imgur.com/uO7rwHu.png',
+      url: profile_url + steamid
+    })
+    .setThumbnail(current.avatarfull)
+    .addFields({
+      name: `${current.personaname}\'s Cheater Friends`,
+      value: summaries
+        .filter((p: SteamProfileSummary) => p.steamid != steamid)
+        .map((p: SteamProfileSummary) => {
+          return `[${p.personaname}](${profile_url}${p.steamid}/)`;
+        })
+        .join('\n')
+    });
+
+  await interaction.editReply({ content: null, embeds: [embed] });
 }
