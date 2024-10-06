@@ -48,7 +48,7 @@ async function handleFriends(interaction: MessageComponentInteraction) {
     return;
   }
 
-  const documents = await Database.lookupMany(
+  const documents = await Database.lookup(
     friends.map((f: SteamFriendList) => f.steamid)
   );
 
@@ -69,7 +69,10 @@ async function handleFriends(interaction: MessageComponentInteraction) {
 
   profiles.unshift(steamid);
 
-  const summaries = await SteamAPI.getProfileSummariesMany(profiles);
+  const summaries = (await SteamAPI.getProfileSummaries(
+    profiles
+  )) as SteamProfileSummary[];
+  
   if (!summaries) {
     await interaction.editReply({
       content: '❌ Error grabbing friends.'
@@ -81,6 +84,7 @@ async function handleFriends(interaction: MessageComponentInteraction) {
   const current = summaries.find(
     (p: SteamProfileSummary) => p.steamid == steamid
   );
+
   const profile_url = 'https://steamcommunity.com/profiles/';
 
   let embed = new EmbedBuilder()

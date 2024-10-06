@@ -71,25 +71,26 @@ class Database {
     Database.servers = Database.client.db('stickbot').collection('servers');
   }
 
-  static async lookupMany(
-    steamids: string[]
-  ): Promise<DatabasePlayerEntry[] | null> {
-    if (!steamids.length) {
-      return null;
+  static async lookup<
+    T extends (string | string[]),
+    R = T extends string ? DatabasePlayerEntry : DatabasePlayerEntry[]
+  >(steamids: T): Promise<R | null> {
+    if (Array.isArray(steamids)) {
+      if (!steamids.length) {
+        return null;
+      }
+
+      return (await Database.players
+        .find({
+          _id: { $in: steamids }
+        })
+        .toArray()) as R;
     }
 
-    return (await Database.players
-      .find({
-        _id: { $in: steamids }
-      })
-      .toArray()) as DatabasePlayerEntry[];
-  }
-
-  static async lookupOne(steamid: string): Promise<DatabasePlayerEntry | null> {
     return (
       ((await Database.players.findOne({
-        _id: steamid
-      })) as DatabasePlayerEntry) ?? null
+        _id: steamids
+      })) as R) ?? null
     );
   }
 }
