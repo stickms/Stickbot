@@ -165,7 +165,7 @@ class SteamProfile {
     const tags = this.dbdata.tags[this.guildid] ?? {};
 
     // Slice last element as banwatch is added after
-    for (const tag of this.#profiletags.slice(-1)) {
+    for (const tag of this.#profiletags.filter((e) => e.value != 'banwatch')) {
       if (tags[tag.value]) {
         alertlist.push(`⚠️ ${tag.name}`);
       }
