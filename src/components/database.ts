@@ -72,7 +72,7 @@ class Database {
   }
 
   static async lookup<
-    T extends (string | string[]),
+    T extends string | string[],
     R = T extends string ? DatabasePlayerEntry : DatabasePlayerEntry[]
   >(steamids: T): Promise<R | null> {
     if (Array.isArray(steamids)) {

@@ -94,7 +94,7 @@ class SteamAPI {
     T extends string | string[],
     R = T extends string ? SteamProfileSummary : SteamProfileSummary[]
   >(profiles: string | string[]): Promise<R | null> {
-    const lookups = Array.isArray(profiles) ? profiles : [ profiles ];
+    const lookups = Array.isArray(profiles) ? profiles : [profiles];
     const promises = [];
 
     for (let i = 0; i < profiles.length; i += 100) {
@@ -112,14 +112,14 @@ class SteamAPI {
     }
 
     const flattened = results.map((d) => d['response']['players']).flat();
-    return Array.isArray(profiles) ? flattened[0] : flattened;
+    return Array.isArray(profiles) ? flattened : flattened[0];
   }
 
   static async getPlayerBans<
     T extends string | string[],
     R = T extends string ? SteamPlayerBans : SteamPlayerBans[]
   >(profiles: string | string[]): Promise<R | null> {
-    const lookups = Array.isArray(profiles) ? profiles : [ profiles ];
+    const lookups = Array.isArray(profiles) ? profiles : [profiles];
     const promises = [];
 
     for (let i = 0; i < profiles.length; i += 100) {
@@ -136,8 +136,8 @@ class SteamAPI {
       return null;
     }
 
-    const flattened = results.map((d) => d['response']['players']).flat();
-    return Array.isArray(profiles) ? flattened[0] : flattened;
+    const flattened = results.map((d) => d['players']).flat();
+    return Array.isArray(profiles) ? flattened : flattened[0];
   }
 
   static async getFriendList(

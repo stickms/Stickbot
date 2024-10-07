@@ -3,10 +3,12 @@ import {
   EmbedBuilder,
   MessageComponentInteraction
 } from 'discord.js';
+
 import SteamAPI, {
   SteamFriendList,
   SteamProfileSummary
 } from '../components/steam-api';
+
 import Database, { DatabasePlayerEntry } from '../components/database';
 
 export const name = 'interactionCreate';
@@ -72,7 +74,7 @@ async function handleFriends(interaction: MessageComponentInteraction) {
   const summaries = (await SteamAPI.getProfileSummaries(
     profiles
   )) as SteamProfileSummary[];
-  
+
   if (!summaries) {
     await interaction.editReply({
       content: '❌ Error grabbing friends.'
