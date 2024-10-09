@@ -51,7 +51,7 @@ class SteamProfile {
     }
 
     const [dbdata, summary, bandata, friends] = await Promise.all([
-      Database.lookup(steamid.getSteamID64()),
+      Database.playerLookup(steamid.getSteamID64()),
       SteamAPI.getProfileSummaries(steamid.getSteamID64()),
       SteamAPI.getPlayerBans(steamid.getSteamID64()),
       SteamAPI.getFriendList(steamid.getSteamID64())
@@ -64,7 +64,7 @@ class SteamProfile {
     let friendcount = 0;
 
     if (friends) {
-      const tables = await Database.lookup(
+      const tables = await Database.playerLookup(
         friends.map((f: SteamFriendList) => {
           return f.steamid;
         })

@@ -62,6 +62,7 @@ class Database {
   private static servers: Collection<DatabaseServerEntry>;
 
   constructor() {
+    // Only setup DB connection once
     if (Database.client) {
       return;
     }
@@ -71,27 +72,89 @@ class Database {
     Database.servers = Database.client.db('stickbot').collection('servers');
   }
 
-  static async lookup<
+  static async playerLookup<
     T extends string | string[],
     R = T extends string ? DatabasePlayerEntry : DatabasePlayerEntry[]
   >(steamids: T): Promise<R | null> {
-    if (Array.isArray(steamids)) {
-      if (!steamids.length) {
-        return null;
+    try {
+      if (Array.isArray(steamids)) {
+        if (!steamids.length) {
+          return null;
+        }
+
+        return (await Database.players
+          .find({
+            _id: { $in: steamids }
+          })
+          .toArray()) as R;
       }
 
-      return (await Database.players
-        .find({
-          _id: { $in: steamids }
-        })
-        .toArray()) as R;
+      return (
+        ((await Database.players.findOne({
+          _id: steamids
+        })) as R) ?? null
+      );
+    } catch (error) {
+      return null;
     }
+  }
 
-    return (
-      ((await Database.players.findOne({
-        _id: steamids
-      })) as R) ?? null
-    );
+  static async serverLookup(guildid: string): Promise<DatabaseServerEntry> {
+    try {
+      return (
+        ((await Database.servers.findOne({
+          _id: guildid
+        })) as DatabaseServerEntry) ?? null
+      );
+    } catch (error) {
+      return null;
+    }
+  }
+
+  static async playerEdit(
+    steamid: string,
+    data: { string: any }
+  ): Promise<boolean> {
+    try {
+      const result = await Database.players.updateOne(
+        {
+          _id: steamid
+        },
+        {
+          $set: data
+        },
+        {
+          upsert: true
+        }
+      );
+
+      return result.acknowledged;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  static async serverEdit(
+    guildid: string,
+    data: { [key: string]: any }
+  ): Promise<boolean> {
+    try {
+      const result = await Database.servers.updateOne(
+        {
+          _id: guildid
+        },
+        {
+          $set: data
+        },
+        {
+          upsert: true
+        }
+      );
+
+      return result.acknowledged;
+    } catch (error) {
+      return false;
+    }
   }
 }
 
