@@ -10,6 +10,7 @@ import SteamAPI, {
 } from '../components/steam-api';
 
 import Database, { DatabasePlayerEntry } from '../components/database';
+import SourceBans from '../components/sourcebans';
 
 export const name = 'interactionCreate';
 
@@ -33,7 +34,12 @@ export async function execute(interaction: BaseInteraction) {
 }
 
 async function handleMoreInfo(interaction: MessageComponentInteraction) {
-  console.log(interaction);
+  await interaction.deferReply();
+
+  const steamid = interaction.customId.split(':')[1];
+  const sourcebans = await SourceBans.get(steamid);
+
+  console.log(sourcebans);
 }
 
 async function handleFriends(interaction: MessageComponentInteraction) {

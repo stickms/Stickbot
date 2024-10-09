@@ -18,7 +18,7 @@ class SteamProfile {
   private steamid: SteamID;
   private guildid: string;
 
-  private dbdata: DatabasePlayerEntry;
+  private dbdata: DatabasePlayerEntry | null;
   private summary: SteamProfileSummary;
   private bandata: SteamPlayerBans;
 
@@ -27,7 +27,7 @@ class SteamProfile {
   constructor(
     steamid: SteamID,
     guildid: string,
-    dbdata: DatabasePlayerEntry,
+    dbdata: DatabasePlayerEntry | null,
     summary: SteamProfileSummary,
     bandata: SteamPlayerBans,
     friends: number
@@ -57,7 +57,7 @@ class SteamProfile {
       SteamAPI.getFriendList(steamid.getSteamID64())
     ]);
 
-    if (!dbdata || !summary || !bandata) {
+    if (!summary || !bandata) {
       return null;
     }
 
@@ -70,15 +70,17 @@ class SteamProfile {
         })
       );
 
-      tables.forEach((e: DatabasePlayerEntry) => {
+      tables && tables.forEach((e: DatabasePlayerEntry) => {
         e.tags[guildid]?.cheater && friendcount++;
       });
     }
 
+    console.log(summary);
+
     return new SteamProfile(
       steamid,
       guildid,
-      dbdata as DatabasePlayerEntry,
+      dbdata,
       summary as SteamProfileSummary,
       bandata as SteamPlayerBans,
       friendcount
@@ -162,7 +164,7 @@ class SteamProfile {
     const alertlist: string[] = [...this.getBanList()];
 
     // First, add bot tags
-    const tags = this.dbdata.tags[this.guildid] ?? {};
+    const tags = this.dbdata?.tags[this.guildid] ?? {};
 
     // Slice last element as banwatch is added after
     for (const tag of this.#profiletags.filter((e) => e.value != 'banwatch')) {
@@ -261,7 +263,7 @@ class SteamProfile {
     | ActionRowBuilder<StringSelectMenuBuilder>
     | ActionRowBuilder<ButtonBuilder>
   )[] {
-    const tagdata = this.dbdata.tags[this.guildid] ?? {};
+    const tagdata = this.dbdata?.tags[this.guildid] ?? {};
 
     const selectmenu = new StringSelectMenuBuilder()
       .setCustomId(`modifytags:${this.steamid}`)
