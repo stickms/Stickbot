@@ -99,7 +99,9 @@ class Database {
     }
   }
 
-  static async serverLookup(guildid: string): Promise<DatabaseServerEntry> {
+  static async serverLookup(
+    guildid: string
+  ): Promise<DatabaseServerEntry | null> {
     try {
       return (
         ((await Database.servers.findOne({
