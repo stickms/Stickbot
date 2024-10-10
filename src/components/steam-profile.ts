@@ -70,12 +70,11 @@ class SteamProfile {
         })
       );
 
-      tables && tables.forEach((e: DatabasePlayerEntry) => {
-        e.tags[guildid]?.cheater && friendcount++;
-      });
+      tables &&
+        tables.forEach((e: DatabasePlayerEntry) => {
+          e.tags[guildid]?.cheater && friendcount++;
+        });
     }
-
-    console.log(summary);
 
     return new SteamProfile(
       steamid,
@@ -304,6 +303,66 @@ class SteamProfile {
     }
 
     return [dropdown, buttons];
+  }
+
+  static async moreinfo(
+    steamid: string,
+    guildid: string
+  ): Promise<{ name: string; value: string }[]> {
+    const dbdata = await Database.playerLookup(steamid);
+    if (!dbdata) {
+      return [];
+    }
+
+    const fields: { name: string; value: string }[] = [];
+
+    const tagdata = dbdata.tags?.[guildid] ?? {};
+    const taglist = Object.entries(tagdata).map(([k, v]) => {
+      return `\`${k}\` - <@${v.addedby}> on <t:${v.date}:D>`;
+    });
+
+    const namedata = dbdata.names ?? [];
+    const namelist = Object.entries(namedata)
+      .map(([k, v]) => [k, v])
+      .sort(function (a, b) {
+        return b[1] - a[1];
+      })
+      .map(([k, v]) => {
+        return `\`${JSON.parse(k)}\` - <t:${v}:D>`;
+      });
+
+    const addrdata = dbdata.addresses ?? [];
+    const addrlist = Object.entries(addrdata)
+      .map(([k, v]) => [k, v])
+      .sort(function (a, b) {
+        return b[1].date - a[1].date;
+      })
+      .map(([k, v]) => {
+        return `\`${k}\` - *${v.game}* on <t:${v.date}:D>`;
+      });
+
+    if (taglist?.length) {
+      fields.push({
+        name: 'Added Tags',
+        value: taglist.join('\n')
+      });
+    }
+
+    if (namelist?.length) {
+      fields.push({
+        name: 'Name History',
+        value: namelist.join('\n')
+      });
+    }
+
+    if (addrlist?.length) {
+      fields.push({
+        name: 'Logged Servers',
+        value: addrlist.join('\n')
+      });
+    }
+
+    return fields;
   }
 }
 

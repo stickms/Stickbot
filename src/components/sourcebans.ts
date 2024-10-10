@@ -2,7 +2,7 @@ import { parse as HTMLParse } from 'node-html-parser';
 import axios, { AxiosResponse } from 'axios';
 import SteamID from 'steamid';
 
-class SourceBans {
+class Sourcebans {
   private static SOURCEBAN_EXT = 'index.php?p=banlist&advType=steam&advSearch=';
 
   private static SOURCEBAN_URLS = [
@@ -126,4 +126,4 @@ class SourceBans {
   }
 }
 
-export default SourceBans;
+export default Sourcebans;

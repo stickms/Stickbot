@@ -10,7 +10,8 @@ import SteamAPI, {
 } from '../components/steam-api';
 
 import Database, { DatabasePlayerEntry } from '../components/database';
-import SourceBans from '../components/sourcebans';
+import Sourcebans from '../components/sourcebans';
+import SteamProfile from '../components/steam-profile';
 
 export const name = 'interactionCreate';
 
@@ -34,12 +35,48 @@ export async function execute(interaction: BaseInteraction) {
 }
 
 async function handleMoreInfo(interaction: MessageComponentInteraction) {
-  await interaction.deferReply();
+  const old_content = interaction.message.content;
+
+  if (old_content.startsWith('Fetching')) {
+    await interaction.reply({
+      content: '❌ Error: Already fetching more info.',
+      ephemeral: true
+    });
+
+    return;
+  }
+
+  await interaction.update({
+    content: 'Fetching additional profile info...'
+  });
 
   const steamid = interaction.customId.split(':')[1];
-  const sourcebans = await SourceBans.get(steamid);
+  const sourcebans = (await Sourcebans.get(steamid))
+    .map((x) => {
+      return `[${x.url.split('/')[2]} - ${x.reason}](${x.url})`;
+    })
+    .join('\n');
 
-  console.log(sourcebans);
+  const original = interaction.message.embeds[0];
+  const moreinfo = await SteamProfile.moreinfo(steamid, interaction.guildId);
+
+  moreinfo.push({
+    name: 'Sourcebans',
+    value: sourcebans.length ? sourcebans : '✅ None'
+  });
+
+  const embed = new EmbedBuilder(original)
+    .setFields(
+      original.fields.filter(
+        (x) => !moreinfo.map((f) => f.name).includes(x.name)
+      )
+    )
+    .addFields(moreinfo);
+
+  await interaction.editReply({
+    content: old_content,
+    embeds: [embed]
+  });
 }
 
 async function handleFriends(interaction: MessageComponentInteraction) {

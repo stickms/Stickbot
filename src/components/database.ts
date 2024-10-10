@@ -18,7 +18,7 @@ export interface DatabasePlayerEntry {
       game: string;
       date: number;
     };
-  }[];
+  };
   bandata: {
     vacbans: number;
     gamebans: number;
@@ -27,7 +27,7 @@ export interface DatabasePlayerEntry {
   };
   names: {
     [name: string]: number;
-  }[];
+  };
   notifications: {
     [guildid: string]: {
       ban: string[];
