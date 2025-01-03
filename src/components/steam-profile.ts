@@ -51,7 +51,7 @@ class SteamProfile {
     }
 
     const [dbdata, summary, bandata, friends] = await Promise.all([
-      Database.playerLookup(steamid.getSteamID64()),
+      Database.lookupPlayer(steamid.getSteamID64()),
       SteamAPI.getProfileSummaries(steamid.getSteamID64()),
       SteamAPI.getPlayerBans(steamid.getSteamID64()),
       SteamAPI.getFriendList(steamid.getSteamID64())
@@ -64,7 +64,7 @@ class SteamProfile {
     let friendcount = 0;
 
     if (friends) {
-      const tables = await Database.playerLookup(
+      const tables = await Database.lookupPlayers(
         friends.map((f: SteamFriendList) => {
           return f.steamid;
         })
@@ -309,7 +309,7 @@ class SteamProfile {
     steamid: string,
     guildid: string
   ): Promise<{ name: string; value: string }[]> {
-    const dbdata = await Database.playerLookup(steamid);
+    const dbdata = await Database.lookupPlayer(steamid);
     if (!dbdata) {
       return [];
     }

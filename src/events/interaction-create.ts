@@ -93,7 +93,7 @@ async function handleFriends(interaction: MessageComponentInteraction) {
     return;
   }
 
-  const documents = await Database.playerLookup(
+  const documents = await Database.lookupPlayers(
     friends.map((f: SteamFriendList) => f.steamid)
   );
 

@@ -5,7 +5,7 @@ import { formatWelcomeMessage } from '../components/util.js';
 export const name = 'guildMemberRemove';
 
 export async function execute(member: GuildMember) {
-  const entry: DatabaseServerEntry = await Database.serverLookup(
+  const entry: DatabaseServerEntry = await Database.lookupServer(
     member.guild.id
   );
 

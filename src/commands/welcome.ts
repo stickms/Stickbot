@@ -60,11 +60,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    await Database.serverEdit(interaction.guildId, {
-      'welcome': {
-        'channel': channel
-      }
-    });
+    await Database.setWelcomeChannel(interaction.guildId, channel.id);
 
     await interaction.reply(
       `\u2139\uFE0F Welcome messages will now be posted in <#${channel.id}>`
@@ -78,11 +74,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    await Database.serverEdit(interaction.guildId, {
-      'welcome': {
-        'join': message
-      }
-    });
+    await Database.setWelcomeJoin(interaction.guildId, message);
 
     await interaction.reply('✅ Set user welcome message successfully.');
   } else if (sub == 'leave') {
@@ -94,11 +86,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    await Database.serverEdit(interaction.guildId, {
-      'welcome': {
-        'leave': message
-      }
-    });
+    await Database.setWelcomeLeave(interaction.guildId, message);
 
     await interaction.reply('✅ Set user goodbye message successfully.');
   } else if (sub == 'format') {

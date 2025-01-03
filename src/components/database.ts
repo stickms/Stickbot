@@ -72,91 +72,119 @@ class Database {
     Database.servers = Database.client.db('stickbot').collection('servers');
   }
 
-  static async playerLookup<
-    T extends string | string[],
-    R = T extends string ? DatabasePlayerEntry : DatabasePlayerEntry[]
-  >(steamids: T): Promise<R | null> {
-    try {
-      if (Array.isArray(steamids)) {
-        if (!steamids.length) {
-          return null;
-        }
+  // Player-related database functions
 
-        return (await Database.players
-          .find({
-            _id: { $in: steamids }
-          })
-          .toArray()) as R;
-      }
+  static async lookupPlayer(steamid: string) {
+    const profile = await Database.players.findOne({
+      _id: steamid
+    });
 
-      return (
-        ((await Database.players.findOne({
-          _id: steamids
-        })) as R) ?? null
-      );
-    } catch (error) {
+    return profile;
+  }
+
+  static async lookupPlayers(steamids: string[]) {
+    if (!steamids.length) {
       return null;
     }
+
+    const profiles = await Database.players.find({
+      _id: { $in: steamids }
+    }).toArray();
+
+    return profiles;
   }
 
-  static async serverLookup(
-    guildid: string
-  ): Promise<DatabaseServerEntry | null> {
-    try {
-      return (
-        ((await Database.servers.findOne({
-          _id: guildid
-        })) as DatabaseServerEntry) ?? null
-      );
-    } catch (error) {
-      return null;
-    }
-  }
-
-  static async playerEdit(
-    steamid: string,
-    data: { string: any }
-  ): Promise<boolean> {
-    try {
-      const result = await Database.players.updateOne(
-        {
-          _id: steamid
-        },
-        {
-          $set: data
-        },
-        {
-          upsert: true
+  static async addTag(steamid: string, guildid: string, userid: string, tag: string) {
+    const resp = await Database.players.updateOne(
+      { _id: steamid }, 
+      {
+        $set: {
+          [`tags.${guildid}.${tag}`]: {
+            addedby: userid,
+            date: Math.floor(Date.now() / 1000)
+          }
         }
-      );
+      },
+      { upsert: true }
+    );
 
-      return result.acknowledged;
-    } catch (error) {
-      return false;
-    }
+    return resp.acknowledged;
   }
 
-  static async serverEdit(
-    guildid: string,
-    data: { [key: string]: any }
-  ): Promise<boolean> {
-    try {
-      const result = await Database.servers.updateOne(
-        {
-          _id: guildid
-        },
-        {
-          $set: data
-        },
-        {
-          upsert: true
+  static async removeTag(steamid: string, guildid: string, tag: string) {
+    const resp = await Database.players.updateOne(
+      { _id: steamid }, 
+      {
+        $unset: {
+          [`tags.${guildid}.${tag}`]: 1
         }
-      );
+      },
+      { upsert: true }
+    );
 
-      return result.acknowledged;
-    } catch (error) {
-      return false;
-    }
+    return resp.acknowledged;
+  }
+
+  // Server-related database functions
+
+  static async lookupServer(guildid: string) {
+    const server = await Database.servers.findOne({
+      _id: guildid
+    });
+
+    return server;
+  }
+
+  static async setWelcomeChannel(guildid: string, channelid: string) {
+    const resp = await Database.servers.updateOne(
+      { _id: guildid },
+      { $set: {
+          'welcome.channel': channelid
+        }
+      },
+      { upsert: true }
+    );
+
+    return resp.acknowledged;
+  }
+
+  static async setWelcomeJoin(guildid: string, message: string) {
+    const resp = await Database.servers.updateOne(
+      { _id: guildid },
+      { $set: {
+          'welcome.join': message
+        }
+      },
+      { upsert: true }
+    );
+
+    return resp.acknowledged;
+  }
+
+  static async setWelcomeLeave(guildid: string, message: string) {
+    const resp = await Database.servers.updateOne(
+      { _id: guildid },
+      { $set: {
+          'welcome.leave': message
+        }
+      },
+      { upsert: true }
+    );
+
+    return resp.acknowledged;
+  }
+
+  static async setBanwatch(guildid: string, channelid: string) {
+    const resp = await Database.servers.updateOne(
+      { _id: guildid },
+      { $set: {
+          'banwatch': channelid
+        }
+      },
+      { upsert: true }
+    );
+
+    return resp.acknowledged;
   }
 }
 

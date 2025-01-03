@@ -30,9 +30,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  const result = await Database.serverEdit(interaction.guildId, {
-    banwatch: channel.id
-  });
+  const result = await Database.setBanwatch(interaction.guildId, channel.id);
 
   if (!result) {
     await interaction.reply({

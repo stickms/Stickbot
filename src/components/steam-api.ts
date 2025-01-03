@@ -59,7 +59,7 @@ class SteamAPI {
   private static token: string = '';
   private static tokennum: number = 0;
 
-  static #updateApiKey() {
+  private static updateApiKey() {
     if (!this.tokenlist?.length) {
       this.tokenlist = process.env.STEAM_TOKENS.split(',');
     }
@@ -73,7 +73,7 @@ class SteamAPI {
     func: string,
     params: {}
   ): Promise<{ error?: string }> {
-    this.#updateApiKey();
+    this.updateApiKey();
 
     try {
       const resp = await axios.get(this.endpoint + func, {
