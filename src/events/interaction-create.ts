@@ -1,7 +1,9 @@
 import {
+  APIEmbed,
   BaseInteraction,
   EmbedBuilder,
-  MessageComponentInteraction
+  MessageComponentInteraction,
+  StringSelectMenuInteraction
 } from 'discord.js';
 
 import SteamAPI, {
@@ -29,6 +31,8 @@ export async function execute(interaction: BaseInteraction) {
       return handleMoreInfo(interaction);
     case 'friends':
       return handleFriends(interaction);
+    case 'modifytags':
+      return handleModifyTags(interaction as StringSelectMenuInteraction);
     default:
       break;
   }
@@ -151,4 +155,32 @@ async function handleFriends(interaction: MessageComponentInteraction) {
     });
 
   await interaction.editReply({ content: null, embeds: [embed] });
+}
+
+async function handleModifyTags(interaction: StringSelectMenuInteraction) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const steamid = interaction.customId.split(':')[1];
+
+  for (const value of interaction.values) {
+    const operator = value.split(':')[0];
+    const tag = value.split(':')[1];
+
+    if (operator === 'add') {
+      await Database.addTag(steamid, interaction.guildId, interaction.user.id, tag);
+    } else if (operator === 'remove') {
+      await Database.removeTag(steamid, interaction.guildId, tag);
+    }
+  }
+
+  const profile = await SteamProfile.create(steamid, interaction.guildId);
+
+	await interaction.message.edit({
+		embeds: profile.embeds,
+		components: profile.components
+	});
+
+	await interaction.editReply({
+		content: `✅ Modified tags for **${steamid}**`
+	});
 }

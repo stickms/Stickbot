@@ -166,7 +166,7 @@ class SteamProfile {
     const tags = this.dbdata?.tags[this.guildid] ?? {};
 
     // Slice last element as banwatch is added after
-    for (const tag of this.#profiletags.filter((e) => e.value != 'banwatch')) {
+    for (const tag of this.profiletags.filter((t) => t.value != 'banwatch')) {
       if (tags[tag.value]) {
         alertlist.push(`⚠️ ${tag.name}`);
       }
@@ -208,7 +208,7 @@ class SteamProfile {
     });
   }
 
-  get #profiletags(): { name: string; value: string }[] {
+  private get profiletags(): { name: string; value: string }[] {
     return [
       { name: 'Cheater', value: 'cheater' },
       { name: 'Suspicious', value: 'suspicious' },
@@ -254,7 +254,7 @@ class SteamProfile {
 
   // Return an array of embeds (for cleaner messages)
   get embeds(): EmbedBuilder[] {
-    return [this.embed];
+    return [ this.embed ];
   }
 
   // Get message components (drop down, etc.)
@@ -267,9 +267,9 @@ class SteamProfile {
     const selectmenu = new StringSelectMenuBuilder()
       .setCustomId(`modifytags:${this.steamid}`)
       .setPlaceholder('Modify User Tags')
-      .setMaxValues(this.#profiletags.length);
+      .setMaxValues(this.profiletags.length);
 
-    for (const tag of this.#profiletags) {
+    for (const tag of this.profiletags) {
       const label = tagdata[tag.value] ? 'Remove ' : 'Add ';
       const value = tagdata[tag.value] ? 'remove:' : 'add:';
 
