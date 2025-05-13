@@ -1,4 +1,3 @@
-import play from 'play-dl';
 import { createAudioResource, createAudioPlayer, getVoiceConnection, 
         NoSubscriberBehavior, AudioPlayerStatus, } from '@discordjs/voice';
 
@@ -29,7 +28,7 @@ class GuildTracker {
       this.queue.shift();
 
       if (this.queue.length) {
-        this.playAudio(this.queue[0]); 
+        this.playAudio(this.queue[0].stream_url); 
       } else {
         this.loop = 'off';
       }
@@ -40,15 +39,9 @@ class GuildTracker {
     const connection = getVoiceConnection(this.id);
     if (!connection) return;
 
-    play.stream(url).then((stream) => {
-      const resource = createAudioResource(stream.stream, { inputType: stream.type });
-      this.audioplayer.play(resource);
-      connection.subscribe(this.audioplayer);
-    }).catch(_ => {
-      const resource = createAudioResource(url);
-      this.audioplayer.play(resource);
-      connection.subscribe(this.audioplayer);
-    });
+    const resource = createAudioResource(url);
+    this.audioplayer.play(resource);
+    connection.subscribe(this.audioplayer);
   }
 
   resetAll() {
@@ -65,7 +58,7 @@ class GuildTracker {
     this.queue.shift();
     
     if (this.queue.length) {
-      this.playAudio(this.queue[0]);
+      this.playAudio(this.queue[0].stream_url);
     } else {
       this.audioplayer.stop();
       this.loop = 'off';
@@ -82,15 +75,15 @@ class GuildTracker {
     this.loop = mode;
   }
 
-  addQueue(url, chan = null) {
+  addQueue(url, stream_url, chan = null) {
     if (chan) this.textchan = chan;
-    if (this.queue.push(url) == 1) {
-      this.playAudio(this.queue[0]);
+    if (this.queue.push({ url, stream_url }) == 1) {
+      this.playAudio(this.queue[0].stream_url);
     }
   }
 
   getQueue() {
-    return this.queue;
+    return this.queue.map((item) => item.url);
   }
 
   getTextChannel() {

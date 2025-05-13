@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { setTags, getTags, getDocument } from '../components/database.js';
+import { setTags, getDocument } from '../components/database.js';
 import { httpsGet } from '../components/bot-helpers.js';
 import { PROFILE_TAGS } from '../components/bot-consts.js';
 

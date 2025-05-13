@@ -4,23 +4,8 @@ import { httpsHead } from '../components/bot-helpers.js';
 import { EMBED_COLOR, MUSIC_ICON } from '../components/bot-consts.js';
 import { joinVoiceChannel, getVoiceConnection, 
 				entersState, VoiceConnectionStatus } from '@discordjs/voice';
-
-import play from 'play-dl';
 import jsmediatags from 'jsmediatags';
-
-play.getFreeClientID().then(clientid => {
-	play.setToken({
-		spotify : {
-			client_id: process.env.SPOTIFY_TOKEN,
-			client_secret: process.env.SPOTIFY_SECRET,
-			refresh_token: process.env.SPOTIFY_REFRESH,
-			market: 'US'
-		},	
-		soundcloud: {
-			client_id: clientid
-		}
-	})
-});
+import axios from 'axios';
 
 jsmediatags.Config.setDisallowedXhrHeaders(['Range']);
 
@@ -35,10 +20,7 @@ export const data = new SlashCommandBuilder()
 			.setName('query')
 			.setDescription('Search from YouTube, Spotify, SoundCloud, or direct file link!')
 			.setRequired(true)
-		).addBooleanOption(option => option
-			.setName('shuffle')
-			.setDescription('Shuffles the imported playlist/album')
-		),
+		)
 	).addSubcommand(command => command
 		.setName('join')
 		.setDescription('Have the bot join your current voice channel!'),
@@ -153,18 +135,11 @@ async function commandPlay(interaction) {
 	const query = interaction.options.getString('query');
 	let data = await resolveQuery(query);
 
-	if (!data.url) {
+	if (!data?.stream_url) {
 		return await interaction.editReply('❌ Error: Could not find or load that track.');
 	}
 
-	if (interaction.options.getBoolean('shuffle')) {
-		// Technically not a truly random sort
-		data.tracks.sort(() => Math.random() - 0.5);
-	}
-
-	for (const track of data.tracks) {
-		audiobot.get(interaction.guildId).addQueue(track, interaction.channelId);
-	}
+	audiobot.get(interaction.guildId).addQueue(data.url, data.stream_url, interaction.channelId);
 
 	try {
 		const info = await trackData(data.url);
@@ -176,18 +151,10 @@ async function commandPlay(interaction) {
 			.setColor(EMBED_COLOR)
 			.setThumbnail(info.thumbnail)
 			.setAuthor({ 
-				name: `Queued ${data.spotify ?? info.fields[0].name}`, 
+				name: `Queued ${info.fields[0].name}`, 
 				iconURL: MUSIC_ICON 
-			});
-
-		if (data.spotify) {
-			embed.addFields({
-				name: data.spotify,
-				value: `Added \`${data.tracks.length}\` tracks to queue from Spotify`,
-			});
-		} else {
-			embed.addFields(info.fields);
-		}
+			})
+			.addFields(info.fields);
 		
 		await interaction.editReply({ embeds: [ embed ], files: info.files });
 	} catch (error) {
@@ -376,113 +343,20 @@ async function commandQueue(interaction) {
 // Anything unknown is assumed to be a YouTube search
 // Returns an array of URLs
 // Can be length one if a single video or track is requested
-// * Spotify streaming not a thing, so it will search for Spotify tracks on YT
 async function resolveQuery(query) {
-	let valid = play.sp_validate(query);
-	if (valid && valid != 'search') {
-		const spot = await play.spotify(query);
-		if (spot.type == 'track') {
-			const search = await play.search(`${spot.artists[0].name} ${spot.name}`, { limit: 1 });
-			return {
-				url: search[0]?.url,
-				tracks: search[0]?.url ? [ search[0]?.url ] : {}
-			};
-		} else { // 'album' or 'playlist'
-			let promises = [];
-			let data = [];
-			for (const track of await spot.all_tracks()) {
-				promises.push(play.search(`${track.artists[0].name} ${track.name}`, { limit: 1 }).catch(() => null));
-			}
+	const resp = await axios.post('https://downr.org/.netlify/functions/download', {
+		'url': query
+	});
 
-			await Promise.allSettled(promises).then((result) => {
-				for (let res of result) {
-					if (res.status == 'fulfilled' && res.value?.[0]?.url) {
-						data.push(res.value?.[0]?.url);
-					}
-				}		
-			});
-
-			return {
-				url: data[0],
-				tracks: data,
-				spotify: spot.type == 'album' ? 'Album' : 'Playlist'
-			};
-		}
+	if (resp.status !== 200) {
+		return null;
 	}
 
-	valid = await play.so_validate(query);
-	if (valid && valid != 'search') {
-		const sound = await play.soundcloud(query);
-		if (sound.type == 'track') {
-			return {
-				url: sound.url,
-				tracks: [ query ]
-			};
-		} else if (sound.type == 'playlist') { // 'playlist'
-			const tracks = await sound.all_tracks();
-			return {
-				url: sound.url,
-				tracks: tracks.map(x => x.url)
-			};
-		} else { // 'user'
-			return {};
-		}
-	}
+	const data = resp.data;
 
-	valid = play.yt_validate(query);
-	if (query.startsWith('https') && valid && valid != 'search') {
-		const type = play.yt_validate(query);
-		if (type == 'video') {
-			return {
-				url: query,
-				tracks: [ query ]
-			};
-		} else if (type == 'playlist') {
-			const playlist = await play.playlist_info(query, { incomplete : true });
-			const tracks = await playlist.all_videos();
-			return {
-				url: playlist.url,
-				tracks: tracks.map(x => x.url)
-			};
-		}
-	}
-
-	// If it is a URL, consider it a file first
-	try {
-		const url = new URL(query);
-		const result = await httpsHead(url.toString(), {}, 500);
-		
-		const type = result.headers?.['content-type'];
-		if (!type) {
-			throw new Error();
-		}
-
-		// We can only play audio/video files over voice chat
-		if (!type.startsWith('audio') && !type.startsWith('video')) {
-			return {
-				url: null,
-				tracks: []
-			}
-		}
-
-		if (result.headers?.['content-length'] >= 25_000_000) { // 25 MB max
-			return {
-				url: null,
-				tracks: []
-			}
-		}
-
-		return {
-			url: query,
-			tracks: [ query ]
-		}
-	} catch (error) {
-		// Otherwise, return a YouTube search query for it
-		const search = await play.search(query, { limit: 1 });
-		return {
-			url: search[0]?.url,
-			tracks: search[0]?.url ? [ search[0]?.url ] : []
-	 	};
+	return {
+		url: data.url,
+		stream_url: data.medias.find((media) => media.type === 'audio')?.url ?? null
 	}
 }
 
@@ -501,196 +375,215 @@ async function trackData(url) {
 	let fields = null;
 	let files = null;
 
-	if (play.sp_validate(url)) {
-		const spot = await play.spotify(url);
-		thumbnail = spot.thumbnail;
-		
-		if (spot.type == 'track') {
-			fields = [
-				{
-					name: 'Track', 
-					value: `[${spot.name}](${spot.url})`,
-					inline: true
-				}, {
-					name: 'Album', 
-					value: `[${spot.album.name}](${spot.album.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Duration: \`[${toDuration(spot.durationInSec)}]\``,
-					inline: true
-				}
-			];
-		} else if (spot.type == 'playlist') {
-			fields = [
-				{
-					name: 'Playlist', 
-					value: `[${spot.name}](${spot.url})`,
-					inline: true
-				}, {
-					name: 'Created By', 
-					value: `[${spot.owner.name}](${spot.owner.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Tracks: ${spot.tracksCount}
-					Description: \`[${spot.description ?? 'none'}]\``,
-					inline: !!spot.description
-				}
-			];
-		} else { // 'album'
-			fields = [
-				{
-					name: 'Album', 
-					value: `[${spot.name}](${spot.url})`,
-					inline: true
-				}, {
-					name: 'Artist' + (spot.artists.length > 1 ? 's' : ''), 
-					value: spot.artists.map(x => `[${x.name}](${x.url})`).join(', '),
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Tracks: ${spot.tracksCount}
-					Released: [${spot.release_date}]`,
-					inline: true
-				}
-			];
-		}
-	} else if (await play.so_validate(url)) {
-		const sound = await play.soundcloud(url);
-		thumbnail = sound.thumbnail ?? sound.user.thumbnail;
-		
-		if (sound.type == 'track') {
-			fields = [
-				{
-					name: 'Track', 
-					value: `[${sound.name}](${sound.permalink})`,
-					inline: true
-				}, {
-					name: 'Uploaded By', 
-					value: `[${sound.user.name}](${sound.user.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Duration: \`[${toDuration(sound.durationInSec)}]\``,
-					inline: true
-				}
-			];
-		} else if (sound.type == 'playlist') {
-			fields = [
-				{
-					name: sound.sub_type == 'album' ? 'Album' : 'Playlist', 
-					value: `[${sound.name}](${sound.url})`,
-					inline: true
-				}, {
-					name: sound.sub_type == 'album' ? 'Artist' : 'Created By',  
-					value: `[${sound.user.name}](${sound.user.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Tracks: \`[${sound.tracksCount}]\``,
-					inline: true
-				}
-			];
-		}
-	} else if (play.yt_validate(url) != false && play.yt_validate(url) != 'search') {
-		const type = play.yt_validate(url);
-		if (type == 'video') {
-			const info = (await play.video_basic_info(url)).video_details;
-			thumbnail = info.thumbnails.pop().url;
-			fields = [
-				{
-					name: 'Video', 
-					value: `[${info.title}](${info.url})`,
-					inline: true
-				}, {
-					name: 'Uploaded By', 
-					value: `[${info.channel?.name}](${info.channel?.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Views: ${info.views.toLocaleString("en-US")}
-					Likes: ${info.likes.toLocaleString("en-US")}
-					Duration: \`[${info.durationRaw}]\``,
-					inline: false
-				}
-			];
-		} else if (type == 'playlist') {
-			const playlist = await play.playlist_info(url, { incomplete : true });
-			thumbnail = playlist.thumbnail?.url;
-			fields = [
-				{
-					name: 'Playlist', 
-					value: `[${playlist.title}](${playlist.url})`,
-					inline: true
-				}, {
-					name: 'Uploaded By', 
-					value: `[${playlist.channel?.name}](${playlist.channel?.url})`,
-					inline: true
-				}, {
-					name: 'Statistics', 
-					value: `Views: ${playlist.views}
-					Last Updated: \`${playlist.lastUpdate}\`
-					Videos: \`[${playlist.videoCount}]\``,
-					inline: false
-				}
-			];
+	const resp = await axios.post('https://downr.org/.netlify/functions/download', {
+		url: url
+	});
 
-			if (!playlist.channel?.name) { // Likely a YouTube 'Mix' which has everything else null
-				fields = [ fields[0] ];
-			}
-		}
-	} else { // Likely a direct file upload
-		fields = [{
-			name: 'Uploaded File',
-			value: `[${url.substring(url.lastIndexOf('/') + 1)}](${url})`,
-		}]
-
-		const tag = await new Promise((resolve, reject) => {
-			jsmediatags.read(url, {
-				onSuccess: tag => resolve(tag),
-				onError: error => resolve(error) // Resolve since we handle this error later anyways
-			})
-		});
-		
-		if (tag.tags) {
-			if (tag.tags.title) {
-				fields = [{
-					name: 'Uploaded File',
-					value: `[${tag.tags.title}](${url})`,
-					inline: true
-				}]
-			}
-
-			if (tag.tags.artist) {
-				fields.push({
-					name: 'Artist',
-					value: tag.tags.artist,
-					inline: true
-				})
-			}
-
-			if (tag.tags.year) {
-				fields.push({
-					name: 'Year',
-					value: tag.tags.year,
-					inline: true
-				})
-			}
-
-			if (tag.tags.picture) {
-				const fmt = tag.tags.picture.format;
-				const type = fmt.substr(fmt.lastIndexOf('/') + 1);
-
-				files = [{
-					attachment: Buffer.from(tag.tags.picture.data),
-					name: `thumbnail.${type}`
-				}]
-
-				thumbnail = `attachment://thumbnail.${type}`;
-			}
-		}
+	if (resp.status !== 200) {
+		return { 'thumbnail': thumbnail, 'fields': fields, 'files': files };
 	}
+
+	const data = resp.data;
+
+	thumbnail = data.thumbnail;
+	fields = [
+		{
+			name: 'Track',
+			value: `[${data.title}](${data.url})`,
+			inline: true
+		}
+	];
+
+	// if (play.sp_validate(url)) {
+	// 	const spot = await play.spotify(url);
+	// 	thumbnail = spot.thumbnail;
+		
+	// 	if (spot.type == 'track') {
+	// 		fields = [
+	// 			{
+	// 				name: 'Track', 
+	// 				value: `[${spot.name}](${spot.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Album', 
+	// 				value: `[${spot.album.name}](${spot.album.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Duration: \`[${toDuration(spot.durationInSec)}]\``,
+	// 				inline: true
+	// 			}
+	// 		];
+	// 	} else if (spot.type == 'playlist') {
+	// 		fields = [
+	// 			{
+	// 				name: 'Playlist', 
+	// 				value: `[${spot.name}](${spot.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Created By', 
+	// 				value: `[${spot.owner.name}](${spot.owner.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Tracks: ${spot.tracksCount}
+	// 				Description: \`[${spot.description ?? 'none'}]\``,
+	// 				inline: !!spot.description
+	// 			}
+	// 		];
+	// 	} else { // 'album'
+	// 		fields = [
+	// 			{
+	// 				name: 'Album', 
+	// 				value: `[${spot.name}](${spot.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Artist' + (spot.artists.length > 1 ? 's' : ''), 
+	// 				value: spot.artists.map(x => `[${x.name}](${x.url})`).join(', '),
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Tracks: ${spot.tracksCount}
+	// 				Released: [${spot.release_date}]`,
+	// 				inline: true
+	// 			}
+	// 		];
+	// 	}
+	// } else if (await play.so_validate(url)) {
+	// 	const sound = await play.soundcloud(url);
+	// 	thumbnail = sound.thumbnail ?? sound.user.thumbnail;
+		
+	// 	if (sound.type == 'track') {
+	// 		fields = [
+	// 			{
+	// 				name: 'Track', 
+	// 				value: `[${sound.name}](${sound.permalink})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Uploaded By', 
+	// 				value: `[${sound.user.name}](${sound.user.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Duration: \`[${toDuration(sound.durationInSec)}]\``,
+	// 				inline: true
+	// 			}
+	// 		];
+	// 	} else if (sound.type == 'playlist') {
+	// 		fields = [
+	// 			{
+	// 				name: sound.sub_type == 'album' ? 'Album' : 'Playlist', 
+	// 				value: `[${sound.name}](${sound.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: sound.sub_type == 'album' ? 'Artist' : 'Created By',  
+	// 				value: `[${sound.user.name}](${sound.user.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Tracks: \`[${sound.tracksCount}]\``,
+	// 				inline: true
+	// 			}
+	// 		];
+	// 	}
+	// } else if (play.yt_validate(url) != false && play.yt_validate(url) != 'search') {
+	// 	const type = play.yt_validate(url);
+	// 	if (type == 'video') {
+	// 		const info = (await play.video_basic_info(url)).video_details;
+	// 		thumbnail = info.thumbnails.pop().url;
+	// 		fields = [
+	// 			{
+	// 				name: 'Video', 
+	// 				value: `[${info.title}](${info.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Uploaded By', 
+	// 				value: `[${info.channel?.name}](${info.channel?.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Views: ${info.views.toLocaleString("en-US")}
+	// 				Likes: ${info.likes.toLocaleString("en-US")}
+	// 				Duration: \`[${info.durationRaw}]\``,
+	// 				inline: false
+	// 			}
+	// 		];
+	// 	} else if (type == 'playlist') {
+	// 		const playlist = await play.playlist_info(url, { incomplete : true });
+	// 		thumbnail = playlist.thumbnail?.url;
+	// 		fields = [
+	// 			{
+	// 				name: 'Playlist', 
+	// 				value: `[${playlist.title}](${playlist.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Uploaded By', 
+	// 				value: `[${playlist.channel?.name}](${playlist.channel?.url})`,
+	// 				inline: true
+	// 			}, {
+	// 				name: 'Statistics', 
+	// 				value: `Views: ${playlist.views}
+	// 				Last Updated: \`${playlist.lastUpdate}\`
+	// 				Videos: \`[${playlist.videoCount}]\``,
+	// 				inline: false
+	// 			}
+	// 		];
+
+	// 		if (!playlist.channel?.name) { // Likely a YouTube 'Mix' which has everything else null
+	// 			fields = [ fields[0] ];
+	// 		}
+	// 	}
+	// } else { // Likely a direct file upload
+	// 	fields = [{
+	// 		name: 'Uploaded File',
+	// 		value: `[${url.substring(url.lastIndexOf('/') + 1)}](${url})`,
+	// 	}]
+
+	// 	const tag = await new Promise((resolve, reject) => {
+	// 		jsmediatags.read(url, {
+	// 			onSuccess: tag => resolve(tag),
+	// 			onError: error => resolve(error) // Resolve since we handle this error later anyways
+	// 		})
+	// 	});
+		
+	// 	if (tag.tags) {
+	// 		if (tag.tags.title) {
+	// 			fields = [{
+	// 				name: 'Uploaded File',
+	// 				value: `[${tag.tags.title}](${url})`,
+	// 				inline: true
+	// 			}]
+	// 		}
+
+	// 		if (tag.tags.artist) {
+	// 			fields.push({
+	// 				name: 'Artist',
+	// 				value: tag.tags.artist,
+	// 				inline: true
+	// 			})
+	// 		}
+
+	// 		if (tag.tags.year) {
+	// 			fields.push({
+	// 				name: 'Year',
+	// 				value: tag.tags.year,
+	// 				inline: true
+	// 			})
+	// 		}
+
+	// 		if (tag.tags.picture) {
+	// 			const fmt = tag.tags.picture.format;
+	// 			const type = fmt.substr(fmt.lastIndexOf('/') + 1);
+
+	// 			files = [{
+	// 				attachment: Buffer.from(tag.tags.picture.data),
+	// 				name: `thumbnail.${type}`
+	// 			}]
+
+	// 			thumbnail = `attachment://thumbnail.${type}`;
+	// 		}
+	// 	}
+	// }
 
 	return { 'thumbnail': thumbnail, 'fields': fields, 'files': files };
 }
