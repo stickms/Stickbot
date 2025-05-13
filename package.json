@@ -5,9 +5,10 @@
 		"prettier": "prettier --write \"src/**/*.{js,ts}\" --config \".prettierrc.json\""
 	},
 	"dependencies": {
+		"@discordjs/voice": "^0.18.0",
 		"@types/steamid": "^2.0.3",
 		"axios": "^1.7.7",
-		"discord.js": "^14.16.3",
+		"discord.js": "^14.19.3",
 		"dotenv": "^16.4.5",
 		"mongodb": "^6.9.0",
 		"node-html-parser": "^6.1.13",
