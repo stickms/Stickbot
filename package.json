@@ -1,22 +1,29 @@
 {
-	"type": "module",
-	"scripts": {
-		"start": "npx tsx \"./src/\"",
-		"prettier": "prettier --write \"src/**/*.{js,ts}\" --config \".prettierrc.json\""
-	},
-	"dependencies": {
-		"@types/steamid": "^2.0.3",
-		"axios": "^1.7.7",
-		"discord.js": "^14.16.3",
-		"dotenv": "^16.4.5",
-		"mongodb": "^6.9.0",
-		"node-html-parser": "^6.1.13",
-		"steamid": "^2.1.0"
-	},
-	"devDependencies": {
-		"@types/node": "^22.7.4",
-		"prettier": "^3.3.3",
-		"tsx": "^4.19.1",
-		"typescript": "^5.6.2"
-	}
+  "name": "stickbot",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/index.js --sourcemap",
+    "start": "node dist/bundle.js",
+    "biome": "biome format --write"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.1",
+  "devDependencies": {
+    "@biomejs/biome": "2.3.14",
+    "@tsconfig/node24": "^24.0.4",
+    "@types/node": "^25.2.2",
+    "esbuild": "^0.27.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.4",
+    "globby": "^16.1.0"
+  }
 }

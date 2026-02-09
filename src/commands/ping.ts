@@ -1,16 +1,11 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
+import { type ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 
-export const data = new SlashCommandBuilder()
-  .setName('ping')
-  .setDescription('Replies with Pong!');
+export const data = new SlashCommandBuilder().setName('ping').setDescription('Replies with Pong!');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const start = performance.now();
+  const reference = performance.now();
+  await interaction.reply('...');
 
-  const msg = await interaction.reply({
-    content: 'Pong!',
-    fetchReply: true
-  });
-
-  await msg.edit(`Pong! ${Math.ceil(performance.now() - start)}ms`);
+  const elapsed = performance.now() - reference;
+  await interaction.editReply(`Pong! (${Math.round(elapsed)} ms)`);
 }
