@@ -19,7 +19,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply();
 
-  const profile = await createProfileEmbed(query, interaction.guildId);
+  const { embed, sourcebans } = await createProfileEmbed(
+    query,
+    interaction.guildId
+  );
 
-  await interaction.editReply({ embeds: [profile] });
+  await interaction.editReply({ embeds: [embed] });
+
+  if (embed.fields) {
+    const sourcebansField = await sourcebans;
+    embed.fields = embed.fields.map((field) =>
+      field.name !== 'Sourcebans' ? field : sourcebansField
+    );
+
+    await interaction.editReply({ embeds: [embed] });
+  }
 }

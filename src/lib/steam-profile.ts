@@ -1,5 +1,5 @@
 import type { APIEmbed, APIEmbedField } from 'discord.js';
-import type { SteamProfileSummary } from '~/types/index';
+import type { Sourceban, SteamProfileSummary } from '~/types/index';
 import { playersDB } from './db';
 
 const tagLabels = {
@@ -9,7 +9,7 @@ const tagLabels = {
   banwatch: 'Banwatch'
 };
 
-function idList(summary: SteamProfileSummary): APIEmbedField {
+function steamIdsField(summary: SteamProfileSummary): APIEmbedField {
   const accountid = Number(BigInt(summary.steamid) & BigInt(0xffffffff));
 
   const idlist = [
@@ -29,7 +29,7 @@ function idList(summary: SteamProfileSummary): APIEmbedField {
   };
 }
 
-async function alertList(
+async function alertsField(
   summary: SteamProfileSummary,
   guildId: string | null
 ): Promise<APIEmbedField> {
@@ -93,7 +93,7 @@ async function alertList(
   };
 }
 
-function quickLinks(summary: SteamProfileSummary): APIEmbedField {
+function quickLinksField(summary: SteamProfileSummary): APIEmbedField {
   const links = {
     SteamHistory: 'https://steamhistory.net/id/',
     'SteamID.uk': 'https://steamid.uk/profile/',
@@ -113,10 +113,39 @@ function quickLinks(summary: SteamProfileSummary): APIEmbedField {
   };
 }
 
+async function sourcebansField(
+  summary: SteamProfileSummary
+): Promise<APIEmbedField> {
+  const response = await fetch(
+    `https://stickbot.net/api/steam/sourcebans/${summary.steamid}`
+  );
+
+  if (!response.ok) {
+    return {
+      name: 'Sourcebans',
+      value: '❌ Error retrieving sourcebans'
+    };
+  }
+
+  const sourcebans = ((await response.json()) as Sourceban[]).map((ban) => {
+    const hostname = new URL(ban.url).hostname;
+    return `[${hostname} - ${ban.reason}](${ban.url})`;
+  });
+
+  if (!sourcebans.length) {
+    sourcebans.push('✅ None');
+  }
+
+  return {
+    name: 'Sourcebans',
+    value: sourcebans.join('\n')
+  };
+}
+
 export async function createProfileEmbed(
   steamId: string,
   guildId: string | null
-): Promise<APIEmbed> {
+): Promise<{ embed: APIEmbed; sourcebans: Promise<APIEmbedField> }> {
   const response = await fetch(
     `https://stickbot.net/api/steam/lookup/${steamId}`
   );
@@ -128,9 +157,9 @@ export async function createProfileEmbed(
   const summary = (await response.json()) as SteamProfileSummary;
 
   const fields = [
-    idList(summary),
-    await alertList(summary, guildId),
-    quickLinks(summary)
+    steamIdsField(summary),
+    await alertsField(summary, guildId),
+    quickLinksField(summary)
   ];
 
   if (summary.gameextrainfo) {
@@ -142,10 +171,18 @@ export async function createProfileEmbed(
     });
   }
 
+  fields.push({
+    name: 'Sourcebans',
+    value: '\u2139\uFE0F Loading...'
+  });
+
   return {
-    color: 0x386662,
-    title: summary.personaname,
-    thumbnail: { url: summary.avatarfull },
-    fields
+    embed: {
+      color: 0x386662,
+      title: summary.personaname,
+      thumbnail: { url: summary.avatarfull },
+      fields
+    },
+    sourcebans: sourcebansField(summary)
   };
 }

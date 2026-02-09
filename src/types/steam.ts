@@ -30,3 +30,8 @@ export interface SteamProfileSummary {
   NumberOfGameBans: number;
   EconomyBan: string;
 }
+
+export type Sourceban = {
+  url: string;
+  reason: string;
+};
