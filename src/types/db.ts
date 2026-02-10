@@ -22,9 +22,9 @@ export interface DatabasePlayerEntry {
   };
   notifications?: {
     [guildid: string]: {
-      ban: string[];
-      name: string[];
-      log: string[];
+      ban?: string[];
+      name?: string[];
+      log?: string[];
     };
   };
   tags?: {

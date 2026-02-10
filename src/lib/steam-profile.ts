@@ -1,8 +1,10 @@
 import {
+  type APIActionRowComponent,
   type APIEmbed,
   type APIEmbedField,
   type APIMessageComponent,
   type APISelectMenuOption,
+  type APIStringSelectComponent,
   ButtonStyle,
   ComponentType,
   type Embed
@@ -19,6 +21,12 @@ const tagLabels = {
   suspicious: 'Suspicious',
   popular: 'Popular',
   banwatch: 'Banwatch'
+};
+
+const eventLabels = {
+  ban: 'Ban',
+  name: 'Name Change',
+  log: 'Server Log',
 };
 
 function steamIdsField(summary: SteamProfileSummary): APIEmbedField {
@@ -153,7 +161,7 @@ function tagSelect(
           type: ComponentType.StringSelect,
           custom_id: `tags:${summary.steamid}`,
           placeholder: 'Edit tags...',
-          max_values: 4,
+          max_values: Object.keys(tagLabels).length,
           options
         }
       ]
@@ -282,7 +290,7 @@ export async function getMoreInfo(
   const player = await playersDB.findOne({ _id: steamId });
 
   if (player) {
-    const addedtags = Object.entries(player.tags?.[guildId ?? ''] ?? {}).map(
+    const addedtags = Object.entries((guildId && player.tags?.[guildId]) ?? {}).map(
       ([tag, data]) => `\`${tag}\` - <@${data.addedby}> on <t:${data.date}:D>`
     );
 
@@ -318,9 +326,36 @@ export async function getMoreInfo(
 
   return {
     color: 0x386662,
-    title: `More Info for **${embed ? embed.title : steamId}**`,
+    title: `More Info for **${embed?.title ?? steamId}**`,
     thumbnail: embed?.thumbnail ?? undefined,
     description: !fields.length ? 'No database info found...' : undefined,
     fields
   };
+}
+
+export async function getNotifications(userId: string, steamId: string, guildId: string): Promise<APIActionRowComponent<APIStringSelectComponent>> {
+  const player = await playersDB.findOne({ _id: steamId });
+
+  const options: APISelectMenuOption[] = (Object.entries(eventLabels) as [keyof typeof eventLabels, string][]).map(
+    ([event, label]) => {
+      const hasEvent = (player?.notifications?.[guildId]?.[event] ?? [])
+        .includes(userId);
+
+      return {
+        value: hasEvent ? `remove:${event}` : `add:${event}`,
+        label: hasEvent ? `Don't notify on ${label}` : `Notify on ${label}`
+      };
+    }
+  );
+
+  return {
+    type: ComponentType.ActionRow,
+    components: [{
+      type: ComponentType.StringSelect,
+      custom_id: `notifications:${steamId}`,
+      placeholder: 'Edit notifications...',
+      max_values: Object.keys(eventLabels).length,
+      options: options
+    }]
+  }
 }
