@@ -1,5 +1,17 @@
-import type { APIEmbed, APIEmbedField } from 'discord.js';
-import type { Sourceban, SteamProfileSummary } from '~/types/index';
+import {
+  type APIEmbed,
+  type APIEmbedField,
+  type APIMessageComponent,
+  type APISelectMenuOption,
+  ButtonStyle,
+  ComponentType,
+  type Embed
+} from 'discord.js';
+import type {
+  DatabasePlayerEntry,
+  Sourceban,
+  SteamProfileSummary
+} from '~/types/index';
 import { playersDB } from './db';
 
 const tagLabels = {
@@ -29,10 +41,11 @@ function steamIdsField(summary: SteamProfileSummary): APIEmbedField {
   };
 }
 
-async function alertsField(
+function alertsField(
   summary: SteamProfileSummary,
+  dbdata: DatabasePlayerEntry | null,
   guildId: string | null
-): Promise<APIEmbedField> {
+): APIEmbedField {
   const plural = (num: number, label: string) => {
     return `${num} ${label}${num === 1 ? '' : 's'}`;
   };
@@ -58,17 +71,17 @@ async function alertsField(
     .filter((alert) => alert.show)
     .map((alert) => `❌ ${alert.label}`);
 
-  const player = await playersDB.findOne({ _id: summary.steamid });
-
-  if (player) {
-    const tags = Object.keys(player.tags?.[guildId ?? ''] ?? {}).filter(
+  if (dbdata && guildId) {
+    const tags = Object.keys(dbdata.tags?.[guildId] ?? {}).filter(
       (tag) => tag !== 'banwatch'
     );
-    alertlist.concat(
-      Object.entries(tagLabels)
-        .filter((tag) => tags.includes(tag[0]))
-        .map(([tag]) => `⚠️ ${tag[1]}`)
-    );
+
+    Object.entries(tagLabels)
+      .filter((tag) => tags.includes(tag[0]))
+      .map((tag) => `⚠️ ${tag[1]}`)
+      .forEach((alert) => {
+        alertlist.push(alert);
+      });
   }
 
   if (summary.timecreated) {
@@ -78,7 +91,7 @@ async function alertsField(
     }
   }
 
-  if (player?.tags?.[guildId ?? '']?.banwatch) {
+  if (guildId && dbdata?.tags?.[guildId]?.banwatch) {
     alertlist.push(`\u2139\uFE0F ${tagLabels.banwatch}`);
   }
 
@@ -95,9 +108,9 @@ async function alertsField(
 
 function quickLinksField(summary: SteamProfileSummary): APIEmbedField {
   const links = {
-    SteamHistory: 'https://steamhistory.net/id/',
+    'SteamHistory': 'https://steamhistory.net/id/',
     'SteamID.uk': 'https://steamid.uk/profile/',
-    SteamDB: 'https://steamdb.info/calculator/',
+    'SteamDB': 'https://steamdb.info/calculator/',
     'Backpack.tf': 'https://backpack.tf/profiles/',
     'Open in Client': 'https://stickbot.net/open-profile/'
   };
@@ -111,6 +124,41 @@ function quickLinksField(summary: SteamProfileSummary): APIEmbedField {
     value: quicklinks.join('\n'),
     inline: true
   };
+}
+
+function tagSelect(
+  summary: SteamProfileSummary,
+  dbdata: DatabasePlayerEntry | null,
+  guildId: string | null
+): APIMessageComponent[] {
+  if (!guildId) {
+    return [];
+  }
+
+  const options: APISelectMenuOption[] = Object.entries(tagLabels).map(
+    ([tag, label]) => {
+      const hasTag = Object.keys(dbdata?.tags?.[guildId] ?? {}).includes(tag);
+      return {
+        value: hasTag ? `remove:${tag}` : `add:${tag}`,
+        label: hasTag ? `Remove ${label}` : `Add ${label}`
+      };
+    }
+  );
+
+  return [
+    {
+      type: ComponentType.ActionRow,
+      components: [
+        {
+          type: ComponentType.StringSelect,
+          custom_id: `tags:${summary.steamid}`,
+          placeholder: 'Edit tags...',
+          max_values: 4,
+          options
+        }
+      ]
+    }
+  ];
 }
 
 async function sourcebansField(
@@ -145,20 +193,25 @@ async function sourcebansField(
 export async function createProfileEmbed(
   steamId: string,
   guildId: string | null
-): Promise<{ embed: APIEmbed; sourcebans: Promise<APIEmbedField> }> {
+): Promise<{
+  embeds: APIEmbed[];
+  components: APIMessageComponent[];
+  sourcebans: Promise<APIEmbed>;
+} | null> {
   const response = await fetch(
     `https://stickbot.net/api/steam/lookup/${steamId}`
   );
 
   if (!response.ok) {
-    throw new Error('Could not get profile info');
+    return null;
   }
 
   const summary = (await response.json()) as SteamProfileSummary;
+  const dbdata = await playersDB.findOne({ _id: summary.steamid });
 
   const fields = [
     steamIdsField(summary),
-    await alertsField(summary, guildId),
+    alertsField(summary, dbdata, guildId),
     quickLinksField(summary)
   ];
 
@@ -171,18 +224,103 @@ export async function createProfileEmbed(
     });
   }
 
+  // Will later get edited
   fields.push({
     name: 'Sourcebans',
     value: '\u2139\uFE0F Loading...'
   });
 
-  return {
-    embed: {
-      color: 0x386662,
-      title: summary.personaname,
-      thumbnail: { url: summary.avatarfull },
-      fields
+  const components: APIMessageComponent[] = [
+    {
+      type: ComponentType.ActionRow,
+      components: [
+        {
+          type: ComponentType.Button,
+          style: ButtonStyle.Primary,
+          custom_id: `moreinfo:${summary.steamid}`,
+          label: 'More Info'
+        },
+        {
+          type: ComponentType.Button,
+          style: ButtonStyle.Primary,
+          custom_id: `notifications:${summary.steamid}`,
+          label: 'Notifications'
+        }
+      ]
     },
-    sourcebans: sourcebansField(summary)
+    ...tagSelect(summary, dbdata, guildId)
+  ];
+
+  // Force fields to be defined
+  const embed: APIEmbed & { fields: APIEmbedField[] } = {
+    color: 0x386662,
+    title: summary.personaname,
+    thumbnail: { url: summary.avatarfull },
+    fields
+  };
+
+  return {
+    embeds: [embed],
+    components,
+    sourcebans: sourcebansField(summary).then((bansField) => ({
+      ...embed,
+      fields: [
+        ...embed.fields.filter(({ name }) => name !== 'Sourcebans'),
+        bansField
+      ]
+    }))
+  };
+}
+
+export async function getMoreInfo(
+  steamId: string,
+  guildId: string | null,
+  embed?: Embed
+): Promise<APIEmbed> {
+  const fields: APIEmbedField[] = [];
+
+  const player = await playersDB.findOne({ _id: steamId });
+
+  if (player) {
+    const addedtags = Object.entries(player.tags?.[guildId ?? ''] ?? {}).map(
+      ([tag, data]) => `\`${tag}\` - <@${data.addedby}> on <t:${data.date}:D>`
+    );
+
+    const namehistory = Object.entries(player.names ?? {}).map(
+      ([name, date]) => `\`${JSON.parse(name)}\` - <t:${date}:D>`
+    );
+
+    const addresses = Object.entries(player.addresses ?? {}).map(
+      ([ip, { game, date }]) => `\`${ip}\` - ${game} on <t:${date}:D>`
+    );
+
+    if (addedtags.length) {
+      fields.push({
+        name: 'Added Tags',
+        value: addedtags.join('\n')
+      });
+    }
+
+    if (namehistory.length) {
+      fields.push({
+        name: 'Name History',
+        value: namehistory.join('\n')
+      });
+    }
+
+    if (addresses.length) {
+      fields.push({
+        name: 'Prior Servers',
+        value: addresses.join('\n')
+      });
+    }
+  }
+
+  return {
+    color: 0x386662,
+    title: `More Info for **${embed ? embed.title : steamId}**`,
+    thumbnail: embed?.thumbnail ?? undefined,
+    description: !fields.length ? 'No database info found...' : undefined,
+    fields
   };
 }

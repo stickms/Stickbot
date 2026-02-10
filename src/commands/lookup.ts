@@ -3,6 +3,7 @@ import {
   SlashCommandBuilder
 } from 'discord.js';
 import { createProfileEmbed } from '~/lib/steam-profile';
+import { getSteamIdFromUrl } from '~/lib/utils';
 
 export const data = new SlashCommandBuilder()
   .setName('lookup')
@@ -19,19 +20,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply();
 
-  const { embed, sourcebans } = await createProfileEmbed(
-    query,
+  const profile = await createProfileEmbed(
+    getSteamIdFromUrl(query),
     interaction.guildId
   );
 
-  await interaction.editReply({ embeds: [embed] });
-
-  if (embed.fields) {
-    const sourcebansField = await sourcebans;
-    embed.fields = embed.fields.map((field) =>
-      field.name !== 'Sourcebans' ? field : sourcebansField
-    );
-
-    await interaction.editReply({ embeds: [embed] });
+  if (!profile) {
+    return await interaction.editReply({
+      content: '❌ Error: could not find profile'
+    });
   }
+
+  const { embeds, components, sourcebans } = profile;
+
+  await interaction.editReply({ embeds, components });
+  await interaction.editReply({ embeds: [await sourcebans] });
 }
