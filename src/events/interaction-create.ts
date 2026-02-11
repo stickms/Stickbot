@@ -1,11 +1,18 @@
 import {
+  type APIEmbed,
+  AttachmentBuilder,
   type ButtonInteraction,
   Events,
   type Interaction,
   type StringSelectMenuInteraction
 } from 'discord.js';
 import { playersDB } from '~/lib/db';
-import { createProfileEmbed, getMoreInfo, getNotifications } from '~/lib/steam-profile';
+import {
+  createProfileEmbed,
+  getFriends,
+  getMoreInfo,
+  getNotifications
+} from '~/lib/steam-profile';
 
 export const name = Events.InteractionCreate;
 
@@ -22,6 +29,8 @@ export async function execute(interaction: Interaction) {
       moreInfoHandler(interaction);
     } else if (interaction.customId.startsWith('notifications')) {
       notificationsButtonHandler(interaction);
+    } else if (interaction.customId.startsWith('friends')) {
+      friendsHandler(interaction);
     }
   } else if (interaction.isStringSelectMenu()) {
     if (interaction.customId.startsWith('tags')) {
@@ -50,13 +59,58 @@ async function notificationsButtonHandler(interaction: ButtonInteraction) {
 
   const steamId = interaction.customId.split(':')[1];
   const embed = interaction.message.embeds[0];
-  const component = await getNotifications(interaction.user.id, steamId, interaction.guildId);
-  
+  const component = await getNotifications(
+    interaction.user.id,
+    steamId,
+    interaction.guildId
+  );
+
   await interaction.reply({
-    content: `Change notifications for **${embed?.title ?? steamId}**`,
-		components: [ component ],
-		ephemeral: true
+    content: `Change notifications for **${embed?.author?.name ?? steamId}**`,
+    components: [component],
+    ephemeral: true
   });
+}
+
+async function friendsHandler(interaction: ButtonInteraction) {
+  if (!interaction.guildId) {
+    return;
+  }
+
+  const steamId = interaction.customId.split(':')[1];
+  const guildId = interaction.guildId;
+
+  const friends = (await getFriends(steamId)).map(({ steamid }) => steamid);
+  const cheaters = await playersDB.find({
+    _id: { $in: friends },
+    [`tags.${guildId}.cheater`]: { $exists: true }
+  }).toArray();
+
+  let friendslist = '';
+
+  for (const cheater of cheaters) {
+    const names = Object.keys(cheater.names ?? []);
+    const name = names.length ? ` - ${names[0]}` : '';
+    friendslist += `[${cheater._id}${name}](https://steamcommunity.com/profiles/${cheater._id})\n`;
+  }
+
+  const maxLengthIndex = friendslist.lastIndexOf('\n', 4096);
+
+  const personaName = interaction.message.embeds[0].author?.name;
+  const embed: APIEmbed = {
+    title: `${personaName ?? steamId}'s cheater friends`,
+    thumbnail: interaction.message.embeds[0].thumbnail ?? undefined,
+    description: friendslist.substring(0, maxLengthIndex)
+  };
+
+  const files: AttachmentBuilder[] = [];
+
+  if (friendslist.length > 4096) {
+    const buffer = Buffer.from(friendslist, 'utf-8');
+    files.push(new AttachmentBuilder(buffer, { name: 'friends.md' }));
+  }
+  
+  await interaction.reply({ embeds: [ embed ], files });
 }
 
 async function tagsHandler(interaction: StringSelectMenuInteraction) {
@@ -140,13 +194,17 @@ async function notificationsSelectHandler(
     }
   }
 
-  await playersDB.updateOne({ _id: steamId }, { 
-    $set: {
-      [`notifications.${guildId}`]: notifications
+  await playersDB.updateOne(
+    { _id: steamId },
+    {
+      $set: {
+        [`notifications.${guildId}`]: notifications
+      }
+    },
+    {
+      upsert: true
     }
-  }, {
-    upsert: true
-  });
+  );
 
   await interaction.editReply({
     content: `✅ Edited notification settings for **${steamId}**`,

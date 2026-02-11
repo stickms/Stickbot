@@ -1,5 +1,6 @@
 import {
   type APIActionRowComponent,
+  type APIButtonComponent,
   type APIEmbed,
   type APIEmbedField,
   type APIMessageComponent,
@@ -12,6 +13,7 @@ import {
 import type {
   DatabasePlayerEntry,
   Sourceban,
+  SteamFriendsList,
   SteamProfileSummary
 } from '~/types/index';
 import { playersDB } from './db';
@@ -26,7 +28,7 @@ const tagLabels = {
 const eventLabels = {
   ban: 'Ban',
   name: 'Name Change',
-  log: 'Server Log',
+  log: 'Server Log'
 };
 
 function steamIdsField(summary: SteamProfileSummary): APIEmbedField {
@@ -52,7 +54,8 @@ function steamIdsField(summary: SteamProfileSummary): APIEmbedField {
 function alertsField(
   summary: SteamProfileSummary,
   dbdata: DatabasePlayerEntry | null,
-  guildId: string | null
+  guildId: string | null,
+  numFriends: number
 ): APIEmbedField {
   const plural = (num: number, label: string) => {
     return `${num} ${label}${num === 1 ? '' : 's'}`;
@@ -86,10 +89,13 @@ function alertsField(
 
     Object.entries(tagLabels)
       .filter((tag) => tags.includes(tag[0]))
-      .map((tag) => `⚠️ ${tag[1]}`)
-      .forEach((alert) => {
-        alertlist.push(alert);
+      .forEach((tag) => {
+        alertlist.push(`⚠️ ${tag[1]}`);
       });
+  }
+
+  if (numFriends) {
+    alertlist.push(`⚠️ Friends with ${plural(numFriends, 'cheater')}`);
   }
 
   if (summary.timecreated) {
@@ -198,6 +204,21 @@ async function sourcebansField(
   };
 }
 
+export async function getFriends(steamId: string) {
+  const api_url = `https://api.steampowered.com/ISteamUser/GetFriendList/v1/?steamid=${steamId}&key=${process.env.STEAM_API_TOKEN}`;
+
+  const response = await fetch(api_url);
+
+  // Somehow the only Steam Web API endpoing that properly errors...
+  if (!response.ok) {
+    return [];
+  }
+
+  const friends = await response.json() as SteamFriendsList;
+
+  return friends.friendslist.friends;
+}
+
 export async function createProfileEmbed(
   steamId: string,
   guildId: string | null
@@ -217,9 +238,19 @@ export async function createProfileEmbed(
   const summary = (await response.json()) as SteamProfileSummary;
   const dbdata = await playersDB.findOne({ _id: summary.steamid });
 
+  const friends = (await getFriends(summary.steamid))
+    .map(({ steamid }) => steamid);
+
+  const numFriends = guildId
+    ? await playersDB.countDocuments({
+        _id: { $in: friends },
+        [`tags.${guildId}.cheater`]: { $exists: true }
+      })
+    : 0;
+
   const fields = [
     steamIdsField(summary),
-    alertsField(summary, dbdata, guildId),
+    alertsField(summary, dbdata, guildId, numFriends),
     quickLinksField(summary)
   ];
 
@@ -228,7 +259,7 @@ export async function createProfileEmbed(
       name: 'Now Playing',
       value:
         summary.gameextrainfo +
-        (!!summary.gameserverip && ` on \`${summary.gameserverip}\``)
+        (summary.gameserverip ? ` on \`${summary.gameserverip}\`` : '')
     });
   }
 
@@ -238,23 +269,34 @@ export async function createProfileEmbed(
     value: '\u2139\uFE0F Loading...'
   });
 
+  const buttons: APIButtonComponent[] = [
+    {
+      type: ComponentType.Button,
+      style: ButtonStyle.Primary,
+      custom_id: `moreinfo:${summary.steamid}`,
+      label: 'More Info'
+    },
+    {
+      type: ComponentType.Button,
+      style: ButtonStyle.Primary,
+      custom_id: `notifications:${summary.steamid}`,
+      label: 'Notifications'
+    }
+  ];
+
+  if (numFriends) {
+    buttons.push({
+      type: ComponentType.Button,
+      style: ButtonStyle.Primary,
+      custom_id: `friends:${summary.steamid}`,
+      label: 'List Friends'
+    });
+  }
+
   const components: APIMessageComponent[] = [
     {
       type: ComponentType.ActionRow,
-      components: [
-        {
-          type: ComponentType.Button,
-          style: ButtonStyle.Primary,
-          custom_id: `moreinfo:${summary.steamid}`,
-          label: 'More Info'
-        },
-        {
-          type: ComponentType.Button,
-          style: ButtonStyle.Primary,
-          custom_id: `notifications:${summary.steamid}`,
-          label: 'Notifications'
-        }
-      ]
+      components: buttons
     },
     ...tagSelect(summary, dbdata, guildId)
   ];
@@ -262,13 +304,16 @@ export async function createProfileEmbed(
   // Force fields to be defined
   const embed: APIEmbed & { fields: APIEmbedField[] } = {
     color: 0x386662,
-    title: summary.personaname,
+    author: {
+      name: summary.personaname,
+      url: `https://steamcommunity.com/profiles/${summary.steamid}`
+    },
     thumbnail: { url: summary.avatarfull },
     fields
   };
 
   return {
-    embeds: [embed],
+    embeds: [ embed ],
     components,
     sourcebans: sourcebansField(summary).then((bansField) => ({
       ...embed,
@@ -290,7 +335,9 @@ export async function getMoreInfo(
   const player = await playersDB.findOne({ _id: steamId });
 
   if (player) {
-    const addedtags = Object.entries((guildId && player.tags?.[guildId]) ?? {}).map(
+    const addedtags = Object.entries(
+      (guildId && player.tags?.[guildId]) ?? {}
+    ).map(
       ([tag, data]) => `\`${tag}\` - <@${data.addedby}> on <t:${data.date}:D>`
     );
 
@@ -326,36 +373,43 @@ export async function getMoreInfo(
 
   return {
     color: 0x386662,
-    title: `More Info for **${embed?.title ?? steamId}**`,
+    title: `More Info for **${embed?.author?.name ?? steamId}**`,
     thumbnail: embed?.thumbnail ?? undefined,
     description: !fields.length ? 'No database info found...' : undefined,
     fields
   };
 }
 
-export async function getNotifications(userId: string, steamId: string, guildId: string): Promise<APIActionRowComponent<APIStringSelectComponent>> {
+export async function getNotifications(
+  userId: string,
+  steamId: string,
+  guildId: string
+): Promise<APIActionRowComponent<APIStringSelectComponent>> {
   const player = await playersDB.findOne({ _id: steamId });
 
-  const options: APISelectMenuOption[] = (Object.entries(eventLabels) as [keyof typeof eventLabels, string][]).map(
-    ([event, label]) => {
-      const hasEvent = (player?.notifications?.[guildId]?.[event] ?? [])
-        .includes(userId);
+  const options: APISelectMenuOption[] = (
+    Object.entries(eventLabels) as [keyof typeof eventLabels, string][]
+  ).map(([event, label]) => {
+    const hasEvent = (player?.notifications?.[guildId]?.[event] ?? []).includes(
+      userId
+    );
 
-      return {
-        value: hasEvent ? `remove:${event}` : `add:${event}`,
-        label: hasEvent ? `Don't notify on ${label}` : `Notify on ${label}`
-      };
-    }
-  );
+    return {
+      value: hasEvent ? `remove:${event}` : `add:${event}`,
+      label: hasEvent ? `Don't notify on ${label}` : `Notify on ${label}`
+    };
+  });
 
   return {
     type: ComponentType.ActionRow,
-    components: [{
-      type: ComponentType.StringSelect,
-      custom_id: `notifications:${steamId}`,
-      placeholder: 'Edit notifications...',
-      max_values: Object.keys(eventLabels).length,
-      options: options
-    }]
-  }
+    components: [
+      {
+        type: ComponentType.StringSelect,
+        custom_id: `notifications:${steamId}`,
+        placeholder: 'Edit notifications...',
+        max_values: Object.keys(eventLabels).length,
+        options: options
+      }
+    ]
+  };
 }

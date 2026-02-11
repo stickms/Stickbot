@@ -31,6 +31,16 @@ export interface SteamProfileSummary {
   EconomyBan: string;
 }
 
+export interface SteamFriendsList {
+  friendslist: {
+    friends: {
+      steamid: string;
+      relationship: string;
+      friend_since: number;
+    }[];
+  };
+}
+
 export type Sourceban = {
   url: string;
   reason: string;
