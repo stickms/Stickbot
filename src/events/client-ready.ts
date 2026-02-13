@@ -8,8 +8,8 @@ export async function execute(client: Client<true>) {
   // Update database every 24 hours
   setInterval(updateDatabase, 86_400_000, client);
   client.user.setPresence({
-		activities: [ { name: 'Slash Commands!', type: 2 } ]
-	});
+    activities: [{ name: 'Slash Commands!', type: 2 }]
+  });
 
   console.log(`Ready! Logged in as ${client.user.tag}`);
 }
