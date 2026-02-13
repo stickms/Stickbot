@@ -39,7 +39,7 @@ export interface DatabasePlayerEntry {
 
 export interface DatabaseServerEntry {
   _id: string;
-  banwatch: string;
+  banwatch?: string;
   welcome?: {
     channel: string;
     join?: string;

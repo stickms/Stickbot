@@ -214,7 +214,7 @@ export async function getFriends(steamId: string) {
     return [];
   }
 
-  const friends = await response.json() as SteamFriendsList;
+  const friends = (await response.json()) as SteamFriendsList;
 
   return friends.friendslist.friends;
 }
@@ -238,8 +238,9 @@ export async function createProfileEmbed(
   const summary = (await response.json()) as SteamProfileSummary;
   const dbdata = await playersDB.findOne({ _id: summary.steamid });
 
-  const friends = (await getFriends(summary.steamid))
-    .map(({ steamid }) => steamid);
+  const friends = (await getFriends(summary.steamid)).map(
+    ({ steamid }) => steamid
+  );
 
   const numFriends = guildId
     ? await playersDB.countDocuments({
@@ -313,7 +314,7 @@ export async function createProfileEmbed(
   };
 
   return {
-    embeds: [ embed ],
+    embeds: [embed],
     components,
     sourcebans: sourcebansField(summary).then((bansField) => ({
       ...embed,

@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import type { DatabasePlayerEntry } from '~/types';
+import type { DatabasePlayerEntry, DatabaseServerEntry } from '~/types';
 
 const url = process.env.MONGO_DB_URL;
 if (!url) {
@@ -14,6 +14,6 @@ const playersDB = await client
 
 const serversDB = await client
   .connect()
-  .then(() => client.db('stickbot').collection<DatabasePlayerEntry>('servers'));
+  .then(() => client.db('stickbot').collection<DatabaseServerEntry>('servers'));
 
 export { playersDB, serversDB };

@@ -81,10 +81,12 @@ async function friendsHandler(interaction: ButtonInteraction) {
   const guildId = interaction.guildId;
 
   const friends = (await getFriends(steamId)).map(({ steamid }) => steamid);
-  const cheaters = await playersDB.find({
-    _id: { $in: friends },
-    [`tags.${guildId}.cheater`]: { $exists: true }
-  }).toArray();
+  const cheaters = await playersDB
+    .find({
+      _id: { $in: friends },
+      [`tags.${guildId}.cheater`]: { $exists: true }
+    })
+    .toArray();
 
   let friendslist = '';
 
@@ -109,8 +111,8 @@ async function friendsHandler(interaction: ButtonInteraction) {
     const buffer = Buffer.from(friendslist, 'utf-8');
     files.push(new AttachmentBuilder(buffer, { name: 'friends.md' }));
   }
-  
-  await interaction.reply({ embeds: [ embed ], files });
+
+  await interaction.reply({ embeds: [embed], files });
 }
 
 async function tagsHandler(interaction: StringSelectMenuInteraction) {
