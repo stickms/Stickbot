@@ -80,6 +80,7 @@ async function updateBans(
     const summary = summaries[steamId];
 
     if (
+      !summary || 
       summary.NumberOfVACBans === undefined ||
       summary.NumberOfGameBans === undefined ||
       summary.EconomyBan === undefined ||
@@ -147,8 +148,12 @@ async function updateBans(
         .join(' ');
       const content = `**${steamId}** has been **${messages.join(',')}**\n${mentions}`;
 
-      const channel = (await client.channels.fetch(banwatchId)) as TextChannel;
-      channel?.send({ content, embeds, components }).catch(console.error);
+      try {
+        const channel = (await client.channels.fetch(banwatchId)) as TextChannel;
+        channel?.send({ content, embeds, components });
+      } catch (_error) {
+        //console.error(_error);
+      }
     }
   }
 }
@@ -160,6 +165,10 @@ async function updateSummaries(
 ) {
   for (const [steamId, player] of Object.entries(players)) {
     const summary = summaries[steamId];
+
+    if (!summary) {
+      continue;
+    }
 
     const names = player.names ?? {};
     const addresses = player.addresses ?? {};
@@ -263,8 +272,11 @@ async function updateNotifications(
   const { embeds, components } = profile;
 
   for (const userId of userIds) {
-    const user = await client.users.fetch(userId);
-
-    user?.send({ content, embeds, components }).catch(console.error);
+    try {
+      const user = await client.users.fetch(userId);
+      user?.send({ content, embeds, components });
+    } catch (_error) {
+      // console.error(_error);
+    }
   }
 }

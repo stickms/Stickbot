@@ -228,7 +228,7 @@ async function notificationsSelectHandler(
     }
   );
 
-  await interaction.editReply({
+  await interaction.update({
     content: `✅ Edited notification settings for **${steamId}**`,
     components: []
   });

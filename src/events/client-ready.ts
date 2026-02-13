@@ -6,7 +6,8 @@ export const once = true;
 
 export async function execute(client: Client<true>) {
   // Update database every 24 hours
-  setInterval(updateDatabase, 86_400_000, client);
+  //setInterval(updateDatabase, 86_400_000, client);
+  updateDatabase(client);
   client.user.setPresence({
     activities: [{ name: 'Slash Commands!', type: 2 }]
   });
