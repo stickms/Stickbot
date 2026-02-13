@@ -2,6 +2,7 @@ import {
   type APIEmbed,
   AttachmentBuilder,
   type ButtonInteraction,
+  EmbedBuilder,
   Events,
   type Interaction,
   type StringSelectMenuInteraction
@@ -11,7 +12,8 @@ import {
   createProfileEmbed,
   getFriends,
   getMoreInfo,
-  getNotifications
+  getNotifications,
+  getSourcebans
 } from '~/lib/steam-profile';
 
 export const name = Events.InteractionCreate;
@@ -25,7 +27,9 @@ export async function execute(interaction: Interaction) {
 
     command.execute(interaction).catch(console.error);
   } else if (interaction.isButton()) {
-    if (interaction.customId.startsWith('moreinfo')) {
+    if (interaction.customId.startsWith('sourcebans')) {
+      sourcebansHandler(interaction);
+    } else if (interaction.customId.startsWith('moreinfo')) {
       moreInfoHandler(interaction);
     } else if (interaction.customId.startsWith('notifications')) {
       notificationsButtonHandler(interaction);
@@ -39,6 +43,25 @@ export async function execute(interaction: Interaction) {
       notificationsSelectHandler(interaction);
     }
   }
+}
+
+async function sourcebansHandler(interaction: ButtonInteraction) {
+  const embed = interaction.message.embeds[0];
+  if (!embed) {
+    return await interaction.update({
+      content: '❌ Error: message embed not found'
+    });
+  }
+
+  await interaction.deferReply();
+
+  const steamId = interaction.customId.split(':')[1];
+  const embeds = [
+    await getSourcebans(steamId, EmbedBuilder.from(embed).toJSON())
+  ];
+
+  await interaction.message.edit({ embeds });
+  await interaction.deleteReply();
 }
 
 async function moreInfoHandler(interaction: ButtonInteraction) {
@@ -159,9 +182,8 @@ async function tagsHandler(interaction: StringSelectMenuInteraction) {
   // Refresh old message embed
   const profile = await createProfileEmbed(steamId, guildId);
   if (profile) {
-    const { embeds, components, sourcebans } = profile;
+    const { embeds, components } = profile;
     await interaction.message.edit({ embeds, components });
-    sourcebans.then((embed) => interaction.message.edit({ embeds: [embed] }));
   }
 
   await interaction.editReply({
@@ -175,8 +197,6 @@ async function notificationsSelectHandler(
   if (!interaction.guildId) {
     return;
   }
-
-  await interaction.deferUpdate();
 
   const userId = interaction.user.id;
   const steamId = interaction.customId.split(':')[1];

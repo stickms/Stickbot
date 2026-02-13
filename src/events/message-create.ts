@@ -8,6 +8,10 @@ import { createProfileEmbed } from '~/lib/steam-profile';
 export const name = Events.MessageCreate;
 
 export async function execute(message: OmitPartialGroupDMChannel<Message>) {
+  if (message.author.bot) {
+    return;
+  }
+
   const url = URL.parse(message.content);
 
   if (!url?.hostname.endsWith('steamcommunity.com')) {
@@ -28,9 +32,8 @@ export async function execute(message: OmitPartialGroupDMChannel<Message>) {
     return;
   }
 
-  const { embeds, components, sourcebans } = profile;
+  const { embeds, components } = profile;
 
-  message.suppressEmbeds(true);
-  const reply = await message.reply({ embeds, components });
-  await reply.edit({ embeds: [await sourcebans] });
+  message.suppressEmbeds(true).catch(console.error);
+  await message.reply({ embeds, components });
 }

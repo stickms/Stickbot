@@ -140,7 +140,7 @@ async function updateBans(
         continue;
       }
 
-      const { embeds, components, sourcebans } = profile;
+      const { embeds, components } = profile;
 
       const mentions = (player.notifications?.[guildId]?.ban ?? [])
         .map((userId) => `<@${userId}> `)
@@ -148,12 +148,7 @@ async function updateBans(
       const content = `**${steamId}** has been **${messages.join(',')}**\n${mentions}`;
 
       const channel = (await client.channels.fetch(banwatchId)) as TextChannel;
-      channel
-        ?.send({ content, embeds, components })
-        .then((msg) =>
-          sourcebans.then((embed) => msg.edit({ embeds: [embed] }))
-        )
-        .catch(console.error);
+      channel?.send({ content, embeds, components }).catch(console.error);
     }
   }
 }
@@ -265,14 +260,11 @@ async function updateNotifications(
     return;
   }
 
-  const { embeds, components, sourcebans } = profile;
+  const { embeds, components } = profile;
 
   for (const userId of userIds) {
     const user = await client.users.fetch(userId);
 
-    user
-      ?.send({ content, embeds, components })
-      .then((msg) => sourcebans.then((embed) => msg.edit({ embeds: [embed] })))
-      .catch(console.error);
+    user?.send({ content, embeds, components }).catch(console.error);
   }
 }

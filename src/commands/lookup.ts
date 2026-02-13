@@ -31,8 +31,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
-  const { embeds, components, sourcebans } = profile;
+  const { embeds, components } = profile;
 
   await interaction.editReply({ embeds, components });
-  await interaction.editReply({ embeds: [await sourcebans] });
 }

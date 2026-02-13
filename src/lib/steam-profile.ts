@@ -175,17 +175,26 @@ function tagSelect(
   ];
 }
 
-async function sourcebansField(
-  summary: SteamProfileSummary
-): Promise<APIEmbedField> {
+export async function getSourcebans(
+  steamId: string,
+  embed: APIEmbed
+): Promise<APIEmbed> {
   const response = await fetch(
-    `https://stickbot.net/api/steam/sourcebans/${summary.steamid}`
+    `https://stickbot.net/api/steam/sourcebans/${steamId}`
   );
+
+  const field = {
+    name: 'Sourcebans',
+    value: '❌ Error retrieving sourcebans'
+  };
 
   if (!response.ok) {
     return {
-      name: 'Sourcebans',
-      value: '❌ Error retrieving sourcebans'
+      ...embed,
+      fields: [
+        ...(embed.fields ?? []).filter(({ name }) => name !== 'Sourcebans'),
+        field
+      ]
     };
   }
 
@@ -198,9 +207,14 @@ async function sourcebansField(
     sourcebans.push('✅ None');
   }
 
+  field.value = sourcebans.join('\n');
+
   return {
-    name: 'Sourcebans',
-    value: sourcebans.join('\n')
+    ...embed,
+    fields: [
+      ...(embed.fields ?? []).filter(({ name }) => name !== 'Sourcebans'),
+      field
+    ]
   };
 }
 
@@ -225,7 +239,6 @@ export async function createProfileEmbed(
 ): Promise<{
   embeds: APIEmbed[];
   components: APIMessageComponent[];
-  sourcebans: Promise<APIEmbed>;
 } | null> {
   const response = await fetch(
     `https://stickbot.net/api/steam/lookup/${steamId}`
@@ -264,26 +277,29 @@ export async function createProfileEmbed(
     });
   }
 
-  // Will later get edited
-  fields.push({
-    name: 'Sourcebans',
-    value: '\u2139\uFE0F Loading...'
-  });
-
   const buttons: APIButtonComponent[] = [
+    {
+      type: ComponentType.Button,
+      style: ButtonStyle.Primary,
+      custom_id: `sourcebans:${summary.steamid}`,
+      label: 'Sourcebans'
+    },
     {
       type: ComponentType.Button,
       style: ButtonStyle.Primary,
       custom_id: `moreinfo:${summary.steamid}`,
       label: 'More Info'
-    },
-    {
+    }
+  ];
+
+  if (guildId) {
+    buttons.push({
       type: ComponentType.Button,
       style: ButtonStyle.Primary,
       custom_id: `notifications:${summary.steamid}`,
       label: 'Notifications'
-    }
-  ];
+    });
+  }
 
   if (numFriends) {
     buttons.push({
@@ -315,14 +331,7 @@ export async function createProfileEmbed(
 
   return {
     embeds: [embed],
-    components,
-    sourcebans: sourcebansField(summary).then((bansField) => ({
-      ...embed,
-      fields: [
-        ...embed.fields.filter(({ name }) => name !== 'Sourcebans'),
-        bansField
-      ]
-    }))
+    components: components
   };
 }
 
