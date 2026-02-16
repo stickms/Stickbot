@@ -10,7 +10,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Some cool bot stats!');
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const owner = interaction.client.application.owner;
+  const owner = (await interaction.client.application.fetch()).owner;
 	const profiles = await playersDB.countDocuments();
 	const guilds = await interaction.client.guilds.fetch();
 	const uptime = Math.floor(interaction.client.uptime / (86_400_000));
@@ -38,7 +38,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 				value: profiles.toLocaleString(),
 				inline: true
 			}, {
-				name: 'Latency',
+				name: 'API Latency',
 				value: `${interaction.client.ws.ping} ms`,
 				inline: true
 			}, {
