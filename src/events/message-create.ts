@@ -35,5 +35,5 @@ export async function execute(message: OmitPartialGroupDMChannel<Message>) {
   const { embeds, components } = profile;
 
   message.suppressEmbeds(true).catch(console.error);
-  await message.reply({ embeds, components });
+  await message.reply({ embeds, components, flags: ['SuppressNotifications'] });
 }

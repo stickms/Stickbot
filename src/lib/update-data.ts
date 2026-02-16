@@ -80,7 +80,7 @@ async function updateBans(
     const summary = summaries[steamId];
 
     if (
-      !summary || 
+      !summary ||
       summary.NumberOfVACBans === undefined ||
       summary.NumberOfGameBans === undefined ||
       summary.EconomyBan === undefined ||
@@ -149,7 +149,9 @@ async function updateBans(
       const content = `**${steamId}** has been **${messages.join(',')}**\n${mentions}`;
 
       try {
-        const channel = (await client.channels.fetch(banwatchId)) as TextChannel;
+        const channel = (await client.channels.fetch(
+          banwatchId
+        )) as TextChannel;
         channel?.send({ content, embeds, components });
       } catch (_error) {
         //console.error(_error);
